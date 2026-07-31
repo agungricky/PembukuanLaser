@@ -1,14 +1,23 @@
 function toggleMenu(element) {
-    const submenu = element.nextElementSibling;
-    const arrow = element.querySelector(".arrow");
+    const currentSubmenu = element.nextElementSibling;
+    const currentArrow = element.querySelector(".arrow");
 
-    if (submenu.classList.contains("open")) {
+    const isOpen = currentSubmenu.classList.contains("open");
+    document.querySelectorAll(".submenu").forEach(submenu => {
         submenu.classList.remove("open");
+    });
+
+    document.querySelectorAll(".arrow").forEach(arrow => {
         arrow.classList.remove("rotate");
-        element.classList.remove("open");
-    } else {
-        submenu.classList.add("open");
-        arrow.classList.add("rotate");
+    });
+
+    document.querySelectorAll(".menu-header").forEach(header => {
+        header.classList.remove("open");
+    });
+
+    if (!isOpen) {
+        currentSubmenu.classList.add("open");
+        currentArrow.classList.add("rotate");
         element.classList.add("open");
     }
 }
