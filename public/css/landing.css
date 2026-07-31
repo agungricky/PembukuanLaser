@@ -1,0 +1,138 @@
+@font-face {
+    font-family: "BernardMTCondensed";
+    src: url("../font/BernardMTCondensed.ttf") format("truetype");
+}
+@font-face {
+    font-family: "FFGoodPro";
+    src: url("../font/FFGoodPro-Bold.ttf") format("truetype");
+}
+.card-body {
+    background: #ffffff;
+}
+.text-silver {
+    color: #f0f0f0;
+}
+#produkGambar {
+    max-width: 300px;
+}
+#platNomorTampil {
+    font-size: 3rem;
+}
+.plat-nomor-table {
+    width: 270px;
+    height: 80px;
+    position: relative;
+    top: -5px;
+}
+.plat-kode {
+    text-align: left;
+    width: 100px;
+}
+.plat-nomor-tengah {
+    text-align: center;
+    width: 100px;
+}
+.plat-huruf {
+    text-align: right;
+    width: 100px;
+}
+.detak-table {
+    width: 270px;
+    height: 30px;
+    position: relative;
+}
+.detak-td {
+    width: 100px;
+}
+.detak-img {
+    max-width: 300px;
+}
+.plat-table {
+    width: 275px;
+    height: 30px;
+    position: relative;
+    top: 77px;
+}
+.plat-td {
+    text-align: right;
+    width: 100px;
+}
+.plat-tahun {
+    font-size: 1.8rem;
+}
+.plat-nama-table {
+    width: 230px;
+    height: 30px;
+    position: relative;
+    top: 86px;
+    left: 22px;
+}
+.plat-nama-td {
+    text-align: left;
+    width: 100px;
+}
+.plat-nama {
+    font-size: 1.3rem;
+}
+.logo-table {
+    width: 30px;
+    height: 30px;
+    position: relative;
+    top: 88px;
+    left: -100px;
+}
+.logo-td {
+    text-align: right;
+    width: 100px;
+}
+.logo-img {
+    z-index: 10;
+}
+.btn-custom {
+    height: 60px;
+}
+#platKodeTampil,
+#platNomorTengah,
+#platHurufTampil,
+#platTahunTampil,
+#platNamaTampil {
+    font-family: "BernardMTCondensed", sans-serif;
+    font-weight: 500;
+    font-style: normal;
+    transform: scaleY(1.3);
+    display: inline-block;
+}
+.footer {
+    padding: 80px 0;
+    text-align: center;
+}
+.footer .icon {
+    display: inline-block;
+    margin-right: 10px;
+}
+input::placeholder {
+    text-align: center;
+}
+input {
+    text-align: center;
+}
+.display-tengah {
+    max-width: 400px;
+    height: 200px;
+    width: 100%;
+    border: 1px solid #333;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+#downloadScreenshotButton {
+    display: none;
+    margin: 0 auto;
+}
+.footer-text,
+.footer-email,
+.footer-year {
+    color: rgba(108, 117, 125, 0.8);
+    text-decoration: none;
+}

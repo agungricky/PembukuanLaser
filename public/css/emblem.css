@@ -1,0 +1,122 @@
+@font-face { font-family: "AdriaDeco"; src: url("../font-emblem/AdriaDeco.ttf") format("truetype"); }
+@font-face { font-family: "Aeroblade DEMO"; src: url("../font-emblem/Aeroblade DEMO.ttf") format("truetype"); }
+@font-face { font-family: "airstrike"; src: url("../font-emblem/airstrike.ttf") format("truetype"); }
+@font-face { font-family: "BernardMTStd-Condensed"; src: url("../font-emblem/BernardMTStd-Condensed.otf") format("opentype"); }
+@font-face { font-family: "Bismillah Script"; src: url("../font-emblem/Bismillah Script.ttf") format("truetype"); }
+@font-face { font-family: "COOPER BL"; src: url("../font-emblem/COOPER BL.TTF") format("truetype"); }
+@font-face { font-family: "Crizen"; src: url("../font-emblem/Crizen.otf") format("opentype"); }
+@font-face { font-family: "Design System C W01 900R"; src: url("../font-emblem/Design System C W01 900R.ttf") format("truetype"); }
+@font-face { font-family: "Ductus W01 Bold"; src: url("../font-emblem/Ductus W01 Bold.ttf") format("truetype"); }
+@font-face { font-family: "flamenco-d"; src: url("../font-emblem/flamenco-d.ttf") format("truetype"); }
+@font-face { font-family: "gang of three"; src: url("../font-emblem/gang of three.ttf") format("truetype"); }
+@font-face { font-family: "Helvetica Black Condensed"; src: url("../font-emblem/Helvetica Black Condensed.otf") format("opentype"); }
+@font-face { font-family: "hemi head bd it"; src: url("../font-emblem/hemi head bd it.otf") format("opentype"); }
+@font-face { font-family: "Henshin"; src: url("../font-emblem/Henshin.otf") format("opentype"); }
+@font-face { font-family: "Jacksilver"; src: url("../font-emblem/Jacksilver.otf") format("opentype"); }
+@font-face { font-family: "JAPANESE_2020"; src: url("../font-emblem/JAPANESE_2020.otf") format("opentype"); }
+@font-face { font-family: "La Macchina"; src: url("../font-emblem/La Macchina.ttf") format("truetype"); }
+@font-face { font-family: "LTAtomatic"; src: url("../font-emblem/LTAtomatic.ttf") format("truetype"); }
+@font-face { font-family: "MACHINEN"; src: url("../font-emblem/MACHINEN.TTF") format("truetype"); }
+@font-face { font-family: "Marmellata(Jam)_demo"; src: url("../font-emblem/Marmellata(Jam)_demo.ttf") format("truetype"); }
+@font-face { font-family: "No Seven Bold"; src: url("../font-emblem/No Seven Bold.ttf") format("truetype"); }
+@font-face { font-family: "Osaka San"; src: url("../font-emblem/Osaka San.ttf") format("truetype"); }
+@font-face { font-family: "Planet Kosmos"; src: url("../font-emblem/Planet Kosmos.TTF") format("truetype"); }
+@font-face { font-family: "Rockabilly"; src: url("../font-emblem/Rockabilly.ttf") format("truetype"); }
+@font-face { font-family: "Sketter DEMO"; src: url("../font-emblem/Sketter DEMO.ttf") format("truetype"); }
+@font-face { font-family: "Slantblaze Pro"; src: url("../font-emblem/Slantblaze Pro.otf") format("opentype"); }
+@font-face { font-family: "Transformers Movie"; src: url("../font-emblem/Transformers Movie.ttf") format("truetype"); }
+@font-face { font-family: "VANGO-Regular"; src: url("../font-emblem/VANGO-Regular.otf") format("opentype"); }
+@font-face { font-family: "VerminVibes"; src: url("../font-emblem/VerminVibes.ttf") format("truetype"); }
+@font-face { font-family: "vespa font"; src: url("../font-emblem/vespa font.ttf") format("truetype"); }
+
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+.card-body {
+    background: #ffffff;
+}
+
+.text-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: auto;
+    min-height: 150px;
+    margin: 0 auto;
+    padding: 20px;
+    text-align: center;
+    background: #f8f9fa;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+.merah, .abu, .hijau, .hitam, .rose, .biru, .text-warning {
+    text-shadow:
+        -1px -1px 0 black, 0px -1px 0 black, 1px -1px 0 black,
+        -1px 0px 0 black, 0px 0px 0 black, 1px 0px 0 black,
+        -1px 1px 0 black, 0px 1px 0 black, 1px 1px 0 black,
+        -2px -2px 0 black, 0px -2px 0 black, 2px -2px 0 black,
+        -2px 0px 0 black, 2px 0px 0 black,
+        -2px 2px 0 black, 0px 2px 0 black, 2px 2px 0 black,
+        -3px -1px 0 black, 3px -1px 0 black,
+        -3px 1px 0 black, 3px 1px 0 black,
+        -1px -3px 0 black, 1px -3px 0 black,
+        -1px 3px 0 black, 1px 3px 0 black;
+}
+
+.biru   { color: #0056b3; }
+.merah   { color: red; }
+.abu   { color: #f0f0f0; }
+.hijau { color: green; }
+.hitam { color: #4a4a4a; }
+.rose  { color: #f3b4b9; }
+
+.emblem-bottom {
+    font-size: 40px;
+    line-height: 1.2;
+    padding: 5px 10px;
+    background-color: black;
+    color: white;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    display: inline-block;
+    max-width: 100%;
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+    .custom-title {
+        font-size: clamp(1.5rem, 5vw, 2.5rem);
+        font-weight: 900;
+        color: #000;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+        letter-spacing: 1px;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeSlideIn 0.6s ease-out forwards;
+    }
+
+    @keyframes fadeSlideIn {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+@media (max-width: 768px) {
+    .emblem-bottom {
+        font-size: 30px;
+    }
+
+    .text-container {
+        min-height: 100px;
+        padding: 8px;
+    }
+}
