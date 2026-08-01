@@ -23,19 +23,35 @@ use App\Http\Controllers\PesananCekController;
 
 Route::middleware(['web', 'auth'])->group(function () {
 
-    Route::resource('users', UserController::class)
-        ->only(['index','store','update','destroy'])
-        ->middleware('role:manager');
+    // ===================== ADMIN PENJUALAN ===================== //
+    Route::middleware(['role:pegawai'])->group(function () {
+        Route::get('/me', [UserController::class, 'me'])->name('users.me');
+    });
 
-    Route::get('/me', [UserController::class, 'me'])
-        ->name('users.me')
-        ->middleware('role:pegawai');
 
-    Route::resource('toko', TokoController::class)->only(['index','store','update','destroy','show']);
-    Route::resource('iklan', IklanController::class)->only(['index','store','update','destroy','show']);
-    Route::get('/ajax/marketplace', [IklanController::class, 'getMarketplace'])->name('ajax.marketplace');
-    Route::get('/ajax/toko-by-marketplace', [IklanController::class, 'getTokoByMarketplace'])->name('ajax.toko.marketplace');
-    Route::resource('sku',  SkuController::class)->only(['index','store','update','destroy','show']);
+
+
+    // ===================== MANAGER ===================== //
+    Route::middleware(['role:pegawai'])->group(function () {
+            Route::resource('users', UserController::class)->only(['index','store','update','destroy']);
+    });
+
+
+    // ===================== PACKING ===================== //
+    Route::middleware(['role:manager, pegawai'])->group(function () {
+            
+    });
+
+
+    // ===================== Admin & Manager ===================== //
+    Route::middleware(['role:manager, pegawai'])->group(function () {
+
+    });
+
+
+
+
+
 
     Route::prefix('pesanan')
         ->controller(PesananController::class)
