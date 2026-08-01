@@ -10,7 +10,7 @@ class RoleOnly
     {
         $user = $request->user();
         if (!$user || !in_array($user->role, $roles, true)) {
-            abort(403);
+            abort(403, 'Akses ditolak');
         }
         return $next($request);
     }

@@ -28,122 +28,107 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/me', [UserController::class, 'me'])->name('users.me');
     });
 
-
-
-
     // ===================== MANAGER ===================== //
-    Route::middleware(['role:pegawai'])->group(function () {
-            Route::resource('users', UserController::class)->only(['index','store','update','destroy']);
+    Route::middleware(['role:manager'])->group(function () {
+        Route::resource('users', UserController::class)->only(['index', 'store', 'update', 'destroy']);
     });
-
 
     // ===================== PACKING ===================== //
-    Route::middleware(['role:manager, pegawai'])->group(function () {
-            
+    Route::middleware(['role:packing'])->group(function () {
+        Route::get('/packing/pesanan', [PackingPesananController::class, 'index'])->name('packing.pesanan');
+        Route::post('/packing/scan', [PackingPesananController::class, 'scan'])->name('packing.scan');
+        Route::get('/packing/stats', [PackingPesananController::class, 'stats'])->name('packing.stats');
     });
-
 
     // ===================== Admin & Manager ===================== //
-    Route::middleware(['role:manager, pegawai'])->group(function () {
+    Route::middleware(['role:manager,pegawai'])->group(function () {
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    });
+        // Detail Pesanan
+        
+            
+        // Pesanan
+        Route::prefix('pesanan')
+            ->controller(PesananController::class)
+            ->group(function () {
 
+                // halaman import baru
+                Route::get('import', 'importPage')->name('pesanan.import');
 
+                // proses import
+                Route::post('preview-upload', 'uploadPreviewExcel')->name('pesanan.preview');
+                Route::get('preview-data', 'getPreviewData')->name('pesanan.getPreview');
+                Route::post('simpan-import', 'simpanImport')->name('pesanan.simpanImport');
 
+                // ajax toko berdasarkan marketplace
+                Route::get('get-toko/{market}', 'getTokoByMarketplace')->name('pesanan.getToko');
+            });
 
+            Route::controller(PesananDetailController::class)
+            ->group(function () {
+                Route::get('pesanan/{no_pesanan}','show')->name('pesanan.show');
+                Route::put('pesanan/{no_pesanan}','update')->name('pesanan.update');
+            });
 
-
-    Route::prefix('pesanan')
-        ->controller(PesananController::class)
-        ->group(function () {
-    
-            // halaman import baru
-            Route::get('import', 'importPage')
-                ->name('pesanan.import');
-    
-            // proses import
-            Route::post('preview-upload', 'uploadPreviewExcel')
-                ->name('pesanan.preview');
-    
-            Route::get('preview-data', 'getPreviewData')
-                ->name('pesanan.getPreview');
-    
-            Route::post('simpan-import', 'simpanImport')
-                ->name('pesanan.simpanImport');
-    
-            // ajax toko berdasarkan marketplace
-            Route::get('get-toko/{market}', 'getTokoByMarketplace')
-                ->name('pesanan.getToko');
-        });
-    
-    Route::controller(PesananDetailController::class)
-        ->group(function () {
-    
-            Route::get(
-                'pesanan/{no_pesanan}',
+        Route::resource('pesanan', PesananController::class)
+            ->except([
                 'show'
-            )->name('pesanan.show');
-    
-            Route::put(
-                'pesanan/{no_pesanan}',
-                'update'
-            )->name('pesanan.update');
-        });
-    
-    Route::resource('pesanan', PesananController::class)
-        ->except([
-            'show'
-        ]);
+            ]);
 
-    Route::get('/proses', [PesananProsesController::class, 'index'])->name('pesanan.proses');
-    Route::post('/pesanan/ubah-status', [PesananProsesController::class, 'ubahStatus'])->name('pesanan.ubahStatus');
+        // Pesanan Proses
+        Route::get('/proses', [PesananProsesController::class, 'index'])->name('pesanan.proses');
+        Route::post('/pesanan/ubah-status', [PesananProsesController::class, 'ubahStatus'])->name('pesanan.ubahStatus');
 
-    Route::get('/kirim', [PesananKirimController::class, 'index'])
-    ->name('pesanan.kirim');
-    Route::post('/kirim/ubah-status', [PesananKirimController::class, 'ubahStatus'])
-        ->name('kirim.ubahStatus');
-    Route::get('/kirim/import', [PesananKirimController::class, 'importPage'])
-        ->name('kirim.importPage');
-    Route::post('/kirim/preview-pencairan', [PesananKirimController::class, 'previewPencairan'])
-        ->name('kirim.previewPencairan');
-    Route::get('/kirim/preview-data', [PesananKirimController::class, 'getPreviewPencairan'])
-        ->name('kirim.getPreviewPencairan');
-    
-    // simpan hasil preview
-    Route::post('/kirim/simpan-pencairan', [PesananKirimController::class, 'simpanPencairan'])
-        ->name('kirim.simpanPencairan');
-    Route::get('/terima', [PesananDiterimaController::class, 'index'])->name('pesanan.terima');
-    Route::get('/return', [PesananBatalController::class, 'index'])->name('pesanan.return');
-    Route::get('/affiliate', [PesananAffiliateController::class, 'index'])->name('pesanan.affiliate');
+        // Pesanan KIRIM
+        Route::get('/kirim', [PesananKirimController::class, 'index'])->name('pesanan.kirim');
+        Route::post('/kirim/ubah-status', [PesananKirimController::class, 'ubahStatus'])->name('kirim.ubahStatus');
+        Route::get('/kirim/import', [PesananKirimController::class, 'importPage'])->name('kirim.importPage');
+        Route::post('/kirim/preview-pencairan', [PesananKirimController::class, 'previewPencairan'])->name('kirim.previewPencairan');
+        Route::get('/kirim/preview-data', [PesananKirimController::class, 'getPreviewPencairan'])->name('kirim.getPreviewPencairan');
+        Route::post('/kirim/simpan-pencairan', [PesananKirimController::class, 'simpanPencairan'])->name('kirim.simpanPencairan');
 
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        // Pesanan Diterima
+        Route::get('/terima', [PesananDiterimaController::class, 'index'])->name('pesanan.terima');
 
-    Route::get('/penjualan', [PenjualanController::class, 'performance'])->name('penjualan');
+        // Pesanan Batal
+        Route::get('/return', [PesananBatalController::class, 'index'])->name('pesanan.return');
 
-    Route::get('/pembeli', [PembeliController::class, 'index'])->name('pembeli');
-    Route::post('/pembeli/filter', [PembeliController::class, 'storeFilter'])->name('pembeli.filter');
-    Route::post('/pembeli/reset',  [PembeliController::class, 'resetFilter'])->name('pembeli.reset');
+        // Pesanan Afiliate
+        Route::get('/affiliate', [PesananAffiliateController::class, 'index'])->name('pesanan.affiliate');
 
-    Route::get('/produk', [ProdukController::class, 'index'])->name('produk');
-    Route::get('/packing/pesanan', [PackingPesananController::class, 'index'])
-        ->name('packing.pesanan')
-        ->middleware('role:packing');
-    Route::post('/packing/scan', [PackingPesananController::class, 'scan'])->name('packing.scan');
-    Route::get('/packing/stats', [PackingPesananController::class, 'stats'])->name('packing.stats');
-    Route::prefix('cek')
-        ->controller(PesananCekController::class)
-        ->group(function () {
-    
-            Route::get('/', 'index')
-                ->name('pesanan.cek');
-    
-            Route::post('/{no_pesanan}/aktifkan', 'aktifkan')
-                ->name('pesanan.cek.aktifkan');
-    
-            Route::post('/{no_pesanan}/selesai', 'selesai')
-                ->name('pesanan.cek.selesai');
-    
-        });
+        // Pesanan Cek
+        Route::prefix('cek')
+            ->controller(PesananCekController::class)
+            ->group(function () {
+
+                Route::get('/', 'index')->name('pesanan.cek');
+                Route::post('/{no_pesanan}/aktifkan', 'aktifkan')->name('pesanan.cek.aktifkan');
+                Route::post('/{no_pesanan}/selesai', 'selesai')->name('pesanan.cek.selesai');
+            });
+
+        // Toko
+        Route::resource('toko', TokoController::class)->only(['index', 'store', 'update', 'destroy', 'show']);
+
+        // SKU
+        Route::resource('sku',  SkuController::class)->only(['index', 'store', 'update', 'destroy', 'show']);
+
+        // Iklan
+        Route::resource('iklan', IklanController::class)->only(['index', 'store', 'update', 'destroy', 'show']);
+        Route::get('/ajax/marketplace', [IklanController::class, 'getMarketplace'])->name('ajax.marketplace');
+        Route::get('/ajax/toko-by-marketplace', [IklanController::class, 'getTokoByMarketplace'])->name('ajax.toko.marketplace');
+
+        // Penjualan
+        Route::get('/penjualan', [PenjualanController::class, 'performance'])->name('penjualan');
+
+        // Pembeli
+        Route::get('/pembeli', [PembeliController::class, 'index'])->name('pembeli');
+        Route::post('/pembeli/filter', [PembeliController::class, 'storeFilter'])->name('pembeli.filter');
+        Route::post('/pembeli/reset',  [PembeliController::class, 'resetFilter'])->name('pembeli.reset');
+
+        // Produk
+        Route::get('/produk', [ProdukController::class, 'index'])->name('produk');
+    });
 });
 
 Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
