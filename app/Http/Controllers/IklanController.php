@@ -10,6 +10,7 @@ class IklanController extends Controller
 {
     public function index(Request $request)
     {
+
         $query = Iklan::with('toko');
 
         // Search

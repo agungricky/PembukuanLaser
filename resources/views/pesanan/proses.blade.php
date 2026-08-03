@@ -1,10 +1,4 @@
 @extends('layouts.app')
-@push('styles')
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
-        rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-@endpush
 @section('content')
     <div class="bg-white p-3 p-md-4 rounded shadow-sm w-100">
 
@@ -77,6 +71,8 @@
                                 <input type="text" id="daterange" name="tanggal"
                                     class="form-control form-control-sm border-start-0" value="{{ request('tanggal') }}"
                                     placeholder="Tanggal" readonly>
+                                <input type="hidden" name="min_date" id="min_date">
+                                <input type="hidden" name="max_date" id="max_date">
                             </div>
                         </div>
 
@@ -113,7 +109,7 @@
         {{-- Tabel --}}
         @if ($pesanan->isNotEmpty())
             <div class="table-responsive mt-3">
-                <table class="table table-sm table-hover align-middle" style="width:100%">
+                <table id="tabelselect" class="table table-sm table-hover align-middle" style="width:100%">
                     <thead class="table-light">
                         <tr>
                             <th class="text-center" style="width:44px">
@@ -131,7 +127,7 @@
 
                     <tbody>
                         @foreach ($pesanan as $item)
-                            <tr>
+                            <tr data-toko="{{ $item->no_pesanan }}">
                                 <td class="text-center">
                                     <input type="checkbox" name="selected[]" value="{{ $item->no_pesanan }}"
                                         class="form-check-input m-0 row-checkbox">
@@ -241,8 +237,6 @@
 @endsection
 
 @push('styles')
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
-
     <style>
         .table thead th {
             font-size: .85rem;
@@ -252,17 +246,10 @@
         .table tbody td {
             vertical-align: middle;
         }
-
-        .select2-results__options {
-            max-height: 370px !important;
-        }
     </style>
 @endpush
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-
     <script>
         $(function() {
             const form = document.querySelector('.filter-bar');
@@ -316,6 +303,16 @@
                     $('#daterange').data('daterangepicker').setEndDate(moment(dates[1], 'YYYY-MM-DD'));
                 }
             }
+
+            ['min_date', 'max_date'].forEach(function(name) {
+                const el = form.querySelector(`[name="${name}"]`);
+
+                if (el) {
+                    el.addEventListener('change', function() {
+                        form.submit();
+                    });
+                }
+            });
 
             // Search otomatis
             const searchInput = form.querySelector('[name="no_pesanan"]');
@@ -392,6 +389,8 @@
                     },
                     success: function() {
                         location.reload();
+                        $('.row-checkbox').prop('checked', false);
+                        toggleButton();
                     },
                     error: function(xhr) {
                         $('#error-message')
@@ -411,6 +410,22 @@
                 width: '100%',
                 placeholder: $('#id_toko').data('placeholder'),
                 allowClear: true
+            });
+
+            $('#tabelselect').on('click', 'tr', function() {
+                const id = $(this).data('toko');
+
+                const checkbox = $('.row-checkbox[value="' + id + '"]');
+                checkbox.prop('checked', !checkbox.prop('checked'));
+
+                toggleButton();
+            });
+
+            // Jika klik langsung pada checkbox, jangan lanjut ke event tr
+            $('#tabelselect').on('click', '.row-checkbox', function(e) {
+                e.stopPropagation();
+
+                toggleButton();
             });
         });
     </script>
