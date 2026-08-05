@@ -8,60 +8,39 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
 
         <div class="d-flex align-items-center gap-3">
-
             <div class="rounded-4 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
                  style="width:72px;height:72px;">
-
                 <i class="bi bi-qr-code-scan fs-1 text-primary"></i>
-
             </div>
-
             <div>
-
                 <h3 class="fw-bold mb-1">
                     Packing Scanner
                 </h3>
-
                 <div class="text-muted">
                     Scan No. Resi / No. Pesanan untuk mengubah status menjadi
                     <span class="fw-semibold text-success">Kirim</span>
                 </div>
-
             </div>
-
         </div>
 
         <div class="text-end">
-
             <div class="small text-muted">
                 Operator
             </div>
-
             <div class="fw-semibold">
                 {{ auth()->user()->name }}
             </div>
-
         </div>
-
     </div>
 
-
-
     <div class="row g-4">
-
         {{-- AREA SCANNER --}}
         <div class="col-lg-7">
-
             <div class="card border-0 shadow-sm rounded-4 h-100">
-
                 <div class="card-body p-5 text-center">
-
                     <div class="mb-4">
-
                         <div class="scan-circle mb-3">
-
                             <i class="bi bi-qr-code-scan fs-1"></i>
-
                         </div>
 
                         <h3 class="fw-bold mb-2">
@@ -69,14 +48,9 @@
                         </h3>
 
                         <div class="text-muted">
-
                             Fokus otomatis • Enter = Scan • ESC = Reset
-
                         </div>
-
                     </div>
-
-
 
                     <div class="input-group input-group-lg mx-auto"
                          style="max-width:650px;">
@@ -94,106 +68,63 @@
                                 letter-spacing:3px;
                                 height:78px;
                             ">
-
                     </div>
-
-
 
                     <div class="mt-4">
-
                         <div class="alert alert-light border mb-0">
-
                             <i class="bi bi-info-circle me-1"></i>
-
                             Pastikan barcode jelas dan scanner berada pada fokus input.
-
                         </div>
-
                     </div>
-
                 </div>
-
             </div>
-
         </div>
                 {{-- STATUS --}}
         <div class="col-lg-5">
-
             <div class="card border-0 shadow-sm rounded-4 h-100">
-
                 <div class="card-body">
-                    
-
                     <div class="text-center mb-4">
-
                         <h5 class="fw-bold mb-1">
-
                             Status Terakhir
-
                         </h5>
 
                         <small class="text-muted">
-
                             Informasi hasil scan terakhir
-
                         </small>
-
                     </div>
 
                     <div id="scanStatus"
                         class="border rounded-4 p-4 mb-4 bg-light">
-
                         <div class="text-center">
-
                             <i class="bi bi-clock-history display-4 text-secondary"></i>
-
                             <h5 class="mt-3 mb-1">
-
                                 Siap Scan
-
                             </h5>
-
                             <div class="text-muted">
-
                                 Silakan scan No. Resi atau No. Pesanan
-
                             </div>
-
                         </div>
-
                     </div>
 
 
 
                     {{-- STATISTIK --}}
-
                     <div class="row g-3">
-
                         <div class="col-6">
-
                             <div class="card border-0 bg-primary bg-opacity-10">
-
                                 <div class="card-body text-center py-3">
-
                                     <div
                                         class="fw-bold text-primary"
                                         style="font-size:32px;"
                                         id="statHariIni">
-
                                         {{ $hariIni }}
 
                                     </div>
-
                                     <small class="text-muted">
-
                                         Scan Hari Ini
-
                                     </small>
-
                                 </div>
-
                             </div>
-
                         </div>
 
                         <div class="col-6">

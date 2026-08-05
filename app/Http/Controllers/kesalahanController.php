@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Kesalahan;
 use App\Models\Pesanan;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class kesalahanController extends Controller
 {
@@ -29,35 +30,44 @@ class kesalahanController extends Controller
      */
     public function store(Request $request)
     {
-        // $pesanan = Pesanan::where('no_pesanan', $request->no_pesanan)->first();
-        return response()->json($request->all());
-
         $request->validate([
             'no_pesanan'   => 'required|exists:pesanan,no_pesanan',
-            'idKesalahan'  => 'required',
+            'idKesalahan'  => 'nullable|exists:kesalahan,id',
             'notes'        => 'nullable',
             'pencairan' => 'required',
         ]);
 
+        DB::beginTransaction();
+
         try {
+            $pesanan = Pesanan::where('no_pesanan', $request->no_pesanan)->first();
+            $pencairan = $request->pencairan;
+            if ($pencairan > 0) {
+                $pencairan -= $pesanan->total_hpp;
+            } elseif ($pencairan < 0) {
+                $pencairan += -$pesanan->total_hpp;
+            }
+
             Kesalahan::create([
                 'no_pesanan'    => $request->no_pesanan,
                 'kesalahan_id'  => $request->idKesalahan,
             ]);
 
-            $pencairan = $request->pencairan;
-
             Pesanan::where('no_pesanan', $request->no_pesanan)
                 ->update([
                     'status_cek' => 0,
                     'notes' => $request->notes,
+                    'pencairan' => $pencairan,
                 ]);
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Data berhasil disimpan.'
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Data gagal disimpan.',

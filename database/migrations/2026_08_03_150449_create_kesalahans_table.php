@@ -20,6 +20,7 @@ return new class extends Migration
                 ->cascadeOnDelete();
 
             $table->foreignId('kesalahan_id')
+                ->nullable()
                 ->constrained('role_kesalahans')
                 ->cascadeOnDelete();
             $table->timestamps();

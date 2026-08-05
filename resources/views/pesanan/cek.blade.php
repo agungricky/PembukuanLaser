@@ -181,7 +181,7 @@
 
     {{-- Modal --}}
     <div class="modal fade" id="modalKesalahan" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
 
                 <div class="modal-header">
@@ -190,67 +190,76 @@
                 </div>
 
                 <div class="modal-body">
-                    <table class="table table-borderless table-sm mb-0">
-                        <tr>
-                            <th width="170">Nomor Pesanan</th>
-                            <td>: <span id="nomor_pesanan">-</span></td>
-                        </tr>
-                        <tr>
-                            <th>Kode Resi</th>
-                            <td>: <span id="kode_resi">-</span></td>
-                        </tr>
-                        <tr>
-                            <th>Nama Pemesan</th>
-                            <td>: <span id="nama_pemesan">-</span></td>
-                        </tr>
-                        <tr>
-                            <th>Tanggal</th>
-                            <td>: <span id="tanggal">-</span></td>
-                        </tr>
-                    </table>
+                    <div class="row">
 
+                        <div class="col-6 border-end">
+                            <table class="table table-borderless table-sm mb-0">
+                                <tr>
+                                    <th width="170">Nomor Pesanan</th>
+                                    <td>: <span id="nomor_pesanan">-</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Kode Resi</th>
+                                    <td>: <span id="kode_resi">-</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Nama Pemesan</th>
+                                    <td>: <span id="nama_pemesan">-</span></td>
+                                </tr>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <td>: <span id="tanggal">-</span></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-6">
+                            <form id="formKesalahan">
+                                @csrf
+                                <div class="row">
+                                    <div class="col-12">
+                                        <label class="form-label">Status Pesanan</label>
+                                        <select class="form-select" name="status" data-placeholder="Pilih Status Pesanan"
+                                            id="status">
+                                            <option value="pengiriman gagal">Pengiriman Gagal</option>
+                                            <option value="pengembalian">Pengembalian</option>
+                                        </select>
+                                    </div>
 
-                    <form id="formKesalahan">
-                        @csrf
-                        <div class="my-3">
-                            <label class="form-label">Status Pesanan</label>
-                            <select class="form-select" name="status" data-placeholder="Pilih Status Pesanan"
-                                id="status">
-                                <option value="pengiriman gagal">Pengiriman Gagal</option>
-                                <option value="pengembalian">Pengembalian</option>
-                            </select>
-                            <input type="hidden" id="id_pesanan" name="id_pesanan">
-                        </div>
-                        <div class="my-3">
-                            <label class="form-label">Pencairan</label>
-                            <input type="text" class="form-control" id="pencairan" name="pencairan"
-                                placeholder="Masukan Pencairan">
-                        </div>
-                        <div class="my-3 d-none" id="divKesalahan">
-                            <label class="form-label">Jenis Kesalahan</label>
-                            <select class="form-select" id="idKesalahan" name="idKesalahan"
-                                data-placeholder="Pilih Jenis Kesalahan">
-                                {{-- <option></option> --}}
+                                    <div class="col-12 mt-3">
+                                        <label class="form-label">Pencairan</label>
+                                        <input type="text" class="form-control" id="pencairan" name="pencairan"
+                                            placeholder="Masukan Pencairan">
+                                    </div>
 
-                                @if ($roleKesalahan && $roleKesalahan->count())
-                                    @foreach ($roleKesalahan as $item)
-                                        <option value="{{ $item->id }}">
-                                            {{ $item->jenis_kesalahan }} - {{ $item->divisi }}
-                                        </option>
-                                    @endforeach
-                                @else
-                                    <option value=""></option>
-                                @endif
-                            </select>
-                            <input type="hidden" id="no_pesanan" name="no_pesanan">
+                                    <div class="col-12 mt-3 d-none" id="divKesalahan">
+                                        <label class="form-label">Jenis Kesalahan</label>
+                                        <select class="form-select" id="idKesalahan" name="idKesalahan"
+                                            data-placeholder="Pilih Jenis Kesalahan">
+                                            {{-- <option></option> --}}
+
+                                            @if ($roleKesalahan && $roleKesalahan->count())
+                                                @foreach ($roleKesalahan as $item)
+                                                    <option value="{{ $item->id }}">
+                                                        {{ $item->jenis_kesalahan }} - {{ $item->divisi }}
+                                                    </option>
+                                                @endforeach
+                                            @else
+                                                <option value=""></option>
+                                            @endif
+                                        </select>
+                                        <input type="hidden" id="no_pesanan" name="no_pesanan">
+                                    </div>
+
+                                    <div class="col-12 mt-3 d-none" id="divKeterangan">
+                                        <label class="form-label">Keterangan</label>
+                                        <input type="text" class="form-control" id="notes" name="notes"
+                                            placeholder="Masukkan Keterangan">
+                                    </div>
+                                </div>
+                            </form>
                         </div>
 
-                        <div class="my-3 d-none" id="divKeterangan">
-                            <label class="form-label">Keterangan</label>
-                            <input type="text" class="form-control" id="notes" name="notes"
-                                placeholder="Masukkan Keterangan">
-                        </div>
-                    </form>
+                    </div>
                 </div>
 
                 <div class="modal-footer">
@@ -337,8 +346,14 @@
             });
 
             $('#pencairan').on('input', function() {
-                let angka = $(this).val().replace(/\D/g, '');
-                let rupiah = new Intl.NumberFormat('id-ID').format(angka);
+                let value = $(this).val();
+                let isNegative = value.startsWith('-');
+                let angka = value.replace(/\D/g, '');
+                let rupiah = angka ? new Intl.NumberFormat('id-ID').format(angka) : '';
+                if (isNegative) {
+                    rupiah = '-' + rupiah;
+                }
+
                 $(this).val(rupiah);
             });
 
@@ -348,7 +363,10 @@
 
                 data.forEach(function(item) {
                     if (item.name === 'pencairan') {
-                        item.value = item.value.replace(/\D/g, '');
+                        let isNegative = item.value.startsWith('-');
+                        let angka = item.value.replace(/\D/g, '');
+
+                        item.value = (isNegative ? '-' : '') + angka;
                     }
                 });
 
@@ -360,6 +378,8 @@
                     data: data,
                     dataType: "json",
                     success: function(response) {
+                        console.log(response);
+
                         Swal.fire({
                             icon: 'success',
                             title: 'Berhasil',
