@@ -140,6 +140,11 @@ class PesananController extends Controller
             'tanggal' => $range,
         ]);
     }
+
+    public function pesananDetail($id){
+        $pesanan = Pesanan::where('no_pesanan', $id)->with('toko')->first();
+        return response()->json($pesanan);
+    }
     
     public function importPage()
     {

@@ -17,6 +17,7 @@ use App\Http\Controllers\PenjualanController;
 use App\Http\Controllers\PembeliController;
 use App\Http\Controllers\SkuController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\kesalahanController;
 use App\Http\Controllers\PackingPesananController;
 use App\Http\Controllers\PesananAffiliateController;
 use App\Http\Controllers\PesananCekController;
@@ -26,6 +27,8 @@ Route::middleware(['web', 'auth'])->group(function () {
     // ===================== ADMIN PENJUALAN ===================== //
     Route::middleware(['role:pegawai'])->group(function () {
         Route::get('/me', [UserController::class, 'me'])->name('users.me');
+
+        Route::resource('/kesalahan', kesalahanController::class);
     });
 
     // ===================== MANAGER ===================== //
@@ -63,6 +66,8 @@ Route::middleware(['web', 'auth'])->group(function () {
 
                 // ajax toko berdasarkan marketplace
                 Route::get('get-toko/{market}', 'getTokoByMarketplace')->name('pesanan.getToko');
+
+                Route::get('pesanan-detail/{id}', 'pesananDetail')->name('pesanan.detail');
             });
 
             Route::controller(PesananDetailController::class)

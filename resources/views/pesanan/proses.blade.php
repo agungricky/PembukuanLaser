@@ -421,7 +421,6 @@
                 toggleButton();
             });
 
-            // Jika klik langsung pada checkbox, jangan lanjut ke event tr
             $('#tabelselect').on('click', '.row-checkbox', function(e) {
                 e.stopPropagation();
 

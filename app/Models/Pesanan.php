@@ -82,4 +82,8 @@ class Pesanan extends Model
             'id'
         )->withTrashed();
     }
+
+    public function kesalahan(){
+        return $this->belongsTo(kesalahan::class, 'no_pesanan', 'no_pesanan');
+    }
 }

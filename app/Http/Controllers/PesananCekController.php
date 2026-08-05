@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Pesanan;
+use App\Models\RoleKesalahan;
 use App\Models\Toko;
 use Carbon\Carbon;
 
@@ -48,22 +49,16 @@ class PesananCekController extends Controller
             });
 
         if ($request->filled('tanggal')) {
-
             $raw = trim($request->tanggal);
-        
             if (str_contains($raw, ' s.d ')) {
-        
                 [$start, $end] = explode(' s.d ', $raw);
-        
                 $query->whereBetween('tanggal', [
                     Carbon::parse(trim($start))->startOfDay(),
                     Carbon::parse(trim($end))->endOfDay(),
                 ]);
         
             } else {
-        
                 $query->whereDate('tanggal', Carbon::parse($raw)->toDateString());
-        
             }
         
         }
@@ -76,13 +71,15 @@ class PesananCekController extends Controller
         $jumlahPesanan = $pesanan->total();
 
         $daftarToko = Toko::orderBy('nama_toko')->get();
+        $roleKesalahan = RoleKesalahan::all();
 
         return view('pesanan.cek', compact(
             'pesanan',
             'jumlahPesanan',
             'daftarToko',
             'perPage',
-            'allowedPerPage'
+            'allowedPerPage',
+            'roleKesalahan'
         ));
     }
 

@@ -116,6 +116,7 @@
                     <thead class="table-light">
                         <tr>
                             <th class="text-center" style="width:48px">Pilih</th>
+                            <th class="text-center" style="width:48px">Cheking</th>
                             <th class="text-center" style="min-width:110px">Tanggal</th>
                             <th class="text-center" style="min-width:160px">No. Pesanan</th>
                             <th class="text-center" style="min-width:160px">No. Resi</th>
@@ -129,11 +130,12 @@
                     </thead>
                     <tbody>
                         @foreach ($pesanan as $p)
-                            <tr>
+                            <tr class="pilih-pesanan">
                                 <td class="text-center">
                                     <input type="radio" name="selected" value="{{ $p->no_pesanan }}"
                                         class="form-check-input">
                                 </td>
+                                <td class="text-center">{{$p->status_cek ? '⚠' : ''}}</td>
                                 <td class="text-center">
                                     {{ \Carbon\Carbon::parse($p->tanggal)->format('d/m/Y') }}
                                 </td>
@@ -262,14 +264,6 @@
                 $('#notesGroup').removeClass('d-none'): $('#notesGroup').addClass('d-none');
             });
 
-            $('input[name="selected"]').change(function() {
-                $('#selectedOrderNumber').val(
-                    $(this).val()
-                );
-
-                $('#btnUbahStatus').prop('disabled', false);
-            });
-
             $('#id_toko').select2({
                 theme: 'bootstrap-5',
                 width: '100%',
@@ -291,7 +285,7 @@
                     ],
                     firstDay: 1
                 },
-                autoUpdateInput: true,
+                autoUpdateInput: false,
                 opens: 'left',
             });
 
@@ -324,7 +318,15 @@
                 form.submit();
             });
 
+            $(document).on('click', '.pilih-pesanan', function(e) {
+                if ($(e.target).is('input[type="radio"]')) return;
 
+                const radio = $(this).find('input[type="radio"]');
+
+                radio.prop('checked', true);
+                $('#selectedOrderNumber').val(radio.val());
+                $('#btnUbahStatus').prop('disabled', false);
+            });
         });
     </script>
 @endpush
