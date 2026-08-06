@@ -21,6 +21,7 @@ use App\Http\Controllers\kesalahanController;
 use App\Http\Controllers\PackingPesananController;
 use App\Http\Controllers\PesananAffiliateController;
 use App\Http\Controllers\PesananCekController;
+use App\Http\Controllers\stokProdukController;
 
 Route::middleware(['web', 'auth'])->group(function () {
 
@@ -143,3 +144,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/', [HomeController::class, 'index']);
 Route::get('/emblem', [HomeController::class, 'emblem']);
 Route::get('/punyalcknihbossenggoldong', [HomeController::class, 'gancinama']);
+
+
+
+
+Route::resource('/stok-produk', stokProdukController::class);
+Route::patch('/tambah-stok/{id}', [stokProdukController::class, 'tambahstok'])->name('tambah.stok');

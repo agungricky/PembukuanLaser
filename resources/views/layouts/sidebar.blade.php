@@ -59,18 +59,32 @@
 
             <div class="menu-section">
                 <div class="menu-header" onclick="toggleMenu(this)">
-                    <span class="menu-title"> <i class="bi bi-database-fill-gear me-2"></i> Data Master </span>
+                    <span class="menu-title"> <i class="bi bi-boxes me-2"></i> Management Stok </span>
                     <span class="arrow">
                         <i class="bi bi-chevron-down"></i>
                     </span>
                 </div>
                 <ul class="submenu 
-                {{  
-                    request()->routeIs('toko.*') ||
-                    request()->routeIs('sku.*') ||
-                    request()->routeIs('iklan.*') ? 'open' : '' 
-                }}">
-                
+                {{ request()->routeIs('stok-produk.*') ? 'open' : '' }}">
+                    <li>
+                        <a href="{{ route('stok-produk.index') }}" class="{{ Request::is('stok-produk') ? 'active' : '' }}">
+                            <i class="bi bi-shop me-2"></i> Stok Produk
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-header" onclick="toggleMenu(this)">
+                    <span class="menu-title"> <i class="bi bi-database-fill-gear me-2"></i> Data Master </span>
+                    <span class="arrow">
+                        <i class="bi bi-chevron-down"></i>
+                    </span>
+                </div>
+                <ul
+                    class="submenu 
+                {{ request()->routeIs('toko.*') || request()->routeIs('sku.*') || request()->routeIs('iklan.*') ? 'open' : '' }}">
+
                     <li>
                         <a href="{{ route('toko.index') }}" class="{{ Request::is('toko') ? 'active' : '' }}">
                             <i class="bi bi-shop me-2"></i> Data Toko
@@ -98,11 +112,12 @@
                         <i class="bi bi-chevron-down"></i>
                     </span>
                 </div>
-                <ul class="submenu {{  
-                    request()->routeIs('penjualan', 'penjualan.*') ||
+                <ul
+                    class="submenu {{ request()->routeIs('penjualan', 'penjualan.*') ||
                     request()->routeIs('pembeli', 'pembeli.*') ||
-                    request()->routeIs('produk', 'produk.*') ? 'open' : '' 
-                }}">
+                    request()->routeIs('produk', 'produk.*')
+                        ? 'open'
+                        : '' }}">
                     <li>
                         <a href="{{ route('penjualan') }}" class="{{ Request::is('penjualan') ? 'active' : '' }}">
                             <i class="bi bi-bar-chart-line me-2"></i> Penjualan

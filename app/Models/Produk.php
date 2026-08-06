@@ -18,4 +18,10 @@ class Produk extends Model
     protected $casts = [
         'hpp' => 'decimal:2',
     ];
+
+
+    public function stok_produk()
+    {
+        return $this->hasOne(stok_produk::class, 'sku_id', 'sku');
+    }
 }

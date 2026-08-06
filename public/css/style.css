@@ -176,3 +176,70 @@ body {
 .select2-results__options {
   max-height: 370px !important;
 }
+
+
+/* DataTables Styling */
+div.dt-container nav {
+  display: flex !important;
+  /* gap: 1px !important; */
+}
+
+/* Semua tombol */
+div.dt-container .dt-paging .dt-paging-button {
+  min-width: 38px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #dee2e6 !important;
+  background: #fff !important;
+  color: #495057 !important;
+  transition: .25s;
+}
+
+/* Hover */
+div.dt-container .dt-paging .dt-paging-button:hover {
+  background: #f8f9fa !important;
+  border-color: #0d6efd !important;
+}
+
+div.dt-container .dt-paging button.dt-paging-button:hover {
+  color: #0d6efd !important;
+}
+
+/* Aktif */
+div.dt-container .dt-paging .dt-paging-button.current {
+  background: #0d6efd !important;
+  color: #fff !important;
+}
+
+div.dt-container .dt-paging button.dt-paging-button.current {
+  color: #fff !important;
+}
+
+/* Disabled */
+div.dt-container .dt-paging .dt-paging-button:disabled,
+div.dt-container .dt-paging .dt-paging-button.disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* Ellipsis (Titik ..... antar page) */
+div.dt-container .dt-paging span.ellipsis {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  color: #6c757d;
+}
+
+/* Menyembunyikan Tampilan Search Data Table */
+div.dt-container .dt-search {
+  display: none;
+}
+
+/* Effek Disabled jika readonly */
+.form-control[lock] {
+    background: var(--bs-secondary-bg);
+    border-color: var(--bs-border-color);
+    color: var(--bs-secondary-color);
+    cursor: not-allowed;
+    pointer-events: none;
+}

@@ -378,8 +378,6 @@
                     data: data,
                     dataType: "json",
                     success: function(response) {
-                        console.log(response);
-
                         Swal.fire({
                             icon: 'success',
                             title: 'Berhasil',
