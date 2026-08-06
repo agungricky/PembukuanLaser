@@ -175,4 +175,8 @@ class DashboardController extends Controller
             'endDate'          => $endStr,
         ]);
     }
+
+    public function gudang(){
+        return view('gudang.Dashboard');
+    }
 }

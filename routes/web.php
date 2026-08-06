@@ -1,27 +1,27 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\TokoController;
-use App\Http\Controllers\IklanController;
-use App\Http\Controllers\ProdukController;
-use App\Http\Controllers\PesananController;
-use App\Http\Controllers\PesananProsesController;
-use App\Http\Controllers\PesananKirimController;
-use App\Http\Controllers\PesananDiterimaController;
-use App\Http\Controllers\PesananBatalController;
-use App\Http\Controllers\PesananDetailController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\PenjualanController;
-use App\Http\Controllers\PembeliController;
-use App\Http\Controllers\SkuController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\IklanController;
 use App\Http\Controllers\kesalahanController;
 use App\Http\Controllers\PackingPesananController;
+use App\Http\Controllers\PembeliController;
+use App\Http\Controllers\PenjualanController;
 use App\Http\Controllers\PesananAffiliateController;
+use App\Http\Controllers\PesananBatalController;
 use App\Http\Controllers\PesananCekController;
+use App\Http\Controllers\PesananController;
+use App\Http\Controllers\PesananDetailController;
+use App\Http\Controllers\PesananDiterimaController;
+use App\Http\Controllers\PesananKirimController;
+use App\Http\Controllers\PesananProsesController;
+use App\Http\Controllers\ProdukController;
+use App\Http\Controllers\SkuController;
 use App\Http\Controllers\stokProdukController;
+use App\Http\Controllers\TokoController;
+use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth'])->group(function () {
 
@@ -50,8 +50,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
         // Detail Pesanan
-        
-            
+
         // Pesanan
         Route::prefix('pesanan')
             ->controller(PesananController::class)
@@ -71,15 +70,15 @@ Route::middleware(['web', 'auth'])->group(function () {
                 Route::get('pesanan-detail/{id}', 'pesananDetail')->name('pesanan.detail');
             });
 
-            Route::controller(PesananDetailController::class)
+        Route::controller(PesananDetailController::class)
             ->group(function () {
-                Route::get('pesanan/{no_pesanan}','show')->name('pesanan.show');
-                Route::put('pesanan/{no_pesanan}','update')->name('pesanan.update');
+                Route::get('pesanan/{no_pesanan}', 'show')->name('pesanan.show');
+                Route::put('pesanan/{no_pesanan}', 'update')->name('pesanan.update');
             });
 
         Route::resource('pesanan', PesananController::class)
             ->except([
-                'show'
+                'show',
             ]);
 
         // Pesanan Proses
@@ -117,7 +116,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::resource('toko', TokoController::class)->only(['index', 'store', 'update', 'destroy', 'show']);
 
         // SKU
-        Route::resource('sku',  SkuController::class)->only(['index', 'store', 'update', 'destroy', 'show']);
+        Route::resource('sku', SkuController::class)->only(['index', 'store', 'update', 'destroy', 'show']);
 
         // Iklan
         Route::resource('iklan', IklanController::class)->only(['index', 'store', 'update', 'destroy', 'show']);
@@ -130,14 +129,14 @@ Route::middleware(['web', 'auth'])->group(function () {
         // Pembeli
         Route::get('/pembeli', [PembeliController::class, 'index'])->name('pembeli');
         Route::post('/pembeli/filter', [PembeliController::class, 'storeFilter'])->name('pembeli.filter');
-        Route::post('/pembeli/reset',  [PembeliController::class, 'resetFilter'])->name('pembeli.reset');
+        Route::post('/pembeli/reset', [PembeliController::class, 'resetFilter'])->name('pembeli.reset');
 
         // Produk
         Route::get('/produk', [ProdukController::class, 'index'])->name('produk');
     });
 });
 
-Route::get('/login',  [AuthController::class, 'showLogin'])->name('login');
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
@@ -145,8 +144,9 @@ Route::get('/', [HomeController::class, 'index']);
 Route::get('/emblem', [HomeController::class, 'emblem']);
 Route::get('/punyalcknihbossenggoldong', [HomeController::class, 'gancinama']);
 
-
-
-
 Route::resource('/stok-produk', stokProdukController::class);
 Route::patch('/tambah-stok/{id}', [stokProdukController::class, 'tambahstok'])->name('tambah.stok');
+
+Route::middleware(['role:gudang'])->group(function () {
+    Route::get('/gudang', [DashboardController::class, 'gudang'])->name('gudang.index');
+});

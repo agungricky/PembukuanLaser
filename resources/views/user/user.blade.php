@@ -123,6 +123,7 @@
                 <option value="pegawai">Pegawai</option>
                 <option value="manager">Manager</option>
                 <option value="packing">Packing</option>
+                <option value="gudang">Gudang</option>
               </select>
             </div>
             <div class="col-12 col-md-6">
@@ -172,6 +173,7 @@
                 <option value="pegawai">Pegawai</option>
                 <option value="manager">Manager</option>
                 <option value="packing">Packing</option>
+                <option value="gudang">Gudang</option>
               </select>
             </div>
             <div class="col-12 col-md-6">
