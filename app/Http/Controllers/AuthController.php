@@ -28,7 +28,7 @@ class AuthController extends Controller
 
             if ($user->role === 'packing') {
                 return redirect()->route('packing.pesanan');
-            }elseif($user->role === 'manager'){
+            }elseif($user->role === 'manager' || $user->role === 'pegawai'){
                 return redirect()->intended('/dashboard');
             }elseif($user->role === 'gudang'){
                 return redirect()->intended('/gudang');
