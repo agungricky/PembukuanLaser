@@ -150,7 +150,10 @@ Route::patch('/tambah-stok/{id}', [stokProdukController::class, 'tambahstok'])->
 
 Route::middleware(['role:gudang'])->group(function () {
     Route::get('/gudang', [GudangController::class, 'gudang'])->name('gudang.index');
-    Route::get('/gudang/pesanan/{filter}', [GudangController::class, 'gudanginventory'])->name('pesanan.json');
-
+    Route::get('/gudang/pesanan', [GudangController::class, 'gudanginventory'])->name('pesanan.json');
+    Route::get('/semua-pesanan', [GudangController::class, 'allindex'])->name('allpesanan.index');
+    Route::get('/semua-pesanan/{filter}', [GudangController::class, 'allpesanan'])->name('allpesanan.json');
+    Route::resource('/transaksi', GudangController::class);
+    Route::get('/show/{filter}', [GudangController::class, 'showdata'])->name('showdata.json');
 
 });

@@ -15,11 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('stok_produk_id')->constrained('stok_produks')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->unsignedBigInteger('pesanan_perproduk_id')->nullable(); 
-            $table->enum('jenis_mutasi', ['edit', 'masuk', 'keluar']);
+            $table->enum('jenis_mutasi', ['edit', 'masuk', 'keluar', 'siap']);
             $table->integer('jumlah');
             $table->text('keterangan');
-            $table->enum('status', ['siapkan','siap','diambil']);
             $table->timestamps();
         });
     }

@@ -8,6 +8,7 @@ use App\Models\Produk;
 use App\Models\stok_produk;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class GudangController extends Controller
 {
@@ -48,7 +49,7 @@ class GudangController extends Controller
         ]);
     }
 
-    public function gudanginventory($filter)
+    public function gudanginventory()
     {
         $pesanan = Pesanan::with('pesanan_per_produk.produk')
             ->where('status', 'proses')
@@ -60,10 +61,12 @@ class GudangController extends Controller
                 $sku = $item->sku;
                 $jumlah = $item->jumlah;
 
-                if (isset($kebutuhan[$sku])) {
-                    $kebutuhan[$sku] += $jumlah;
-                } else {
-                    $kebutuhan[$sku] = $jumlah;
+                if ($item->status_pesanan == 0) {
+                    if (isset($kebutuhan[$sku])) {
+                        $kebutuhan[$sku] += $jumlah;
+                    } else {
+                        $kebutuhan[$sku] = $jumlah;
+                    }
                 }
             }
         }
@@ -77,10 +80,65 @@ class GudangController extends Controller
             ];
         }
 
-        $perluDisiapkan = count($kebutuhanProduk);
-
         return response()->json($kebutuhanProduk);
 
+    }
+
+    public function allindex()
+    {
+        return view('gudang.allpesanan');
+    }
+
+    public function allpesanan($filter)
+    {
+        if ($filter === 'siapkan') {
+            $pesanan = Pesanan::with('pesanan_per_produk.produk')
+                ->where('status', 'proses')
+                ->get();
+
+            $kebutuhan = [];
+            foreach ($pesanan as $value) {
+                foreach ($value->pesanan_per_produk as $item) {
+                    $sku = $item->sku;
+                    $jumlah = $item->jumlah;
+
+                    if ($item->status_pesanan == 0) {
+                        if (isset($kebutuhan[$sku])) {
+                            $kebutuhan[$sku] += $jumlah;
+                        } else {
+                            $kebutuhan[$sku] = $jumlah;
+                        }
+                    }
+                }
+            }
+
+            $kebutuhanProduk = [];
+            foreach ($kebutuhan as $sku => $jumlah) {
+                $produk = Produk::with('stok_produk')->where('sku', $sku)->first();
+                $kebutuhanProduk[] = [
+                    'produk' => $produk,
+                    'kebutuhan' => $jumlah,
+                ];
+            }
+
+            return response()->json($kebutuhanProduk);
+
+        } elseif ($filter === 'siap') {
+            $kebutuhanProduk = mutasi_stok::with('stok_produk.produk')
+                ->where('jenis_mutasi', 'siap')
+                ->orderBy('updated_at', 'DESC')
+                ->get();
+
+            return response()->json($kebutuhanProduk);
+
+        } elseif ($filter === 'diambil') {
+            $kebutuhanProduk = mutasi_stok::with('stok_produk.produk')
+                ->where('jenis_mutasi', 'keluar')
+                ->orderBy('updated_at', 'DESC')
+                ->get();
+
+            return response()->json($kebutuhanProduk);
+        }
     }
 
     /**
@@ -96,7 +154,44 @@ class GudangController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        DB::beginTransaction();
+
+        try {
+            $pesanan = Pesanan::with('pesanan_per_produk.produk')
+                ->where('status', 'proses')
+                ->get();
+
+            $dataUpdate = [];
+            foreach ($pesanan as $value) {
+                foreach ($value->pesanan_per_produk as $item) {
+                    if ($item->status_pesanan == 0 && in_array($item->sku, $request->sku)) {
+                        // Update status
+                        $item->status_pesanan = 1;
+                        $item->save();
+
+                        // Simpan data yang berhasil diupdate
+                        $dataUpdate[] = $item;
+                    }
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Barang berhasil disiapkan',
+                'data' => $dataUpdate,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memperbarui status barang',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -104,7 +199,83 @@ class GudangController extends Controller
      */
     public function show(string $id)
     {
-        //
+        return view('gudang.transaksi', compact('id'));
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'sku' => 'required|array',
+            'sku.*' => 'required|string',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $pesanan = Pesanan::with('pesanan_per_produk.produk.stok_produk')
+                ->where('status', 'proses')
+                ->get();
+
+            $kebutuhan = [];
+            foreach ($pesanan as $value) {
+                foreach ($value->pesanan_per_produk as $item) {
+                    // Hanya SKU yang dipilih + belum diproses
+                    
+                    if ( $item->status_pesanan == 0 && in_array($item->sku, $request->sku)) {
+
+                        $sku = $item->sku;
+                        $jumlah = $item->jumlah;
+
+                        // =========================
+                        // KUMPULKAN TOTAL PER SKU
+                        // =========================
+                        if (isset($kebutuhan[$sku])) {
+                            $kebutuhan[$sku]['jumlah'] += $jumlah;
+                        } else {
+                            $kebutuhan[$sku] = [
+                                'jumlah' => $jumlah,
+                                'stok_produk_id' => $item->produk->stok_produk->id,
+                            ];
+                        }
+
+                        // =========================
+                        // UPDATE STATUS PESANAN
+                        // =========================
+                        $item->status_pesanan = 1;
+                        $item->save();
+                    }
+                }
+            }
+
+            // =========================
+            // BUAT MUTASI STOK
+            // =========================
+            foreach ($kebutuhan as $sku => $data) {
+
+                mutasi_stok::create([
+                    'stok_produk_id' => $data['stok_produk_id'],
+                    'user_id' => auth()->id(),
+                    'jenis_mutasi' => 'siap',
+                    'jumlah' => $data['jumlah'],
+                    'keterangan' => null,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Barang berhasil disiapkan',
+                'data' => $kebutuhan,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses barang',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

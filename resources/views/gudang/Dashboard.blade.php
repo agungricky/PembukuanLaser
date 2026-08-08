@@ -29,8 +29,8 @@
             <i class="fa-solid fa-circle-info fs-5 text-primary mt-0.5"></i>
             <div class="small">
                 <strong class="text-primary-emphasis">Laporan :
-                    </strong> Halo Admin ada <strong class="text-primary-emphasis" id="perludisiapkan"></strong> 
-                    yang perlu disiapkan dari pesanan yang masuk. 
+                </strong> Halo Admin ada <strong class="text-primary-emphasis" id="perludisiapkan"></strong>
+                yang perlu disiapkan dari pesanan yang masuk.
             </div>
         </div>
 
@@ -290,23 +290,26 @@
                         <span class="input-group-text bg-light border-end-0">
                             <i class="fa-solid fa-magnifying-glass text-muted"></i>
                         </span>
-                        <input type="text" id="tableSearchInput" placeholder="Cari SKU / Produk..."
+                        <input type="text" id="searchTable" placeholder="Cari SKU / Produk..."
                             class="form-control form-control-sm border-start-0 bg-light" />
                     </div>
 
-                    <!-- Status Select Filter -->
-                    <select id="statusSelectFilter" class="form-select form-select-sm" style="width: auto;">
-                        <option value="all">Semua Status</option>
-                        <option value="siapkan" selected>Perlu Disiapkan</option>
-                        <option value="siap">Siap Diambil</option>
-                        <option value="diambil">Sudah Diambil</option>
+                    <select id="per_page" class="form-select form-select-sm" style="width: auto;">
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
                     </select>
+
+                    <a href="{{ route('allpesanan.index') }}" class="btn btn-primary text-nowrap">
+                        <i class="fa-solid fa-list me-2"></i>Semua Pesanan
+                    </a>
                 </div>
             </div>
 
             <!-- Table Container -->
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 text-nowrap">
+                <table class="table table-hover align-middle mb-0 text-nowrap" id="orderlist">
                     <thead class="table-light">
                         <tr>
                             <th scope="col" class="py-3 px-4 text-end">No</th>
@@ -321,18 +324,6 @@
                     </thead>
                     <tbody id="stockTableBody"></tbody>
                 </table>
-            </div>
-
-            <!-- Table Footer Pagination Info -->
-            <div
-                class="card-footer bg-white border-top p-3 d-flex align-items-center justify-content-between text-muted small">
-                <p class="mb-0">Menampilkan <strong id="showingCount" class="text-dark">0</strong> produk
-                    terpilih</p>
-                <div class="d-flex align-items-center gap-1">
-                    <button class="btn btn-outline-secondary btn-sm" disabled>Sebelumnya</button>
-                    <span class="btn btn-primary btn-sm px-3 fw-bold disabled">1</span>
-                    <button class="btn btn-outline-secondary btn-sm">Selanjutnya</button>
-                </div>
             </div>
         </section>
 
@@ -592,241 +583,99 @@
         </div>
     </div>
 @endsection
-@push('styles')
-    <style>
-        /* StockFlow WMS - Professional Bootstrap 5 Custom Theme */
-
-        :root {
-            --bs-font-sans-serif: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            --wms-sidebar-width: 270px;
-            --wms-header-height: 64px;
-        }
-
-        body {
-            font-family: var(--bs-font-sans-serif);
-            background-color: #f1f5f9;
-            color: #0f172a;
-            min-height: 100vh;
-        }
-
-        /* Cursor pointer helper */
-        .cursor-pointer {
-            cursor: pointer;
-        }
-
-        /* Professional Sidebar Styling */
-        .sidebar-wrapper {
-            width: var(--wms-sidebar-width);
-            background-color: #0f172a;
-            /* Slate 900 */
-            color: #f8fafc;
-            flex-shrink: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            border-right: 1px solid #1e293b;
-            position: sticky;
-            top: 0;
-            height: 100vh;
-            z-index: 1020;
-        }
-
-        .sidebar-brand {
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid #1e293b;
-        }
-
-        .sidebar-nav {
-            padding: 1rem 0.75rem;
-            overflow-y: auto;
-        }
-
-        .sidebar-heading {
-            font-size: 0.6875rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #64748b;
-            padding: 0.75rem 1rem 0.375rem 1rem;
-        }
-
-        .sidebar-link {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.625rem 1rem;
-            margin-bottom: 0.25rem;
-            color: #94a3b8;
-            font-weight: 600;
-            font-size: 0.875rem;
-            border-radius: 0.5rem;
-            text-decoration: none;
-            transition: all 0.2s ease-in-out;
-        }
-
-        .sidebar-link:hover {
-            color: #ffffff;
-            background-color: #1e293b;
-        }
-
-        .sidebar-link.active {
-            color: #ffffff;
-            background-color: #2563eb;
-            /* Primary Blue */
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-        }
-
-        .sidebar-link.active i {
-            color: #ffffff !important;
-        }
-
-        .sidebar-footer {
-            padding: 1rem 1.25rem;
-            border-top: 1px solid #1e293b;
-            background-color: #090d16;
-        }
-
-        /* Offcanvas Sidebar for Mobile */
-        .offcanvas-sidebar {
-            width: 280px !important;
-            background-color: #0f172a;
-            color: #f8fafc;
-        }
-
-        .offcanvas-sidebar .btn-close {
-            filter: invert(1);
-        }
-
-        /* Card Enhancements */
-        .card {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .hover-shadow:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0.75rem 1.5rem rgba(15, 23, 42, 0.08) !important;
-        }
-
-        /* Status Card Active Indicator */
-        .status-card-active {
-            outline: 2.5px solid #2563eb !important;
-            box-shadow: 0 0.5rem 1.25rem rgba(37, 99, 235, 0.2) !important;
-        }
-
-        /* Table Customizations */
-        .table th {
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            font-size: 0.6875rem;
-            color: #64748b;
-            background-color: #f8fafc;
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 9999px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-    </style>
-@endpush
 
 @push('scripts')
     <script>
         $(document).ready(function() {
-            let filter = $('#statusSelectFilter').val();
-            loadPesanan(filter);
 
-            function loadPesanan(filter) {
-                $.ajax({
-                    type: "GET",
-                    url: "{{ route('pesanan.json', ':filter') }}".replace(':filter', filter),
-                    dataType: "JSON",
-                    success: function(response) {
-                        let html = '';
-                        let no = 1;
+            $.ajax({
+                type: "GET",
+                url: "{{ route('pesanan.json') }}",
+                dataType: "JSON",
+                success: function(response) {
 
-                        $.each(response, function(index, item) {
-                            html += `
-                                    <tr>
-                                        <td class="py-3 px-4 text-center">
-                                            ${no++}
-                                        </td>
-                                        
-                                        <td class="py-3 px-4">
-                                            ${item.produk.sku ?? '-'}
-                                        </td>
+                    let html = '';
+                    let no = 1;
+                    $.each(response, function(index, item) {
+                        html += `
+                            <tr>
+                                <td class="py-3 px-4 text-center">
+                                    ${no++}
+                                </td>
 
-                                        <td class="py-3 px-4 text-start">
-                                            ${item.produk.nama_produk ?? '-'}
-                                        </td>
+                                <td class="py-3 px-4">
+                                    ${item.produk?.sku ?? '-'}
+                                </td>
 
-                                        <td class="py-3 px-4 text-center">
-                                            ${item.produk.variasi ?? '-'}
-                                        </td>
+                                <td class="py-3 px-4 text-start">
+                                    ${item.produk?.nama_produk ?? '-'}
+                                </td>
 
-                                        <td class="py-3 px-4 text-center">
-                                            <div class="fw-bold text-success fs-6">
-                                                ${Number(item.produk.hpp ?? 0).toLocaleString('id-ID', {
-                                                    style: 'currency',
-                                                    currency: 'IDR',
-                                                    minimumFractionDigits: 0
-                                                })}
-                                            </div>
-                                            <small class="text-muted">/ Item</small>
-                                        </td>
+                                <td class="py-3 px-4 text-center">
+                                    ${item.produk?.variasi ?? '-'}
+                                </td>
 
-                                        <td class="py-3 px-4 text-center">
-                                            <span class="fw-bold text-danger">
-                                                ${item?.kebutuhan ?? 0}
-                                            </span>
-                                        </td>
+                                <td class="py-3 px-4 text-center">
+                                    <div class="fw-bold text-success fs-6">
+                                        ${Number(item.produk?.hpp ?? 0).toLocaleString('id-ID', {
+                                            style: 'currency',
+                                            currency: 'IDR',
+                                            minimumFractionDigits: 0
+                                        })}
+                                    </div>
 
-                                        <td class="py-3 px-4 text-center">
-                                            <span class="fw-bold text-primary">
-                                                ${item.produk?.stok_produk?.jumlah_tersedia ?? 0}
-                                            </span>
-                                        </td>
+                                    <small class="text-muted">/ Item</small>
+                                </td>
 
-                                        <td class="py-3 px-4 text-center">
-                                            ${
-                                                (item.produk.stok_produk.jumlah_tersedia  ?? 0) >= (item.kebutuhan ?? 0)
-                                                ? `<span class="badge bg-success">Tersedia</span>`
-                                                : `<span class="badge bg-danger">Kurang</span>`
-                                            }
-                                        </td>
-                                    </tr>
-                                `;
-                        });
+                                <td class="py-3 px-4 text-center">
+                                    <span class="fw-bold text-danger">
+                                        ${item.kebutuhan ?? 0}
+                                    </span>
+                                </td>
 
-                        $('#perludisiapkan').text(response.length + " Barang");
+                                <td class="py-3 px-4 text-center">
+                                    <span class="fw-bold text-primary">
+                                        ${item.produk?.stok_produk?.jumlah_tersedia ?? 0}
+                                    </span>
+                                </td>
 
-                        $('#stockTableBody').html(html);
-                    },
+                                <td class="py-3 px-4 text-center">
+                                    ${
+                                        (item.produk?.stok_produk?.jumlah_tersedia ?? 0) >=
+                                        (item.kebutuhan ?? 0)
 
-                    error: function(xhr) {
-                        console.log(xhr.responseText);
-                    }
-                });
-            }
+                                        ? `<span class="badge bg-success">Tersedia</span>`
+                                        : `<span class="badge bg-danger">Kurang</span>`
+                                    }
+                                </td>
+                            </tr>
+                        `;
+                    });
 
-            $('#statusSelectFilter').on('change', function() {
-                filter = $(this).val();
-                loadPesanan(filter);
+                    $('#stockTableBody').html(html);
+                    $('#perludisiapkan').text(response.length + " Barang");
+                    const table = new DataTable('#orderlist', {
+                        pageLength: 10,
+                        searching: true,
+                        lengthChange: false,
+                        autoWidth: false
+                    });
+
+                    $('#per_page').val(10);
+                    $('#per_page').on('change', function() {
+                        table.page.len(parseInt(this.value)).draw();
+                    });
+
+                    $('#searchTable').on('input', function() {
+                        table.search(this.value).draw();
+                    });
+                },
+
+                error: function(xhr) {
+                    console.log(xhr.responseText);
+                }
             });
+
         });
     </script>
 @endpush

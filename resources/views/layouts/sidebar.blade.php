@@ -165,157 +165,127 @@
             <nav class="sidebar">
 
                 <!-- Dashboard -->
-                <div class="sidebar-heading border-bottom">
-                    # DASHBOARD
+                <div>
+                    <div class="sidebar-heading border-bottom">
+                        # DASHBOARD
+                    </div>
+
+                    <a href="{{ route('gudang.index') }}"
+                        class="sidebar-link mt-1 {{ Request::is('gudang') ? 'active' : '' }}">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span>Dashboard</span>
+                        </div>
+                    </a>
                 </div>
 
-                <a href="" class="sidebar-link active mt-1">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-gauge-high"></i>
-                        <span>Dashboard</span>
-                    </div>
-                </a>
-
-                <div class="sidebar-heading mt-3 border-bottom"># TRANSAKSI</div>
-                <a class="sidebar-link justify-content-between mt-1" data-bs-toggle="collapse" href="#transaksiMenu">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                        <span>Transaksi Stok</span>
-                    </div>
-                    <i class="fa-solid fa-chevron-down small"></i>
-                </a>
-
-                <div class="collapse" id="transaksiMenu">
-                    <a href="#" class="sidebar-sublink">
-                        <i class="fa-solid fa-arrow-down"></i>
-                        Barang Masuk
-                    </a>
-
-                    <a href="#" class="sidebar-sublink">
-                        <i class="fa-solid fa-arrow-up"></i>
-                        Barang Keluar
-                    </a>
-
-                    <a href="#" class="sidebar-sublink">
-                        <i class="fa-solid fa-right-left"></i>
-                        Mutasi Stok
-                    </a>
-
-                    <a href="#" class="sidebar-sublink">
-                        <i class="fa-solid fa-clipboard-check"></i>
-                        Stock Opname
-                    </a>
-
-                </div>
-
-                <!-- Master -->
-                <div class="sidebar-heading border-bottom mt-3">
-                    # MASTER DATA
-                </div>
-
-                <a href="" class="sidebar-link mt-1">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-box"></i>
-                        <span>Produk</span>
-                    </div>
-
-                    <span class="badge rounded-pill bg-primary">
-                        128
-                    </span>
-                </a>
-
-                <a href="" class="sidebar-link">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-tags"></i>
-                        <span>Kategori</span>
-                    </div>
-                </a>
-
-                <a href="" class="sidebar-link">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-warehouse"></i>
-                        <span>Lokasi Rak</span>
-                    </div>
-                </a>
 
                 <!-- Transaksi -->
-                <div class="sidebar-heading border-bottom mt-3">
-                    TRANSAKSI STOK
+                <div>
+                    <div class="sidebar-heading mt-3 border-bottom"># TRANSAKSI</div>
+                    <a class="sidebar-link justify-content-between mt-1" data-bs-toggle="collapse"
+                        href="#transaksiMenu">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                            <span>Transaksi Stok</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-down small"></i>
+                    </a>
+
+                    <div class="collapse {{ request()->routeIs('transaksi.*') ? 'show' : '' }}" id="transaksiMenu">
+                        <a href="{{ route('transaksi.show', ['transaksi' => 'siapkan']) }}"
+                            class="sidebar-sublink {{ request()->route('transaksi') === 'siapkan' ? 'active' : '' }}">
+                            <i class="fa-solid fa-box"></i>
+                            <small>Perlu Disiapkan</small>
+                        </a>
+
+                        <a href="{{ route('transaksi.show', ['transaksi' => 'siap']) }}"
+                            class="sidebar-sublink {{ request()->route('transaksi') === 'siap' ? 'active' : '' }}">
+                            <i class="fa-solid fa-box-open"></i>
+                            <small>Siap Diambil</small>
+                        </a>
+
+                        <a href="{{ route('transaksi.show', ['transaksi' => 'diambil']) }}"
+                            class="sidebar-sublink {{ request()->route('transaksi') === 'diambil' ? 'active' : '' }}">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <small>Sudah Diambil</small>
+                        </a>
+
+                    </div>
                 </div>
 
-                <a href="#" class="sidebar-link mt-1">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-arrow-down"></i>
-                        <span>Barang Masuk</span>
-                    </div>
-                </a>
 
-                <a href="#" class="sidebar-link">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-arrow-up"></i>
-                        <span>Barang Keluar</span>
-                    </div>
-                </a>
-
-                <a href="#" class="sidebar-link">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                        <span>Mutasi Stok</span>
-                    </div>
-                </a>
-
-                <a href="#" class="sidebar-link">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-clipboard-check"></i>
-                        <span>Stock Opname</span>
+                <!-- Master -->
+                <div>
+                    <div class="sidebar-heading border-bottom mt-3">
+                        # MASTER DATA
                     </div>
 
-                    <span class="badge rounded-pill bg-warning text-dark">
-                        3
-                    </span>
-                </a>
+                    <a href="" class="sidebar-link mt-1">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-box"></i>
+                            <span>Produk</span>
+                        </div>
 
-                <!-- Monitoring -->
-                <div class="sidebar-heading border-bottom mt-3">
-                    MONITORING
+                        <span class="badge rounded-pill bg-primary">
+                            128
+                        </span>
+                    </a>
+
+                    <a href="" class="sidebar-link">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-tags"></i>
+                            <span>Kategori</span>
+                        </div>
+                    </a>
                 </div>
 
-                <a href="#" class="sidebar-link mt-1">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                        <span>Stok Kritis</span>
+                <div>
+                    <!-- Monitoring -->
+                    <div class="sidebar-heading border-bottom mt-3">
+                        MONITORING
                     </div>
 
-                    <span class="badge rounded-pill bg-danger">
-                        6
-                    </span>
-                </a>
-
-                <a href="#" class="sidebar-link">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
-                        <span>Riwayat Aktivitas</span>
-                    </div>
-                </a>
+                    <a href="#" class="sidebar-link">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            <span>Riwayat Aktivitas</span>
+                        </div>
+                    </a>
+                </div>
 
                 <!-- Laporan -->
+                {{-- <div>
+
                 <div class="sidebar-heading border-bottom mt-3">
                     LAPORAN
-                </div>
-
-                <a href="#" class="sidebar-link mt-1">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-chart-column"></i>
-                        <span>Laporan Stok</span>
                     </div>
-                </a>
 
-                <a href="#" class="sidebar-link">
-                    <div class="d-flex align-items-center gap-3">
-                        <i class="fa-solid fa-file-arrow-down"></i>
-                        <span>Export Excel</span>
-                    </div>
-                </a>
+                    <a href="#" class="sidebar-link">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                            <span>Stock Opname</span>
+                        </div>
+
+                        <span class="badge rounded-pill bg-warning text-dark">
+                            3
+                        </span>
+                    </a>
+
+                    <a href="#" class="sidebar-link mt-1">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-chart-column"></i>
+                            <span>Laporan Stok</span>
+                        </div>
+                    </a>
+
+                    <a href="#" class="sidebar-link">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-file-arrow-down"></i>
+                            <span>Export Excel</span>
+                        </div>
+                    </a>
+                </div> --}}
 
             </nav>
         </aside>
