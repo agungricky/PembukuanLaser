@@ -24,4 +24,8 @@ class Produk extends Model
     {
         return $this->hasOne(stok_produk::class, 'sku_id', 'sku');
     }
+
+    public function pesanan_per_produk(){
+        return $this->hasMany(PesananPerProduk::class, 'sku', 'sku');
+    }
 }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GudangController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IklanController;
 use App\Http\Controllers\kesalahanController;
@@ -148,5 +149,8 @@ Route::resource('/stok-produk', stokProdukController::class);
 Route::patch('/tambah-stok/{id}', [stokProdukController::class, 'tambahstok'])->name('tambah.stok');
 
 Route::middleware(['role:gudang'])->group(function () {
-    Route::get('/gudang', [DashboardController::class, 'gudang'])->name('gudang.index');
+    Route::get('/gudang', [GudangController::class, 'gudang'])->name('gudang.index');
+    Route::get('/gudang/pesanan/{filter}', [GudangController::class, 'gudanginventory'])->name('pesanan.json');
+
+
 });

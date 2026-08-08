@@ -18,4 +18,9 @@ class stok_produk extends Model
     {
         return $this->belongsTo(Produk::class, 'sku_id', 'sku');
     }
+
+     public function mutasi_stok()
+    {
+        return $this->hasMany(mutasi_stok::class);
+    }
 }

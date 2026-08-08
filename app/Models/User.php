@@ -48,4 +48,8 @@ class User extends Authenticatable
             'id'
         );
     }
+
+    public function mutasi_stok(){
+        return $this->belongsTo(mutasi_stok::class);
+    }
 }

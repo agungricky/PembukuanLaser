@@ -2,7 +2,7 @@
     @if (auth()->check() && auth()->user()->role === 'packing')
     @endif
 
-    @if ((auth()->check() && auth()->user()->role === 'pegawai') || auth()->user()->role === 'pegawai')
+    @if ((auth()->check() && auth()->user()->role === 'pegawai') || auth()->user()->role === 'manager')
         <div class="sidebar">
 
             <div class="menu-section">
