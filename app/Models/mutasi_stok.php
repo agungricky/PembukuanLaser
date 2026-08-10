@@ -11,7 +11,8 @@ class mutasi_stok extends Model
         'user_id',
         'pesanan_perproduk_id',
         'jenis_mutasi',
-        'keterangan'
+        'keterangan',
+        'jumlah'
     ];
 
     public function stok_produk(){

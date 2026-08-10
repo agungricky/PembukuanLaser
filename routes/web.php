@@ -155,5 +155,8 @@ Route::middleware(['role:gudang'])->group(function () {
     Route::get('/semua-pesanan/{filter}', [GudangController::class, 'allpesanan'])->name('allpesanan.json');
     Route::resource('/transaksi', GudangController::class);
     Route::get('/show/{filter}', [GudangController::class, 'showdata'])->name('showdata.json');
-
+    Route::post('/transaksi/update-status', [GudangController::class, 'updateStatus'])->name('transaksi.updatestatus');
+    Route::get('/semua-produk', [GudangController::class, 'produk'])->name('gudang.produk');
+    Route::get('/semua-produk/{sku}', [GudangController::class, 'produkShow'])->name('gudang.produk.json');
+    Route::patch('/update-stok', [GudangController::class, 'updatestok'])->name('update.stok');
 });

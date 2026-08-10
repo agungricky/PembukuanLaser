@@ -42,10 +42,18 @@
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
-                    <button type="button" class="btn btn-success btn-sm text-nowrap" id="btnDisiapkan">
-                        <i class="fa-solid fa-circle-check me-1"></i>
-                        Tandai Sudah Disiapkan
-                    </button>
+
+                    @if ($id === 'siapkan')
+                        <button type="button" class="btn btn-success btn-sm text-nowrap" id="btnDisiapkan">
+                            <i class="fa-solid fa-circle-check me-1"></i>
+                            Tandai Sudah Disiapkan
+                        </button>
+                    @elseif ($id === 'siap')
+                        <button type="button" class="btn btn-primary btn-sm text-nowrap" id="btnSiap">
+                            <i class="fa-solid fa-circle-check me-1"></i>
+                            Tandai Sudah Diambil
+                        </button>
+                    @endif
                 </div>
             </div>
 
@@ -63,7 +71,11 @@
                             <th scope="col" class="py-3 px-4 text-center">Variasi</th>
                             <th scope="col" class="py-3 px-4 text-center">Hpp</th>
                             <th scope="col" class="py-3 px-4 text-center">Kebutuhan</th>
-                            <th scope="col" class="py-3 px-4 text-center">Tersedia</th>
+                            <th scope="col" class="py-3 px-4 text-center {{ $id === 'diambil' ? 'd-none' : '' }}">
+                                Tersedia</th>
+                            <th scope="col" class="py-3 px-4 text-center {{ $id != 'diambil' ? 'd-none' : '' }}">
+                                Tanggal Disiapkan
+                            </th>
                             <th scope="col" class="py-3 px-4 text-center" id="filteron">Status Stok</th>
                         </tr>
                     </thead>
@@ -93,7 +105,6 @@
 
                     if (filter === "siapkan") {
                         $.each(response, function(index, item) {
-
                             html += `
                                     <tr>
                                        <td class="py-3 px-4 text-center">
@@ -141,16 +152,16 @@
                                             ${
                                                 (item.produk?.stok_produk?.jumlah_tersedia ?? 0) >= (item.kebutuhan ?? 0)
                                                 ? `
-                                                                                        <span class="badge bg-success">Tersedia</span>
-                                                                                    `
+                                                                                                                    <span class="badge bg-success">Tersedia</span>
+                                                                                                                `
                                                 : `
-                                                                                        <span class="badge bg-danger">Kurang</span>
-                                                                                        <input type="hidden" class="status-stok" value="kurang">
-                                                                                    `
+                                                                                                                    <span class="badge bg-danger">Kurang</span>
+                                                                                                                    <input type="hidden" class="status-stok" value="kurang">
+                                                                                                                `
                                             }
                                         </td>
                                     </tr>
-                                `;
+                            `;
                         });
 
                         $('#headertitle').text("Produk Perlu Disiapkan");
@@ -169,7 +180,9 @@
                             html += `
                             <tr>
                                 <td class="py-3 px-4 text-center">
-                                    ${no++}
+                                    <input type="checkbox"
+                                        class="form-check-input item-checkbox"
+                                        value="${item.id}">
                                 </td>
 
                                 <td class="py-3 px-4">
@@ -202,11 +215,19 @@
                                     </span>
                                 </td>
 
-                                <td class="py-3 px-4 text-center">
+                                <td class="py-3 px-4 text-center ${filter === 'diambil' ? 'd-none' : ''}">
                                     <span class="fw-bold text-primary">
                                         ${item.stok_produk?.jumlah_tersedia ?? 0}
                                     </span>
                                 </td>
+
+                                ${filter === 'diambil' ? `
+                                        <td class="py-3 px-4 text-center">
+                                            <span class="fw-bold text-primary">
+                                                ${item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID') : '-'}
+                                            </span>
+                                        </td>
+                                    ` : ''}
 
                                 <td class="py-3 px-4 text-center">
                                     <span class="fw-bold text-success">
@@ -233,8 +254,30 @@
 
                         if (filter === "siap") {
                             $('#filteron').text("Tanggal Disiapkan");
+                            $('#headertitle').text("Produk Siap Diambil");
+                            $('#headersub').html(`
+                                <span class="text-muted">
+                                    <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                                    Transaksi
+                                </span>
+                                <span class="mx-2 text-secondary">/</span>
+                                <span class="fw-semibold text-primary">
+                                    Siap Diambil
+                                </span>
+                            `);
                         } else {
                             $('#filteron').text("Tanggal Diambil");
+                            $('#headertitle').text("Produk Sudah Diambil");
+                            $('#headersub').html(`
+                                <span class="text-muted">
+                                    <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                                    Transaksi
+                                </span>
+                                <span class="mx-2 text-secondary">/</span>
+                                <span class="fw-semibold text-primary">
+                                    Sudah Diambil
+                                </span>
+                            `);
                         }
                     }
 
@@ -297,9 +340,7 @@
                 });
             });
 
-
             $('#stockTableBody').on('click', 'tr', function(e) {
-
                 const status = $(this).find('.status-stok').val();
                 const checkbox = $(this).find('.item-checkbox');
 
@@ -325,6 +366,7 @@
                 );
             });
 
+            // Fitur Halaman Disiapkan
             $('#btnDisiapkan').on('click', function() {
                 const selected = $('.item-checkbox:checked');
                 if (selected.length === 0) {
@@ -343,6 +385,8 @@
                         .text()
                         .trim();
                 }).get();
+
+                console.log(selectedSku);
 
                 Swal.fire({
                     title: 'Konfirmasi',
@@ -384,7 +428,78 @@
                             },
 
                             error: function(xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Gagal',
+                                    text: xhr.responseJSON?.message ??
+                                        'Terjadi kesalahan saat memproses data.'
+                                });
 
+                            }
+                        });
+                    }
+
+                });
+
+            });
+
+            // Fitur Halaman Siap
+            $('#btnSiap').on('click', function() {
+                const selected = $('.item-checkbox:checked');
+                if (selected.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Belum Ada Barang',
+                        text: 'Silakan pilih barang terlebih dahulu.'
+                    });
+                    return;
+                }
+
+                const selectedSku = selected.map(function() {
+                    return $(this).val();
+                }).get();
+
+                Swal.fire({
+                    title: 'Konfirmasi',
+                    text: `Tandai ${selected.length} barang sudah di ambil?`,
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, Proses',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            type: "POST",
+                            url: "{{ route('transaksi.updatestatus') }}",
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                sku: selectedSku
+                            },
+                            dataType: "JSON",
+                            success: function(response) {
+                                console.log(response);
+                                if (response.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Berhasil',
+                                        text: response.message,
+                                        timer: 1800,
+                                        showConfirmButton: false
+                                    }).then(() => {
+                                        location.reload();
+                                    });
+
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Gagal',
+                                        text: response.message ??
+                                            'Terjadi kesalahan.'
+                                    });
+                                }
+                            },
+
+                            error: function(xhr) {
                                 Swal.fire({
                                     icon: 'error',
                                     title: 'Gagal',

@@ -221,14 +221,14 @@
                         # MASTER DATA
                     </div>
 
-                    <a href="" class="sidebar-link mt-1">
-                        <div class="d-flex align-items-center gap-3">
+                    <a href="{{ route('gudang.produk') }}" class="sidebar-link mt-1">
+                        <div class="d-flex align-items-center gap-3 {{ Request::is('semua-produk') ? 'active' : '' }}">
                             <i class="fa-solid fa-box"></i>
                             <span>Produk</span>
                         </div>
 
                         <span class="badge rounded-pill bg-primary">
-                            128
+                            {{ $countProduk }}
                         </span>
                     </a>
 

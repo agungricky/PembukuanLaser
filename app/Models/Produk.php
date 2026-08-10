@@ -28,4 +28,8 @@ class Produk extends Model
     public function pesanan_per_produk(){
         return $this->hasMany(PesananPerProduk::class, 'sku', 'sku');
     }
+
+    public function kategori(){
+        return $this->belongsTo(kategori::class);
+    }
 }

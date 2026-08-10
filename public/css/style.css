@@ -248,18 +248,18 @@ div.dt-container .dt-search {
 
 
 #orderlist_wrapper {
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 #orderlist_wrapper .dt-layout-row:not(:last-child) {
-    margin: 0 !important;
-    padding: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 #orderlist_wrapper .dt-layout-row:not(:last-child) .dt-layout-cell {
-    padding: 0 !important;
+  padding: 0 !important;
 }
 
 /* ====================== SideBar Baru ============================== */
@@ -419,4 +419,10 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Efek Coret pada tabel */
+.row-nonactive td {
+  text-decoration: line-through;
+  opacity: 0.5;
 }

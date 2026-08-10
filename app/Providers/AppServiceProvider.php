@@ -2,10 +2,11 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\Models\Produk;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,7 +26,12 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrapFive();
         View::composer('*', function ($view) {
             $dataLogin = Auth::user();
-            $view->with('dataLogin', $dataLogin);
+            $countProduk = Produk::count();
+
+            $view->with([
+                'dataLogin' => $dataLogin,
+                'countProduk' => $countProduk,
+            ]);
         });
     }
 }
