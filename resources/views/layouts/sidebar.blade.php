@@ -232,11 +232,15 @@
                         </span>
                     </a>
 
-                    <a href="" class="sidebar-link">
+                    <a href="{{ route('gudang.kategori') }}" class="sidebar-link">
                         <div class="d-flex align-items-center gap-3">
                             <i class="fa-solid fa-tags"></i>
                             <span>Kategori</span>
                         </div>
+
+                        <span class="badge rounded-pill bg-success">
+                            {{ $countKategori }}
+                        </span>
                     </a>
                 </div>
 

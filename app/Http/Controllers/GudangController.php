@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\kategori;
 use App\Models\mutasi_stok;
 use App\Models\Pesanan;
 use App\Models\Produk;
@@ -34,6 +35,31 @@ class GudangController extends Controller
         $stokKritis = stok_produk::where('jumlah_tersedia', '<', 5)->count();
         $stokHabis = stok_produk::where('jumlah_tersedia', '<=', 0)->count();
 
+        $terlaris = mutasi_stok::with('stok_produk.produk')
+            ->where('jenis_mutasi', 'keluar')
+            ->get()
+            ->groupBy('stok_produk_id')
+            ->map(function ($items) {
+                $mutasi = $items->first();
+                $stok = $mutasi->stok_produk;
+                $produk = $stok?->produk;
+
+                if (! $produk) {
+                    return null;
+                }
+
+                return (object) [
+                    'sku' => $produk->sku,
+                    'nama_produk' => $produk->nama_produk,
+                    'variasi' => $produk->variasi,
+                    'jumlah' => $items->sum('jumlah'),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('jumlah')
+            ->values()
+            ->take(10);
+
         return view('gudang.Dashboard', [
             'Card' => [
                 'allStok_aman' => $allStok_aman,
@@ -45,6 +71,10 @@ class GudangController extends Controller
                 'stokMenipis' => $stokMenipis,
                 'stokKritis' => $stokKritis,
                 'stokHabis' => $stokHabis,
+            ],
+
+            'Produk' => [
+                'terlaris' => $terlaris,
             ],
         ]);
     }
@@ -333,32 +363,80 @@ class GudangController extends Controller
     public function updatestok(Request $request)
     {
         $request->validate([
-            'sku' => 'required',
-            'jumlah' => 'required|integer|min:1',
+            'sku_id' => 'required',
+            'btn' => 'required|in:add,edit',
         ]);
 
         DB::beginTransaction();
         try {
-            $stok = stok_produk::where('sku_id', $request->sku)->first();
-            if ($stok) {
-                // Kalau SKU sudah ada, tambahkan stok
-                $stok->jumlah_tersedia += $request->jumlah;
-                $stok->save();
+            $stok = stok_produk::where('sku_id', $request->sku_id)->first();
 
-            } else {
-                // Kalau SKU belum ada, buat stok baru
-                stok_produk::create([
-                    'sku_id' => $request->sku,
-                    'jumlah_tersedia' => $request->jumlah,
-                    'min_stok' => 5,
+            if ($stok && $request->btn == 'add') {
+                stok_produk::where('sku_id', $request->sku_id)->update([
+                    'jumlah_tersedia' => $stok->jumlah_tersedia + $request->jumlah_add,
                 ]);
+
+                mutasi_stok::create([
+                    'stok_produk_id' => $stok->id,
+                    'user_id' => auth()->id(),
+                    'jenis_mutasi' => 'masuk',
+                    'jumlah' => $request->jumlah_add,
+                    'keterangan' => null,
+                ]);
+            } elseif ($stok && $request->btn == 'edit') {
+                stok_produk::where('sku_id', $request->sku_id)->update([
+                    'jumlah_tersedia' => $request->jumlah_edit,
+                ]);
+
+                mutasi_stok::create([
+                    'stok_produk_id' => $stok->id,
+                    'user_id' => auth()->id(),
+                    'jenis_mutasi' => 'edit',
+                    'jumlah' => $request->jumlah_edit,
+                    'keterangan' => $request->keterangan
+                    .' (stok awal '
+                    .$stok->jumlah_tersedia
+                    .', stok akhir '
+                    .$request->jumlah_edit
+                    .')',
+                ]);
+            } else {
+                if ($request->btn == 'add') {
+                    $stokProduk = stok_produk::create([
+                        'sku_id' => $request->sku_id,
+                        'jumlah_tersedia' => $request->jumlah_add,
+                        'min_stok' => 5,
+                    ]);
+
+                    mutasi_stok::create([
+                        'stok_produk_id' => $stokProduk->id,
+                        'user_id' => auth()->id(),
+                        'jenis_mutasi' => 'masuk',
+                        'jumlah' => $request->jumlah_add,
+                        'keterangan' => null,
+                    ]);
+                } elseif ($request->btn == 'edit') {
+                    $stokProduk = stok_produk::create([
+                        'sku_id' => $request->sku_id,
+                        'jumlah_tersedia' => $request->jumlah_edit,
+                        'min_stok' => 5,
+                    ]);
+
+                    mutasi_stok::create([
+                        'stok_produk_id' => $stokProduk->id,
+                        'user_id' => auth()->id(),
+                        'jenis_mutasi' => 'masuk',
+                        'jumlah' => $request->jumlah_edit,
+                        'keterangan' => null,
+                    ]);
+                }
             }
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Stok berhasil ditambahkan.',
+                'message' => 'Stok berhasil di Update.',
             ]);
 
         } catch (\Exception $e) {
@@ -375,24 +453,26 @@ class GudangController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function kategori()
     {
-        //
+        $kategori = kategori::with('produk')->get();
+        foreach ($kategori as $item) {
+            $item->jumlah_produk = $item->produk->count();
+            $item->produk_aktif = $item->produk->where('status', 'aktif')->count();
+            $item->produk_nonaktif = $item->produk->where('status', 'nonaktif')->count();
+        }
+
+        return view('gudang.kategori', compact('kategori'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    // public function update(Request $request, string $id)
-    // {
-    //     // $data = mutasi_stok::where()
-    // }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function kategorishow(string $id)
     {
-        //
+        $kategori = kategori::where('id', $id)->first();
+        $data = Produk::where('kategori_id', $id)->get();
+
+        return response()->json([
+            'data' => $data,
+            'kategori' => $kategori,
+        ]);
     }
 }

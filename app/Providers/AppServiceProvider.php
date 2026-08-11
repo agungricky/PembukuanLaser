@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\kategori;
 use App\Models\Produk;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
@@ -27,10 +28,12 @@ class AppServiceProvider extends ServiceProvider
         View::composer('*', function ($view) {
             $dataLogin = Auth::user();
             $countProduk = Produk::count();
+            $countKategori = kategori::count();
 
             $view->with([
                 'dataLogin' => $dataLogin,
                 'countProduk' => $countProduk,
+                'countKategori' => $countKategori
             ]);
         });
     }

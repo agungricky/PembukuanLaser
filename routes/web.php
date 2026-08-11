@@ -135,6 +135,21 @@ Route::middleware(['web', 'auth'])->group(function () {
         // Produk
         Route::get('/produk', [ProdukController::class, 'index'])->name('produk');
     });
+
+    Route::middleware(['role:gudang'])->group(function () {
+        Route::get('/gudang', [GudangController::class, 'gudang'])->name('gudang.index');
+        Route::get('/gudang/pesanan', [GudangController::class, 'gudanginventory'])->name('pesanan.json');
+        Route::get('/semua-pesanan', [GudangController::class, 'allindex'])->name('allpesanan.index');
+        Route::get('/semua-pesanan/{filter}', [GudangController::class, 'allpesanan'])->name('allpesanan.json');
+        Route::resource('/transaksi', GudangController::class);
+        Route::get('/show/{filter}', [GudangController::class, 'showdata'])->name('showdata.json');
+        Route::post('/transaksi/update-status', [GudangController::class, 'updateStatus'])->name('transaksi.updatestatus');
+        Route::get('/semua-produk', [GudangController::class, 'produk'])->name('gudang.produk');
+        Route::get('/semua-produk/{sku}', [GudangController::class, 'produkShow'])->name('produkshow.json');
+        Route::patch('/update-stok/{sku}', [GudangController::class, 'updatestok'])->name('updatestok.json');
+        Route::get('/kategori-produk', [GudangController::class, 'kategori'])->name('gudang.kategori');
+        Route::get('/kategori-produk/{id}', [GudangController::class, 'kategorishow'])->name('gudang.kategori.json');
+    });
 });
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -147,16 +162,3 @@ Route::get('/punyalcknihbossenggoldong', [HomeController::class, 'gancinama']);
 
 Route::resource('/stok-produk', stokProdukController::class);
 Route::patch('/tambah-stok/{id}', [stokProdukController::class, 'tambahstok'])->name('tambah.stok');
-
-Route::middleware(['role:gudang'])->group(function () {
-    Route::get('/gudang', [GudangController::class, 'gudang'])->name('gudang.index');
-    Route::get('/gudang/pesanan', [GudangController::class, 'gudanginventory'])->name('pesanan.json');
-    Route::get('/semua-pesanan', [GudangController::class, 'allindex'])->name('allpesanan.index');
-    Route::get('/semua-pesanan/{filter}', [GudangController::class, 'allpesanan'])->name('allpesanan.json');
-    Route::resource('/transaksi', GudangController::class);
-    Route::get('/show/{filter}', [GudangController::class, 'showdata'])->name('showdata.json');
-    Route::post('/transaksi/update-status', [GudangController::class, 'updateStatus'])->name('transaksi.updatestatus');
-    Route::get('/semua-produk', [GudangController::class, 'produk'])->name('gudang.produk');
-    Route::get('/semua-produk/{sku}', [GudangController::class, 'produkShow'])->name('gudang.produk.json');
-    Route::patch('/update-stok', [GudangController::class, 'updatestok'])->name('update.stok');
-});

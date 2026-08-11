@@ -113,15 +113,17 @@
                                 </td>
 
                                 <td class="py-3 px-4 text-center">
-                                    <button type="button" class="btn btn-success btn-sm addstok"
-                                        data-sku="{{ $item->sku }}" {{ $item->status === 'aktif' ? '' : 'disabled' }}>
+                                    <button type="button"
+                                        class="btn btn-success btn-sm btnupdate 
+                                        {{ $item->status === 'aktif' ? '' : 'disabled' }}"
+                                        data-sku="{{ $item->sku }}" data-btn="add">
                                         <i class="fa-solid fa-plus"></i>
                                     </button>
 
                                     <button type="button"
-                                        class="btn btn-warning btn-sm editstok 
+                                        class="btn btn-warning btn-sm btnupdate 
                                         {{ $item->status == 'aktif' ? '' : 'disabled' }}"
-                                        data-sku="{{ $item->sku }}">
+                                        data-sku="{{ $item->sku }}" data-btn="edit">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
                                 </td>
@@ -137,64 +139,56 @@
     </div>
 
     <!-- Footer -->
-    <footer class="bg-white border-top py-3 text-center text-muted small">
-        <div class="container-fluid px-4 d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2">
-            <p class="mb-0">© 2026 StockFlow WMS. Pure Bootstrap 5.3 Framework & Modern JavaScript.</p>
-            <button id="footerBtnCodeModal" class="btn btn-link text-primary p-0 text-decoration-none fw-semibold small">
-                Lihat Kode Pure HTML & CSS / Bootstrap 5
-            </button>
-        </div>
-    </footer>
+    @include('layouts.footer')
 
     <!-- Modal: Tambah Stok (Bootstrap 5 Modal) -->
-    <div class="modal fade" id="addStockModal" tabindex="-1" aria-labelledby="addStockModalLabel" aria-hidden="true">
+    <div class="modal fade" id="StockModal" tabindex="-1" aria-labelledby="StockModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
                 <div class="modal-header bg-light">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="bg-primary text-white rounded-3 p-2 d-flex align-items-center justify-content-center"
-                            style="width: 32px; height: 32px;">
-                            <i class="fa-solid fa-plus"></i>
-                        </div>
-                        <div>
-                            <h5 class="modal-title fw-bold text-dark fs-6" id="addStockModalLabel">Tambah Stok Produk Baru
-                            </h5>
-                            <p class="text-muted mb-0" style="font-size: 11px;">Tambahkan Stok Masuk</p>
-                        </div>
-                    </div>
+                    <div id="modalheader"></div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <form id="addStockForm">
+                <form id="StockForm">
                     @csrf
                     <div class="modal-body p-4">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small text-dark mb-1">SKU Produk *</label>
-                                <input type="text" id="addSku" name="sku" required
+                                <input type="text" id="sku_id" name="sku_id" required
                                     placeholder="Contoh: KRM-SM-009" class="form-control form-control-sm" lock />
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small text-dark mb-1">Kategori *</label>
-                                <input type="text" id="addCategory" required name="kategori"
-                                    placeholder="Pakaian, Elektronik..." class="form-control form-control-sm" lock />
+                                <input type="text" id="kategori" placeholder="" class="form-control form-control-sm"
+                                    lock />
                             </div>
                         </div>
 
                         <div class="row g-3 mt-1">
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small text-dark mb-1">Nama Produk *</label>
-                                <input type="text" id="nama_produk" required name="nama_produk"
-                                    placeholder="masukan Produk" class="form-control form-control-sm" lock />
+                                <input type="text" id="nama_produk" placeholder="masukan Produk"
+                                    class="form-control form-control-sm" lock />
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6 d-none" id="jumlahadd">
                                 <label class="form-label fw-bold small text-dark mb-1">Jumlah ditambahkan *</label>
-                                <input type="number" id="addjumlah" name="jumlah" required value="1"
+                                <input type="number" id="jumlah_add" name="jumlah_add" required value="1"
                                     min="1" class="form-control form-control-sm" />
+                            </div>
+                            <div class="col-md-6 d-none" id="jumlahedit">
+                                <label class="form-label fw-bold small text-dark mb-1">Jumlah Tersedia *</label>
+                                <input type="number" id="jumlah_edit" name="jumlah_edit" required min="0"
+                                    class="form-control form-control-sm" />
                             </div>
                         </div>
 
-                        <input type="hidden" id="checking" name="checking">
+                        <div class="mt-3 d-none" id="fieldketerangan">
+                            <label class="form-label fw-bold small text-dark mb-1">Keterangan *</label>
+                            <input type="text" id="keterangan" name="keterangan" placeholder="Nama lengkap produk..."
+                                class="form-control form-control-sm" required />
+                        </div>
                     </div>
 
                     <div class="modal-footer bg-light border-top p-3">
@@ -211,79 +205,6 @@
             </div>
         </div>
     </div>
-
-    {{-- <!-- Modal: Edit Stok (Bootstrap 5 Modal) -->
-    <div class="modal fade" id="editStockModal" tabindex="-1" aria-labelledby="editStockModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
-                <div class="modal-header bg-light">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="bg-warning text-white rounded-3 p-2 d-flex align-items-center justify-content-center"
-                            style="width: 32px; height: 32px;">
-                            <i class="fa-solid fa-pen-to-square text-white"></i>
-                        </div>
-                        <div>
-                            <h5 class="modal-title fw-bold text-dark fs-6" id="addStockModalLabel">Edit Stok Produk
-                            </h5>
-                            <p class="text-muted mb-0" style="font-size: 11px;">Mohon berikan keterangan yang valid alasan
-                                edit data</p>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-
-                <form id="editStockForm">
-                    <div class="modal-body p-4">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold small text-dark mb-1">SKU Produk *</label>
-                                <input type="text" id="sku" nama="sku" required
-                                    placeholder="Contoh: KRM-SM-009" class="form-control form-control-sm" lock />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold small text-dark mb-1">Kategori *</label>
-                                <input type="text" id="kategori" name="kategori" required
-                                    placeholder="Pakaian, Elektronik..." class="form-control form-control-sm" lock />
-                            </div>
-                        </div>
-
-                        <div class="row g-3 mt-1">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold small text-dark mb-1">Nama Produk *</label>
-                                <input type="text" id="nama_produkk" name="nama_produk" required
-                                    placeholder="masukan Produk" class="form-control form-control-sm" lock />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold small text-dark mb-1">Stok Saat ini *</label>
-                                <input type="number" id="addjumlah" name="jumlah" required min="0"
-                                    class="form-control form-control-sm" />
-                            </div>
-                        </div>
-
-                        <div class="mt-3">
-                            <label class="form-label fw-bold small text-dark mb-1">Keterangan *</label>
-                            <input type="text" id="keterangan" name="keterangan" required
-                                placeholder="Nama lengkap produk..." class="form-control form-control-sm" />
-                        </div>
-                        <input type="hidden" id="checking" name="checking">
-
-                    </div>
-
-                    <div class="modal-footer bg-light border-top p-3">
-                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-3 fw-semibold"
-                            data-bs-dismiss="modal">
-                            Batal
-                        </button>
-                        <button type="submit" class="btn btn-primary btn-sm rounded-3 fw-semibold px-4">
-                            <i class="fa-solid fa-floppy-disk me-1"></i>
-                            Simpan Produk
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div> --}}
 @endsection
 
 @push('scripts')
@@ -306,60 +227,98 @@
                 table.search(this.value).draw();
             });
 
-            $('.addstok').on('click', function() {
-                const modal = new bootstrap.Modal(document.getElementById('addStockModal'));
-                modal.show();
+            $(document).on('input', '#jumlah_add, #jumlah_edit', function() {
+                this.value = this.value.replace(/\D/g, '');
             });
 
-            $('.editstok').on('click', function() {
-                const modal = new bootstrap.Modal(document.getElementById('editStockModal'));
-                modal.show();
-            });
+            function add() {
+                $('#modalheader').html(
+                    `<div class="d-flex align-items-center gap-2">
+                        <div class="bg-primary text-white rounded-3 p-2 d-flex align-items-center justify-content-center"
+                            style="width: 32px; height: 32px;">
+                            <i class="fa-solid fa-plus"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark fs-6" id="StockModalLabel">Tambah Stok Produk Baru
+                            </h5>
+                            <p class="text-muted mb-0" style="font-size: 11px;">Tambahkan Stok Masuk</p>
+                        </div>
+                    </div>
+                    `
+                );
 
-            // addstok
-            $(document).on('click', '.addstok', function() {
+                $('#jumlahedit').addClass("d-none");
+                $('#jumlah_edit')
+                    .prop('disabled', true)
+                    .prop('required', false);
+
+                $('#jumlahadd').removeClass("d-none");
+                $('#jumlah_add')
+                    .prop('disabled', false)
+                    .prop('required', true);
+
+                $('#fieldketerangan').addClass("d-none");
+                $('#keterangan')
+                    .prop('disabled', true)
+                    .prop('required', false);
+            }
+
+            function edit() {
+                $('#modalheader').html(`
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-warning text-white rounded-3 p-2 d-flex align-items-center justify-content-center"
+                            style="width: 32px; height: 32px;">
+                            <i class="fa-solid fa-pen-to-square text-white"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark fs-6" id="addStockModalLabel">Edit Stok Produk
+                            </h5>
+                            <p class="text-muted mb-0" style="font-size: 11px;">Mohon berikan keterangan yang valid alasan
+                                edit data</p>
+                        </div>
+                    </div>
+                `);
+
+                $('#fieldketerangan').removeClass("d-none");
+                $('#keterangan')
+                    .prop('disabled', false)
+                    .prop('required', true);
+                
+                $('#jumlahadd').addClass("d-none");
+                 $('#jumlah_add')
+                    .prop('disabled', true)
+                    .prop('required', false);
+
+                $('#jumlahedit').removeClass("d-none");
+                $('#jumlah_edit')
+                    .prop('disabled', false)
+                    .prop('required', true);
+            }
+
+            // Modal
+            let btn = null;
+            $(document).on('click', '.btnupdate', function() {
                 const sku = $(this).data('sku');
-                $('#addStockForm')[0].reset();
+                btn = $(this).data('btn');
+                $('#StockForm')[0].reset();
 
                 $.ajax({
                     type: "GET",
-                    url: "{{ route('gudang.produk.json', ':sku') }}".replace(':sku', sku),
+                    url: "{{ route('produkshow.json', ':sku') }}".replace(':sku', sku),
                     dataType: "JSON",
                     success: function(response) {
-                        $('#addSku').val(response.sku);
-                        $('#addCategory').val(
-                            response?.kategori?.nama_kategori ?? '-'
-                        );
-                        $('#nama_produk').val(response.nama_produk);
-                        $('#checking').val("add");
-
-                        const modal = bootstrap.Modal.getOrCreateInstance(
-                            document.getElementById('addStockModal')
-                        );
-
-                        modal.show();
-                    }
-                });
-            });
-
-            // Update stok
-            $(document).on('click', '.editstok', function() {
-                const sku = $(this).data('sku');
-                $('#editStockForm')[0].reset();
-
-                $.ajax({
-                    type: "GET",
-                    url: "{{ route('gudang.produk.json', ':sku') }}".replace(':sku', sku),
-                    dataType: "JSON",
-                    success: function(response) {
-                        $('#sku').val(response.sku);
+                        $('#sku_id').val(response.sku);
                         $('#kategori').val(response?.kategori?.nama_kategori ?? '-');
-                        $('#nama_produkk').val(response.nama_produk);
-                        $('#stok').val(response?.stok_produk?.jumlah_tersedia ?? '0');
-                        $('#checking').val("update");
+                        $('#nama_produk').val(response.nama_produk);
+                        $('#jumlah_edit').val(response?.stok_produk?.jumlah_tersedia);
+                        if (btn == "add") {
+                            add();
+                        } else {
+                            edit();
+                        }
 
                         const modal = bootstrap.Modal.getOrCreateInstance(
-                            document.getElementById('editStockModal')
+                            document.getElementById('StockModal')
                         );
 
                         modal.show();
@@ -367,70 +326,56 @@
                 });
             });
 
+            // Update
             $(document).on('click', '.btnSimpan', function() {
-                const sku = $('#sku').val();
-                const jumlah = $('#addjumlah').val();
-                const keterangan = $('#keterangan').val();
-                const checking = $('#checking').val();
+                const formElement = document.getElementById('StockForm');
 
-                console.log(sku);
+                if (!formElement.checkValidity()) {
+                    formElement.reportValidity();
+                    return;
+                }
 
+                const sku = $(this).data('sku');
 
-                if (checking === "add" && jumlah == "0") {
+                const form = Object.fromEntries(
+                    $('#StockForm').serializeArray().map(item => [item.name, item.value])
+                );
+
+                form.btn = btn;
+
+                if (btn == "add" && form.jumlah_add == "0") {
                     Swal.fire({
                         icon: 'warning',
-                        title: 'Data Belum Lengkap',
-                        text: 'jumlah stok tidak boleh 0.'
+                        title: 'Warning',
+                        text: 'jumlah yang ditambah tidak boleh 0.'
                     });
                     return;
                 }
 
                 $.ajax({
                     type: "PATCH",
-                    url: "{{ route('update.stok') }}",
-                    data: {
-                        _token: "{{ csrf_token() }}",
-                        sku: sku,
-                        jumlah: jumlah,
-                        keterangan: keterangan,
-                        checking: checking
-                    },
+                    url: "{{ route('updatestok.json', ':sku') }}".replace(':sku', sku),
+                    data: form,
                     dataType: "JSON",
                     success: function(response) {
-                        console.log(response);
-                        // if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: response.message,
+                            timer: 1800,
+                            showConfirmButton: false
+                        }).then(() => {
+                            $('#StockForm')[0].reset();
 
-                        //     Swal.fire({
-                        //         icon: 'success',
-                        //         title: 'Berhasil',
-                        //         text: response.message,
-                        //         timer: 1800,
-                        //         showConfirmButton: false
-                        //     }).then(() => {
+                            const modal = bootstrap.Modal.getInstance(
+                                document.getElementById('StockModal')
+                            );
+                            modal?.hide();
+                            location.reload();
+                        });
 
-                        //         $('#addStockForm')[0].reset();
-
-                        //         const modal = bootstrap.Modal.getInstance(
-                        //             document.getElementById('addStockModal')
-                        //         );
-
-                        //         modal?.hide();
-
-                        //         location.reload();
-                        //     });
-
-                        // } else {
-
-                        //     Swal.fire({
-                        //         icon: 'error',
-                        //         title: 'Gagal',
-                        //         text: response.message
-                        //     });
-                        // }
                     },
-
                     error: function(xhr) {
-
                         Swal.fire({
                             icon: 'error',
                             title: 'Gagal',

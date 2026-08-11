@@ -327,45 +327,108 @@
             </div>
         </section>
 
-
         <!-- Activity & Mutation History Log -->
-        <section id="activityLogSection" class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-            <div class="card-header bg-white border-bottom p-3 p-md-4 d-flex align-items-center justify-content-between">
-                <div>
-                    <h2 class="h5 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
-                        <i class="fa-solid fa-clock-rotate-left text-primary"></i>
-                        Riwayat Mutasi & Aktivitas Gudang
-                    </h2>
-                    <p class="text-muted small mb-0">Log pendaftaran stok masuk, keluar, dan pemindahan antar rak.</p>
-                </div>
-                <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill">
-                    Real-time Log
-                </span>
+        <div class="row">
+            <div class="col-8">
+                <section id="activityLogSection" class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                    <div
+                        class="card-header bg-white border-bottom p-3 p-md-4 d-flex align-items-center justify-content-between">
+                        <div>
+                            <h2 class="h5 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-clock-rotate-left text-primary"></i>
+                                Riwayat Mutasi & Aktivitas Gudang
+                            </h2>
+                            <p class="text-muted small mb-0">Log pendaftaran stok masuk, keluar, dan pemindahan antar rak.
+                            </p>
+                        </div>
+                        <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill">
+                            Real-time Log
+                        </span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-nowrap">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" class="py-3 px-4">Waktu</th>
+                                    <th scope="col" class="py-3 px-4">Jenis</th>
+                                    <th scope="col" class="py-3 px-4">SKU & Nama Produk</th>
+                                    <th scope="col" class="py-3 px-4 text-center">Jumlah</th>
+                                    <th scope="col" class="py-3 px-4">Asal & Tujuan</th>
+                                    <th scope="col" class="py-3 px-4">Petugas</th>
+                                    <th scope="col" class="py-3 px-4">Catatan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activityLogBody">
+                                <!-- Rendered dynamically via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 text-nowrap">
-                    <thead class="table-light">
-                        <tr>
-                            <th scope="col" class="py-3 px-4">Waktu</th>
-                            <th scope="col" class="py-3 px-4">Jenis</th>
-                            <th scope="col" class="py-3 px-4">SKU & Nama Produk</th>
-                            <th scope="col" class="py-3 px-4 text-center">Jumlah</th>
-                            <th scope="col" class="py-3 px-4">Asal & Tujuan</th>
-                            <th scope="col" class="py-3 px-4">Petugas</th>
-                            <th scope="col" class="py-3 px-4">Catatan</th>
-                        </tr>
-                    </thead>
-                    <tbody id="activityLogBody">
-                        <!-- Rendered dynamically via JS -->
-                    </tbody>
-                </table>
+            <div class="col-4">
+                <section class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+
+                    <div class="card-header bg-white border-bottom pt-3 pt-md-3">
+                        <div>
+                            <h2 class="h5 fw-bold text-dark mb-1">
+                                Produk Paling Laris
+                            </h2>
+                            <p class="text-muted small mb-0">
+                                Berdasarkan jumlah mutasi keluar.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        @php
+                            $rankColors = [
+                                'bg-warning-subtle text-warning',
+                                'bg-secondary-subtle text-secondary',
+                                'bg-danger-subtle text-danger',
+                                'bg-primary-subtle text-primary',
+                                'bg-success-subtle text-success',
+                                'bg-info-subtle text-info',
+                                'bg-dark-subtle text-dark',
+                                'bg-warning-subtle text-dark',
+                                'bg-primary-subtle text-dark',
+                                'bg-secondary-subtle text-dark',
+                            ];
+                        @endphp
+                        @foreach ($Produk['terlaris'] as $item)
+                            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="rank-box {{ $rankColors[$loop->index] }} fw-bold">
+                                        {{ $loop->iteration }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark small">
+                                            {{ $item->nama_produk }}
+                                        </div>
+                                        <div class="text-muted" style="font-size: 11px;">
+                                            SKU: {{ $item->sku }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="text-end">
+                                    <div class="fw-bold text-success">
+                                        {{ $item->jumlah }}
+                                    </div>
+
+                                    <div class="text-muted" style="font-size: 10px;">
+                                        keluar
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
             </div>
-        </section>
+        </div>
 
     </main>
-
-    </div>
 
     <!-- Footer -->
     <footer class="bg-white border-top py-3 text-center text-muted small">
@@ -376,8 +439,22 @@
             </button>
         </div>
     </footer>
-
 @endsection
+
+@push('styles')
+    <style>
+        .rank-box {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 13px;
+        }
+    </style>
+@endpush
 
 @push('scripts')
     <script>
