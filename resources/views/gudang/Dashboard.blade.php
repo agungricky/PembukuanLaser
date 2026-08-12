@@ -1,5 +1,4 @@
 @extends('layouts.app')
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 @section('content')
     <main class="flex-grow-1 overflow-auto p-3 p-lg-4">
@@ -19,7 +18,7 @@
                     class="badge bg-white text-primary border rounded-pill px-3 py-2 fw-bold shadow-xs d-inline-flex align-items-center gap-2">
                     <span class="spinner-grow spinner-grow-sm text-primary" style="width: 6px; height: 6px;"
                         role="status"></span>
-                    LIVE PULSE • AGUSTUS 2026
+                    LIVE MONITORING : <span id="livedate"> AGUSTUS 2026</span>
                 </span>
             </div>
         </div>
@@ -174,7 +173,8 @@
             <div class="row g-3">
 
                 <!-- Card 5: Stok Aman -->
-                <div class="col-12 col-sm-6 col-lg-3">
+                <div class="col-12 col-sm-6 col-lg-3" role="button" data-bs-toggle="modal" data-bs-target="#modalStok"
+                    data-card="aman">
                     <div data-status-card="aman"
                         class="status-card-btn card border-0 bg-success-subtle border-success-subtle rounded-4 h-100 p-3 cursor-pointer hover-shadow">
                         <div class="card-body p-1 d-flex flex-column justify-content-between">
@@ -190,14 +190,16 @@
                                 </h2>
                             </div>
                             <p class="text-success fw-bold small mb-0 mt-3 d-flex align-items-center gap-1">
-                                Filter Stok Aman <i class="fa-solid fa-chevron-right ms-auto"></i>
+                                Filter Stok Aman
+                                <i class="fa-solid fa-chevron-right ms-auto"></i>
                             </p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Card 6: Stok Menipis -->
-                <div class="col-12 col-sm-6 col-lg-3">
+                <div class="col-12 col-sm-6 col-lg-3" role="button" data-bs-toggle="modal" data-bs-target="#modalStok"
+                    data-card="menipis">
                     <div data-status-card="menipis"
                         class="status-card-btn card border-0 bg-warning-subtle border-warning-subtle rounded-4 h-100 p-3 cursor-pointer hover-shadow">
                         <div class="card-body p-1 d-flex flex-column justify-content-between">
@@ -220,7 +222,8 @@
                 </div>
 
                 <!-- Card 7: Stok Kritis -->
-                <div class="col-12 col-sm-6 col-lg-3">
+                <div class="col-12 col-sm-6 col-lg-3" role="button" data-bs-toggle="modal" data-bs-target="#modalStok"
+                    data-card="kritis">
                     <div data-status-card="kritis"
                         class="status-card-btn card border-0 bg-danger-subtle border-danger-subtle rounded-4 h-100 p-3 cursor-pointer hover-shadow">
                         <div class="card-body p-1 d-flex flex-column justify-content-between">
@@ -243,7 +246,8 @@
                 </div>
 
                 <!-- Card 8: Stok Habis -->
-                <div class="col-12 col-sm-6 col-lg-3">
+                <div class="col-12 col-sm-6 col-lg-3" role="button" data-bs-toggle="modal" data-bs-target="#modalStok"
+                    data-card="habis">
                     <div data-status-card="habis"
                         class="status-card-btn card border-0 bg-secondary-subtle border-secondary-subtle rounded-4 h-100 p-3 cursor-pointer hover-shadow">
                         <div class="card-body p-1 d-flex flex-column justify-content-between">
@@ -338,29 +342,79 @@
                                 <i class="fa-solid fa-clock-rotate-left text-primary"></i>
                                 Riwayat Mutasi & Aktivitas Gudang
                             </h2>
-                            <p class="text-muted small mb-0">Log pendaftaran stok masuk, keluar, dan pemindahan antar rak.
-                            </p>
+                            <p class="text-muted small mb-0">Log aktivitas stok masuk, keluar, dan edit.</p>
                         </div>
-                        <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill">
-                            Real-time Log
-                        </span>
+                        <a href="{{ route('gudang.aktivitas') }}">
+                            <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill">
+                                Real-time Log
+                            </span>
+                        </a>
                     </div>
 
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0 text-nowrap">
                             <thead class="table-light">
                                 <tr>
-                                    <th scope="col" class="py-3 px-4">Waktu</th>
-                                    <th scope="col" class="py-3 px-4">Jenis</th>
-                                    <th scope="col" class="py-3 px-4">SKU & Nama Produk</th>
+                                    <th scope="col" class="py-3 px-4 text-center">No</th>
+                                    <th scope="col" class="py-3 px-4 text-center">Produk</th>
+                                    <th scope="col" class="py-3 px-4 text-center">Variasi</th>
                                     <th scope="col" class="py-3 px-4 text-center">Jumlah</th>
-                                    <th scope="col" class="py-3 px-4">Asal & Tujuan</th>
-                                    <th scope="col" class="py-3 px-4">Petugas</th>
-                                    <th scope="col" class="py-3 px-4">Catatan</th>
+                                    <th scope="col" class="py-3 px-4 text-center">Aktivitas</th>
                                 </tr>
                             </thead>
                             <tbody id="activityLogBody">
-                                <!-- Rendered dynamically via JS -->
+                                @php
+                                    $no = 1;
+                                @endphp
+                                @foreach ($Aktivitas['aktivitas'] as $item)
+                                    <tr>
+                                        <td class="text-center">{{ $no++ }}</td>
+                                        <td>
+                                            <div class="fw-semibold text-dark">
+                                                {{ $item->stok_produk->produk->nama_produk ?? '-' }}
+                                            </div>
+
+                                            <div class="text-muted" style="font-size: 11px;">
+                                                SKU: {{ $item->stok_produk->produk->sku ?? '-' }}
+                                            </div>
+                                        </td>
+
+                                        {{-- Detail --}}
+                                        <td>
+                                            <div class="fw-semibold">
+                                                {{ $item->stok_produk->produk->variasi ?? '-' }}
+                                            </div>
+
+                                            <div class="text-muted" style="font-size: 11px;">
+                                                {{ $item->stok_produk->produk->kategori->nama_kategori ?? '-' }}
+                                            </div>
+                                        </td>
+
+                                        {{-- Stok --}}
+                                        <td>
+                                            <div class="fw-bold text-primary">
+                                                {{ $item->jumlah ?? '-' }} pcs
+                                            </div>
+                                        </td>
+
+                                        {{-- Aktivitas --}}
+                                        <td>
+                                            <span
+                                                class="badge {{ $item->jenis_mutasi == 'masuk'
+                                                    ? 'bg-success'
+                                                    : ($item->jenis_mutasi == 'keluar'
+                                                        ? 'bg-danger'
+                                                        : 'bg-secondary') }} mb-1">
+
+                                                {{ strtoupper($item->jenis_mutasi) }}
+                                            </span>
+
+                                            <div class="text-muted" style="font-size: 11px;">
+                                                {{ $item->keterangan ?? '-' }}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
@@ -427,18 +481,38 @@
                 </section>
             </div>
         </div>
-
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-white border-top py-3 text-center text-muted small">
-        <div class="container-fluid px-4 d-flex flex-column flex-sm-row align-items-center justify-content-between gap-2">
-            <p class="mb-0">© 2026 StockFlow WMS. Pure Bootstrap 5.3 Framework & Modern JavaScript.</p>
-            <button id="footerBtnCodeModal" class="btn btn-link text-primary p-0 text-decoration-none fw-semibold small">
-                Lihat Kode Pure HTML & CSS / Bootstrap 5
-            </button>
+    <div class="modal fade" id="modalStok" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="modalHeader"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal">
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table id="tabledata" class="table table-hover align-middle w-100">
+                            <thead>
+                                <tr>
+                                    <th class="py-3 px-3 text-center" style="width: 55px;">No</th>
+                                    <th class="py-3 px-3">Produk</th>
+                                    <th class="py-3 px-3">Detail</th>
+                                    <th class="py-3 px-3 text-center">Hpp</th>
+                                    <th class="py-3 px-3 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablestockbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
-    </footer>
+    </div>
+
+    @include('layouts.footer')
 @endsection
 
 @push('styles')
@@ -452,6 +526,37 @@
             justify-content: center;
             flex-shrink: 0;
             font-size: 13px;
+        }
+
+        #modalStok .dt-search {
+            display: flex !important;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0px 12px;
+            gap: 6px;
+        }
+
+        #modalStok .dt-search label {
+            font-size: 11px;
+            color: #6c757d;
+            margin: 0;
+        }
+
+        #modalStok .dt-search input {
+            width: 160px !important;
+            height: 30px;
+            padding: 4px 9px;
+            font-size: 11px;
+            border: 1px solid #dee2e6;
+            border-radius: 7px;
+            background: #fff;
+            outline: none;
+            margin-left: 4px !important;
+        }
+
+        #modalStok .dt-search input:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.08);
         }
     </style>
 @endpush
@@ -548,6 +653,147 @@
                 }
             });
 
+            const bulan = [
+                'JANUARI',
+                'FEBRUARI',
+                'MARET',
+                'APRIL',
+                'MEI',
+                'JUNI',
+                'JULI',
+                'AGUSTUS',
+                'SEPTEMBER',
+                'OKTOBER',
+                'NOVEMBER',
+                'DESEMBER'
+            ];
+
+            const sekarang = new Date();
+            document.getElementById('livedate').textContent =
+                `${bulan[sekarang.getMonth()]} ${sekarang.getFullYear()}`;
+
+
+            let tableStok = null;
+            $('#modalStok').on('shown.bs.modal', function(event) {
+                const info_btn = $(event.relatedTarget).data('card');
+                if (tableStok) {
+                    tableStok.clear();
+                    tableStok.destroy();
+                    tableStok = null;
+                }
+                $('#tablestockbody').empty();
+
+                let badgeStatus = '';
+                if (info_btn == "aman") {
+                    $('#modalHeader').text('Stok Aman');
+                    badgeStatus = `
+                        <span class="badge bg-success">
+                            Aman
+                        </span>
+                    `;
+                } else if (info_btn == "menipis") {
+                    $('#modalHeader').text('Stok Menipis');
+                    badgeStatus = `
+                        <span class="badge bg-warning text-dark">
+                            Menipis
+                        </span>
+                    `;
+                } else if (info_btn == "kritis") {
+                    $('#modalHeader').text('Stok Kritis');
+                    badgeStatus = `
+                        <span class="badge bg-danger">
+                            Kritis
+                        </span>
+                    `;
+                } else if (info_btn == "habis") {
+                    $('#modalHeader').text('Stok Habis');
+                    badgeStatus = `
+                        <span class="badge bg-dark">
+                            Habis
+                        </span>
+                    `;
+                } else {
+                    $('#modalHeader').text('Data Stok');
+                    badgeStatus = `
+                        <span class="badge bg-secondary">
+                            Tidak Diketahui
+                        </span>
+                    `;
+                }
+
+                $.ajax({
+                    type: "GET",
+                    url: "{{ route('gudang.detailcard.json', ':card') }}".replace(':card',
+                        info_btn),
+                    dataType: "JSON",
+                    success: function(response) {
+                        let html = '';
+                        let no = 1;
+                        $.each(response, function(index, item) {
+                            const tersedia = item.produk?.stok_produk
+                                ?.jumlah_tersedia ?? 0;
+                            const kebutuhan = item.kebutuhan ?? 0;
+                            const aman = tersedia >= kebutuhan;
+
+                            html += `
+                                    <tr class="align-middle">
+                                        <td class="py-3 px-3 text-center">
+                                            ${no++}
+                                        </td>
+                                        <td class="py-3 px-3">
+                                            <div class="fw-semibold text-dark">
+                                                ${item.produk?.nama_produk ?? '-'}
+                                            </div>
+                                            <div class="text-muted"
+                                                style="font-size:11px;">
+                                                SKU: ${item.produk?.sku ?? '-'}
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-3">
+                                            <div>
+                                                ${item.produk?.variasi ?? '-'}
+                                            </div>
+                                            <div class="text-muted" style="font-size:11px;">
+                                                Kategori : ${item.produk?.kategori?.nama_kategori ?? '-'}
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-3 text-center">
+                                            <div class="fw-semibold">
+                                                ${Number(item.produk?.hpp ?? 0)
+                                                    .toLocaleString('id-ID', {
+                                                        style: 'currency',
+                                                        currency: 'IDR',
+                                                        minimumFractionDigits: 0
+                                                    })}
+                                            </div>
+                                            <div class="text-muted"
+                                                style="font-size:11px;">
+                                                Tersedia:
+                                                <span class="fw-bold text-primary">
+                                                    ${item?.jumlah_tersedia}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 px-3 text-center">
+                                            ${badgeStatus}
+                                        </td>
+                                    </tr>
+                                `;
+                        });
+
+                        $('#tablestockbody').html(html);
+                        tableStok = new DataTable('#tabledata', {
+                            pageLength: 10,
+                            searching: true,
+                            lengthChange: true,
+                            autoWidth: false
+                        });
+                        tableStok.columns.adjust();
+                    }
+
+                });
+
+            });
         });
     </script>
 @endpush

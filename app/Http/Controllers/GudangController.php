@@ -31,10 +31,9 @@ class GudangController extends Controller
             ->sum('jumlah');
         $banyakMutasi = mutasi_stok::whereDate('created_at', $tanggalHariIni)->count();
         $stokAman = stok_produk::where('jumlah_tersedia', '>', 5)->count();
-        $stokMenipis = stok_produk::where('jumlah_tersedia', '<=', 5)->count();
-        $stokKritis = stok_produk::where('jumlah_tersedia', '<', 5)->count();
-        $stokHabis = stok_produk::where('jumlah_tersedia', '<=', 0)->count();
-
+        $stokMenipis = stok_produk::whereBetween('jumlah_tersedia', [3, 5])->count();
+        $stokKritis = stok_produk::whereBetween('jumlah_tersedia', [1, 2])->count();
+        $stokHabis = stok_produk::where('jumlah_tersedia', '=', 0)->count();
         $terlaris = mutasi_stok::with('stok_produk.produk')
             ->where('jenis_mutasi', 'keluar')
             ->get()
@@ -60,6 +59,12 @@ class GudangController extends Controller
             ->values()
             ->take(10);
 
+        $aktivitas = mutasi_stok::with(['stok_produk.produk.kategori'])
+            ->latest()
+            ->take(10)
+            ->orderBy('created_at', 'DESC')
+            ->get();
+
         return view('gudang.Dashboard', [
             'Card' => [
                 'allStok_aman' => $allStok_aman,
@@ -72,9 +77,11 @@ class GudangController extends Controller
                 'stokKritis' => $stokKritis,
                 'stokHabis' => $stokHabis,
             ],
-
             'Produk' => [
                 'terlaris' => $terlaris,
+            ],
+            'Aktivitas' => [
+                'aktivitas' => $aktivitas,
             ],
         ]);
     }
@@ -474,5 +481,167 @@ class GudangController extends Controller
             'data' => $data,
             'kategori' => $kategori,
         ]);
+    }
+
+    public function riwayataktivitas()
+    {
+        return view('gudang.riwayat_aktivitas');
+    }
+
+    public function riwayatAktivitasData(Request $request)
+    {
+        /*
+        |--------------------------------------------------------------------------
+        | Query awal
+        |--------------------------------------------------------------------------
+        */
+        $query = mutasi_stok::with([
+            'stok_produk.produk.kategori',
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Total seluruh data
+        |--------------------------------------------------------------------------
+        */
+        $totalData = mutasi_stok::count();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Search
+        |--------------------------------------------------------------------------
+        */
+        if ($request->filled('search.value')) {
+            $search = $request->input('search.value');
+            $query->where(function ($q) use ($search) {
+                // dari tabel mutasi_stok
+                $q->where('jenis_mutasi', 'like', "%{$search}%")
+                    ->orWhere('keterangan', 'like', "%{$search}%")
+                    ->orWhereHas('stok_produk.produk', function ($q) use ($search) {
+                        $q->where('sku', 'like', "%{$search}%")
+                            ->orWhere('nama_produk', 'like', "%{$search}%")
+                            ->orWhere('variasi', 'like', "%{$search}%");
+
+                    })
+                    ->orWhereHas('stok_produk.produk.kategori', function ($q) use ($search) {
+
+                        $q->where('nama_kategori', 'like', "%{$search}%");
+
+                    });
+
+            });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Total setelah search
+        |--------------------------------------------------------------------------
+        */
+
+        $totalFiltered = $query->count();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Order
+        |--------------------------------------------------------------------------
+        |
+        | Riwayat terbaru ditampilkan paling atas
+        |
+        */
+
+        $orderColumn = (int) $request->input('order.0.column', 0);
+        $orderDirection = $request->input('order.0.dir', 'desc');
+        $orderDirection = $orderDirection === 'asc' ? 'asc' : 'desc';
+
+        if ($orderColumn === 0) {
+            $query->orderBy('id', $orderDirection);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Pagination DataTables
+        |--------------------------------------------------------------------------
+        */
+
+        $start = (int) $request->input('start', 0);
+        $length = (int) $request->input('length', 10);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Ambil data
+        |--------------------------------------------------------------------------
+        */
+
+        $data = $query
+            ->skip($start)
+            ->take($length)
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Format Data
+        |--------------------------------------------------------------------------
+        */
+
+        $result = [];
+        foreach ($data as $index => $item) {
+            $produk = $item->stok_produk?->produk;
+            if ($orderColumn === 0 && $orderDirection === 'desc') {
+                $no = $totalFiltered - $start - $index;
+            } else {
+                $no = $start + $index + 1;
+            }
+            $result[] = [
+                'no' => $no,
+                'produk' => $produk?->nama_produk ?? '-',
+                'sku' => $produk?->sku ?? '-',
+                'variasi' => $produk?->variasi ?? '-',
+                'kategori' => $produk?->kategori?->nama_kategori ?? '-',
+                'hpp' => $produk?->hpp ?? 0,
+                'jumlah' => $item->jumlah ?? 0,
+                'jenis_mutasi' => $item->jenis_mutasi ?? '-',
+                'keterangan' => $item->keterangan ?? '-',
+            ];
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Response DataTables
+        |--------------------------------------------------------------------------
+        */
+
+        return response()->json([
+            'draw' => (int) $request->input('draw'),
+            'recordsTotal' => $totalData,
+            'recordsFiltered' => $totalFiltered,
+            'data' => $result,
+
+        ]);
+    }
+
+    public function detailcard($card)
+    {
+        $query = stok_produk::with([
+            'produk.kategori',
+        ]);
+
+        if ($card === 'aman') {
+            $query->where('jumlah_tersedia', '>', 5);
+        } elseif ($card === 'menipis') {
+            $query->whereBetween('jumlah_tersedia', [3, 5]);
+        } elseif ($card === 'kritis') {
+            $query->whereBetween('jumlah_tersedia', [1, 2]);
+        } elseif ($card === 'habis') {
+            $query->where('jumlah_tersedia', '=', 0);
+        } else {
+            return response()->json([
+                'message' => 'Filter tidak valid',
+            ], 400);
+        }
+        $data = $query->orderBy('jumlah_tersedia', 'asc')->get();
+
+        return response()->json($data);
     }
 }

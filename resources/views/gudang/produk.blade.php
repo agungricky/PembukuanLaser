@@ -1,9 +1,6 @@
 @extends('layouts.app')
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
 @section('content')
     <main class="flex-grow-1 overflow-auto p-3 p-lg-4">
-
         <!-- Dashboard Title & Pulse Badge -->
         <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
             <div>
@@ -133,10 +130,7 @@
                 </table>
             </div>
         </section>
-
     </main>
-
-    </div>
 
     <!-- Footer -->
     @include('layouts.footer')

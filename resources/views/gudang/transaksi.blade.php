@@ -1,5 +1,4 @@
 @extends('layouts.app')
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 @section('content')
     <main class="flex-grow-1 overflow-auto p-3 p-lg-4">
         <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
@@ -71,11 +70,18 @@
                             <th scope="col" class="py-3 px-4 text-center">Variasi</th>
                             <th scope="col" class="py-3 px-4 text-center">Hpp</th>
                             <th scope="col" class="py-3 px-4 text-center">Kebutuhan</th>
-                            <th scope="col" class="py-3 px-4 text-center {{ $id === 'diambil' ? 'd-none' : '' }}">
-                                Tersedia</th>
-                            <th scope="col" class="py-3 px-4 text-center {{ $id != 'diambil' ? 'd-none' : '' }}">
-                                Tanggal Disiapkan
-                            </th>
+                            @if ($id !== 'diambil')
+                                <th scope="col" class="py-3 px-4 text-center">
+                                    Tersedia
+                                </th>
+                            @endif
+
+                            @if ($id === 'diambil')
+                                <th scope="col" class="py-3 px-4 text-center">
+                                    Tanggal Disiapkan
+                                </th>
+                            @endif
+
                             <th scope="col" class="py-3 px-4 text-center" id="filteron">Status Stok</th>
                         </tr>
                     </thead>
@@ -152,12 +158,12 @@
                                             ${
                                                 (item.produk?.stok_produk?.jumlah_tersedia ?? 0) >= (item.kebutuhan ?? 0)
                                                 ? `
-                                                                                                                    <span class="badge bg-success">Tersedia</span>
-                                                                                                                `
+                                                                                                                        <span class="badge bg-success">Tersedia</span>
+                                                                                                                    `
                                                 : `
-                                                                                                                    <span class="badge bg-danger">Kurang</span>
-                                                                                                                    <input type="hidden" class="status-stok" value="kurang">
-                                                                                                                `
+                                                                                                                        <span class="badge bg-danger">Kurang</span>
+                                                                                                                        <input type="hidden" class="status-stok" value="kurang">
+                                                                                                                    `
                                             }
                                         </td>
                                     </tr>
@@ -215,19 +221,29 @@
                                     </span>
                                 </td>
 
-                                <td class="py-3 px-4 text-center ${filter === 'diambil' ? 'd-none' : ''}">
-                                    <span class="fw-bold text-primary">
-                                        ${item.stok_produk?.jumlah_tersedia ?? 0}
-                                    </span>
-                                </td>
 
-                                ${filter === 'diambil' ? `
+                                ${filter === 'diambil'
+                                    ? `
                                         <td class="py-3 px-4 text-center">
                                             <span class="fw-bold text-primary">
-                                                ${item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID') : '-'}
+                                                ${
+                                                    item.created_at
+                                                        ? new Date(item.created_at)
+                                                            .toLocaleDateString('id-ID')
+                                                        : '-'
+                                                }
                                             </span>
                                         </td>
-                                    ` : ''}
+                                    `
+                                    : `
+                                        <td class="py-3 px-4 text-center">
+                                            <span class="fw-bold text-primary">
+                                                ${item.stok_produk?.jumlah_tersedia ?? 0}
+                                            </span>
+                                        </td>
+                                    `
+                                }
+
 
                                 <td class="py-3 px-4 text-center">
                                     <span class="fw-bold text-success">

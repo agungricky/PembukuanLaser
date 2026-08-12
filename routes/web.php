@@ -149,6 +149,10 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::patch('/update-stok/{sku}', [GudangController::class, 'updatestok'])->name('updatestok.json');
         Route::get('/kategori-produk', [GudangController::class, 'kategori'])->name('gudang.kategori');
         Route::get('/kategori-produk/{id}', [GudangController::class, 'kategorishow'])->name('gudang.kategori.json');
+        Route::get('/riwayat-aktivitas/gudang', [GudangController::class, 'riwayataktivitas'])->name('gudang.aktivitas');
+        Route::get('/riwayat-aktivitas/data', [GudangController::class, 'riwayatAktivitasData'])
+        ->name('gudang.riwayataktivitas.data');
+        Route::get('/card-detail/{card}', [GudangController::class, 'detailcard'])->name('gudang.detailcard.json');
     });
 });
 

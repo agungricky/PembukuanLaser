@@ -211,6 +211,16 @@
                             <small>Sudah Diambil</small>
                         </a>
 
+                        <a href="" class="sidebar-sublink">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <small>Barang Retur</small>
+                        </a>
+
+                        <a href="" class="sidebar-sublink">
+                            <i class="fa-solid fa-vial"></i>
+                            <small>Barang Sampel</small>
+                        </a>
+
                     </div>
                 </div>
 
@@ -221,8 +231,9 @@
                         # MASTER DATA
                     </div>
 
-                    <a href="{{ route('gudang.produk') }}" class="sidebar-link mt-1">
-                        <div class="d-flex align-items-center gap-3 {{ Request::is('semua-produk') ? 'active' : '' }}">
+                    <a href="{{ route('gudang.produk') }}"
+                        class="sidebar-link mt-1 {{ Route::is('gudang.produk') ? 'active' : '' }}">
+                        <div class="d-flex align-items-center gap-3">
                             <i class="fa-solid fa-box"></i>
                             <span>Produk</span>
                         </div>
@@ -232,7 +243,8 @@
                         </span>
                     </a>
 
-                    <a href="{{ route('gudang.kategori') }}" class="sidebar-link">
+                    <a href="{{ route('gudang.kategori') }}"
+                        class="sidebar-link {{ Request::is('kategori-produk') ? 'active' : '' }}">
                         <div class="d-flex align-items-center gap-3">
                             <i class="fa-solid fa-tags"></i>
                             <span>Kategori</span>
@@ -250,7 +262,8 @@
                         MONITORING
                     </div>
 
-                    <a href="#" class="sidebar-link">
+                    <a href="{{ route('gudang.aktivitas') }}"
+                        class="sidebar-link {{ Route::is('gudang.aktivitas') ? 'active' : '' }}">
                         <div class="d-flex align-items-center gap-3">
                             <i class="fa-solid fa-clock-rotate-left"></i>
                             <span>Riwayat Aktivitas</span>
