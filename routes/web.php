@@ -150,9 +150,9 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/kategori-produk', [GudangController::class, 'kategori'])->name('gudang.kategori');
         Route::get('/kategori-produk/{id}', [GudangController::class, 'kategorishow'])->name('gudang.kategori.json');
         Route::get('/riwayat-aktivitas/gudang', [GudangController::class, 'riwayataktivitas'])->name('gudang.aktivitas');
-        Route::get('/riwayat-aktivitas/data', [GudangController::class, 'riwayatAktivitasData'])
-        ->name('gudang.riwayataktivitas.data');
+        Route::get('/riwayat-aktivitas/data', [GudangController::class, 'riwayatAktivitasData'])->name('gudang.riwayataktivitas.data');
         Route::get('/card-detail/{card}', [GudangController::class, 'detailcard'])->name('gudang.detailcard.json');
+        Route::get('/kebutuhan/detail-pesanan/{sku}', [GudangController::class, 'detailpesanan'])->name('kebutuhan.detailpesanan');
     });
 });
 

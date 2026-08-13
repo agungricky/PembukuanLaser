@@ -65,14 +65,12 @@
                                 <input type="checkbox" class="form-check-input" id="checkAll"
                                     style="width: 18px; height: 18px;">
                             </th>
-                            <th scope="col" class="py-3 px-4">Sku</th>
                             <th scope="col" class="py-3 px-4">Nama Produk</th>
                             <th scope="col" class="py-3 px-4 text-center">Variasi</th>
                             <th scope="col" class="py-3 px-4 text-center">Hpp</th>
-                            <th scope="col" class="py-3 px-4 text-center">Kebutuhan</th>
                             @if ($id !== 'diambil')
                                 <th scope="col" class="py-3 px-4 text-center">
-                                    Tersedia
+                                    Stok
                                 </th>
                             @endif
 
@@ -83,6 +81,7 @@
                             @endif
 
                             <th scope="col" class="py-3 px-4 text-center" id="filteron">Status Stok</th>
+                            <th scope="col" class="py-3 px-4 text-center">Detail Pesanan</th>
                         </tr>
                     </thead>
                     <tbody id="stockTableBody"></tbody>
@@ -90,16 +89,65 @@
             </div>
         </section>
     </main>
-@endsection
 
+    <!-- Modal Detail -->
+    <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow">
+
+                <div class="modal-header">
+                    <div>
+                        <h5 class="modal-title fw-bold">
+                            Detail Kebuthan Terhadap Pesanan
+                        </h5>
+                        <small class="text-muted" id="detailSku"></small>
+                    </div>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table id="detailTable" class="table table-hover align-middle w-100">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>No</th>
+                                    <th>No Pesanan</th>
+                                    <th>Nama Customer</th>
+                                    <th>Produk</th>
+                                    <th class="text-center">Jumlah</th>
+                                    <th class="text-center">Status</th>
+                                    <th>Tanggal</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="detailTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+@endsection
 
 @push('scripts')
     <script>
         $(document).ready(function() {
-
             let filter = "{{ $id }}";
-            let table = null;
             let selected = [];
+
+            let table = new DataTable('#orderlist', {
+                pageLength: 10,
+                searching: true,
+                lengthChange: false,
+                autoWidth: false
+            });
 
             $.ajax({
                 type: "GET",
@@ -118,15 +166,17 @@
                                                 class="form-check-input item-checkbox"
                                                 value="${item.id}">
                                         </td>
-
-                                        <td class="py-3 px-4 sku">
-                                            ${item.produk?.sku ?? '-'}
-                                        </td>
-
                                         <td class="py-3 px-4 text-start">
-                                            ${item.produk?.nama_produk ?? '-'}
-                                        </td>
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-semibold text-dark sku">
+                                                    ${item.produk?.nama_produk ?? '-'}
+                                                </span>
 
+                                                <span class="text-muted" style="font-size: 11px;">
+                                                   SKU : ${item.produk?.sku ?? '-'}
+                                                </span>
+                                            </div>
+                                        </td>
                                         <td class="py-3 px-4 text-center">
                                             ${item.produk?.variasi ?? '-'}
                                         </td>
@@ -143,28 +193,49 @@
                                         </td>
 
                                         <td class="py-3 px-4 text-center">
-                                            <span class="fw-bold text-danger">
-                                                ${item.kebutuhan ?? 0}
-                                            </span>
-                                        </td>
+                                            <div class="d-flex flex-column gap-1 align-items-center">
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <i class="fa-solid fa-box-open text-danger" style="font-size: 11px;"></i>
+                                                    <span class="text-muted" style="font-size: 11px;">
+                                                        Kebutuhan :
+                                                    </span>
+                                                    <span class="fw-bold text-danger">
+                                                        ${item.kebutuhan ?? 0}
+                                                    </span>
+                                                </div>
 
-                                        <td class="py-3 px-4 text-center">
-                                            <span class="fw-bold text-primary">
-                                                ${item.produk?.stok_produk?.jumlah_tersedia ?? 0}
-                                            </span>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <i class="fa-solid fa-boxes-stacked text-primary" style="font-size: 11px;"></i>
+                                                    <span class="text-muted" style="font-size: 11px;">
+                                                        Tersedia :
+                                                    </span>
+                                                    <span class="fw-bold text-primary">
+                                                        ${item.produk?.stok_produk?.jumlah_tersedia ?? 0}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </td>
 
                                         <td class="py-3 px-4 text-center">
                                             ${
                                                 (item.produk?.stok_produk?.jumlah_tersedia ?? 0) >= (item.kebutuhan ?? 0)
                                                 ? `
-                                                                                                                        <span class="badge bg-success">Tersedia</span>
-                                                                                                                    `
+                                                                                                                                                                    <span class="badge bg-success">Tersedia</span>
+                                                                                                                                                                `
                                                 : `
-                                                                                                                        <span class="badge bg-danger">Kurang</span>
-                                                                                                                        <input type="hidden" class="status-stok" value="kurang">
-                                                                                                                    `
+                                                                                                                                                                    <span class="badge bg-danger">Kurang</span>
+                                                                                                                                                                    <input type="hidden" class="status-stok" value="kurang">
+                                                                                                                                                                `
                                             }
+                                        </td>
+                                        <td class="py-3 px-4 text-center">
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-primary btnDetail"
+                                                data-sku="${item.produk?.sku ?? ''}"
+                                                title="Lihat Detail"
+                                                style="width: 34px; height: 34px; padding: 0;">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
                                         </td>
                                     </tr>
                             `;
@@ -191,12 +262,16 @@
                                         value="${item.id}">
                                 </td>
 
-                                <td class="py-3 px-4">
-                                    ${item.stok_produk?.sku_id ?? '-'}
-                                </td>
-
                                 <td class="py-3 px-4 text-start">
-                                    ${item.stok_produk?.produk?.nama_produk ?? '-'}
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-semibold text-dark sku">
+                                            ${item.stok_produk?.produk?.nama_produk ?? '-'}
+                                        </span>
+
+                                        <span class="text-muted" style="font-size: 11px;">
+                                           SKU : ${item.stok_produk?.sku_id ?? '-'}
+                                        </span>
+                                    </div>
                                 </td>
 
                                 <td class="py-3 px-4 text-center">
@@ -224,24 +299,24 @@
 
                                 ${filter === 'diambil'
                                     ? `
-                                        <td class="py-3 px-4 text-center">
-                                            <span class="fw-bold text-primary">
-                                                ${
-                                                    item.created_at
-                                                        ? new Date(item.created_at)
-                                                            .toLocaleDateString('id-ID')
-                                                        : '-'
-                                                }
-                                            </span>
-                                        </td>
-                                    `
+                                                                                    <td class="py-3 px-4 text-center">
+                                                                                        <span class="fw-bold text-primary">
+                                                                                            ${
+                                                                                                item.created_at
+                                                                                                    ? new Date(item.created_at)
+                                                                                                        .toLocaleDateString('id-ID')
+                                                                                                    : '-'
+                                                                                            }
+                                                                                        </span>
+                                                                                    </td>
+                                                                                `
                                     : `
-                                        <td class="py-3 px-4 text-center">
-                                            <span class="fw-bold text-primary">
-                                                ${item.stok_produk?.jumlah_tersedia ?? 0}
-                                            </span>
-                                        </td>
-                                    `
+                                                                                    <td class="py-3 px-4 text-center">
+                                                                                        <span class="fw-bold text-primary">
+                                                                                            ${item.stok_produk?.jumlah_tersedia ?? 0}
+                                                                                        </span>
+                                                                                    </td>
+                                                                                `
                                 }
 
 
@@ -297,20 +372,16 @@
                         }
                     }
 
-                    $('#stockTableBody').html(html);
+                    if ($.fn.DataTable.isDataTable('#orderlist')) {
+                        table.destroy();
+                    }
 
+                    $('#stockTableBody').html(html);
                     table = new DataTable('#orderlist', {
                         pageLength: 10,
                         searching: true,
                         lengthChange: false,
-                        autoWidth: false,
-                        order: [],
-
-                        columnDefs: [{
-                            targets: 0,
-                            orderable: false,
-                            searchable: false
-                        }]
+                        autoWidth: false
                     });
                 },
 
@@ -337,14 +408,17 @@
                 $('.item-checkbox').prop('checked', false);
             });
 
-            $('#checkAll').on('change', function() {
-                const checked = this.checked;
-
-                $('#stockTableBody tr').each(function() {
+            // Check All
+            $(document).on('change', '#checkAll', function() {
+                const checked = $(this).prop('checked');
+                $('#orderlist tbody tr').each(function() {
                     const status = $(this).find('.status-stok').val();
                     const checkbox = $(this).find('.item-checkbox');
 
-                    // Stok kurang jangan bisa dipilih
+                    if (!checkbox.length) {
+                        return;
+                    }
+
                     if (status === 'kurang') {
                         checkbox.prop('checked', false);
                         $(this).removeClass('table-active');
@@ -352,33 +426,48 @@
                     }
 
                     checkbox.prop('checked', checked);
-                    $(this).toggleClass('table-active', checked);
+                    $(this).toggleClass(
+                        'table-active',
+                        checked
+                    );
                 });
             });
 
-            $('#stockTableBody').on('click', 'tr', function(e) {
+            // Klik Row
+            $(document).on('click', '#orderlist tbody tr', function(e) {
+
+                // Jangan jalankan kalau klik tombol detail
+                if ($(e.target).closest('.btnDetail').length) {
+                    return;
+                }
+
                 const status = $(this).find('.status-stok').val();
                 const checkbox = $(this).find('.item-checkbox');
 
-                // Kalau stok kurang, hentikan
+                if (!checkbox.length) {
+                    return;
+                }
+
                 if (status === 'kurang') {
                     checkbox.prop('checked', false);
                     $(this).removeClass('table-active');
                     return;
                 }
 
-                // Klik langsung checkbox
                 if ($(e.target).is('.item-checkbox')) {
-                    $(this).toggleClass('table-active', e.target.checked);
+                    $(this).toggleClass(
+                        'table-active',
+                        checkbox.prop('checked')
+                    );
+
                     return;
                 }
 
-                // Klik area row
-                checkbox.prop('checked', !checkbox.prop('checked'));
-
+                const checked = !checkbox.prop('checked');
+                checkbox.prop('checked', checked);
                 $(this).toggleClass(
                     'table-active',
-                    checkbox.prop('checked')
+                    checked
                 );
             });
 
@@ -529,6 +618,111 @@
 
                 });
 
+            });
+
+            let detailTable = null;
+            $('#stockTableBody').on('click', '.btnDetail', function(e) {
+                e.stopPropagation();
+                const sku = $(this).data('sku');
+
+                if (!sku || String(sku).trim() === '') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Data tidak valid',
+                        text: 'Data pesanan tidak valid.'
+                    });
+
+                    return;
+                }
+
+                $('#detailSku').html(`
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted fw-semibold">SKU Produk :</span>
+                        <span class="fw-bold text-primary">${sku}</span>
+                    </div>
+                `);
+
+                $('#detailTableBody').empty();
+
+                $.ajax({
+                    type: "GET",
+                    url: "{{ route('kebutuhan.detailpesanan', ':filter') }}".replace(':filter', filter),
+                    dataType: "JSON",
+                    success: function(response) {
+                        $.each(data, function(index, item) {
+                            $('#detailTableBody').append(`
+                                <tr>
+                                    <td>${index + 1}</td>
+
+                                    <td>
+                                        <span class="fw-semibold">
+                                            ${item.no_pesanan}
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        ${item.customer}
+                                    </td>
+
+                                    <td>
+                                        ${item.produk}
+                                    </td>
+
+                                    <td class="text-center">
+                                        <span class="fw-bold">
+                                            ${item.jumlah}
+                                        </span>
+                                    </td>
+
+                                    <td class="text-center">
+                                        <span class="badge bg-primary-subtle text-primary">
+                                            ${item.status}
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        ${item.tanggal}
+                                    </td>
+                                </tr>
+                            `);
+                        });
+                    }
+                });
+
+                // Masukkan ke tbody
+
+
+                // Hancurkan DataTable lama jika ada
+                if ($.fn.DataTable.isDataTable('#detailTable')) {
+                    $('#detailTable').DataTable().destroy();
+                }
+
+                // Buat DataTable
+                detailTable = $('#detailTable').DataTable({
+                    pageLength: 10,
+                    lengthChange: false,
+                    searching: true,
+                    ordering: true,
+                    autoWidth: false,
+                    responsive: true,
+                    language: {
+                        search: '',
+                        searchPlaceholder: 'Cari data...',
+                        emptyTable: 'Tidak ada data pesanan'
+                    },
+                    columnDefs: [{
+                        targets: 0,
+                        orderable: false,
+                        searchable: false
+                    }]
+                });
+
+                // Buka modal
+                const modal = new bootstrap.Modal(
+                    document.getElementById('detailModal')
+                );
+
+                modal.show();
             });
         });
     </script>

@@ -21,7 +21,6 @@ class GudangController extends Controller
         $produk = Produk::whereNotNull(['nama_produk', 'variasi'])->get();
         $allStok_aman = $produk->count() * 5;
         $stokTersedia = stok_produk::sum('jumlah_tersedia');
-
         $tanggalHariIni = Carbon::now('Asia/Jakarta')->toDateString();
         $mutasi_masuk = mutasi_stok::where('jenis_mutasi', 'masuk')
             ->whereDate('created_at', $tanggalHariIni)
@@ -52,6 +51,7 @@ class GudangController extends Controller
                     'nama_produk' => $produk->nama_produk,
                     'variasi' => $produk->variasi,
                     'jumlah' => $items->sum('jumlah'),
+                    'stok_produk' => $stok?->jumlah_tersedia,
                 ];
             })
             ->filter()
@@ -643,5 +643,58 @@ class GudangController extends Controller
         $data = $query->orderBy('jumlah_tersedia', 'asc')->get();
 
         return response()->json($data);
+    }
+
+    public function detailpesanan($sku){
+         if ($sku === 'siapkan') {
+            $pesanan = Pesanan::with('pesanan_per_produk.produk')
+                ->where('status', 'proses')
+                ->get();
+            
+            return response()->json($pesanan);
+
+            $kebutuhan = [];
+            foreach ($pesanan as $value) {
+                foreach ($value->pesanan_per_produk as $item) {
+                    $sku = $item->sku;
+                    $jumlah = $item->jumlah;
+
+                    if ($item->status_pesanan == 0) {
+                        if (isset($kebutuhan[$sku])) {
+                            $kebutuhan[$sku] += $jumlah;
+                        } else {
+                            $kebutuhan[$sku] = $jumlah;
+                        }
+                    }
+                }
+            }
+
+            $kebutuhanProduk = [];
+            foreach ($kebutuhan as $sku => $jumlah) {
+                $produk = Produk::with('stok_produk')->where('sku', $sku)->first();
+                $kebutuhanProduk[] = [
+                    'produk' => $produk,
+                    'kebutuhan' => $jumlah,
+                ];
+            }
+
+            return response()->json($kebutuhanProduk);
+
+        } elseif ($sku === 'siap') {
+            $kebutuhanProduk = mutasi_stok::with('stok_produk.produk')
+                ->where('jenis_mutasi', 'siap')
+                ->orderBy('updated_at', 'DESC')
+                ->get();
+
+            return response()->json($kebutuhanProduk);
+
+        } elseif ($sku === 'diambil') {
+            $kebutuhanProduk = mutasi_stok::with('stok_produk.produk')
+                ->where('jenis_mutasi', 'keluar')
+                ->orderBy('updated_at', 'DESC')
+                ->get();
+
+            return response()->json($kebutuhanProduk);
+        }
     }
 }

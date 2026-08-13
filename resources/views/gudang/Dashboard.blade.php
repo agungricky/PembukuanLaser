@@ -378,8 +378,6 @@
                                                 SKU: {{ $item->stok_produk->produk->sku ?? '-' }}
                                             </div>
                                         </td>
-
-                                        {{-- Detail --}}
                                         <td>
                                             <div class="fw-semibold">
                                                 {{ $item->stok_produk->produk->variasi ?? '-' }}
@@ -389,15 +387,11 @@
                                                 {{ $item->stok_produk->produk->kategori->nama_kategori ?? '-' }}
                                             </div>
                                         </td>
-
-                                        {{-- Stok --}}
                                         <td>
-                                            <div class="fw-bold text-primary">
+                                            <div class="fw-bold text-primary text-center">
                                                 {{ $item->jumlah ?? '-' }} pcs
                                             </div>
                                         </td>
-
-                                        {{-- Aktivitas --}}
                                         <td>
                                             <span
                                                 class="badge {{ $item->jenis_mutasi == 'masuk'
@@ -451,30 +445,47 @@
                             ];
                         @endphp
                         @foreach ($Produk['terlaris'] as $item)
-                            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="rank-box {{ $rankColors[$loop->index] }} fw-bold">
-                                        {{ $loop->iteration }}
-                                    </div>
-                                    <div>
-                                        <div class="fw-bold text-dark small">
-                                            {{ $item->nama_produk }}
+                            <div class="row align-items-center py-2 border-bottom">
+                                <div class="col-6">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rank-box {{ $rankColors[$loop->index] }} fw-bold">
+                                            {{ $loop->iteration }}
                                         </div>
-                                        <div class="text-muted" style="font-size: 11px;">
-                                            SKU: {{ $item->sku }}
+
+                                        <div>
+                                            <div class="fw-bold text-dark small">
+                                                {{ $item->nama_produk }}
+                                            </div>
+
+                                            <div class="text-muted" style="font-size: 11px;">
+                                                SKU: {{ $item->sku }}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="text-end">
-                                    <div class="fw-bold text-success">
+                                <div class="col-3 text-center">
+                                    <div class="fw-bold {{ $item->stok_produk <= 30 ? 'text-danger' : 'text-success' }} ">
+                                        {{ $item->stok_produk }}
+                                    </div>
+
+                                    <div class="text-muted" style="font-size: 10px;">
+                                        Tersedia
+                                    </div>
+                                </div>
+
+
+                                {{-- 3. Data Ketiga --}}
+                                <div class="col-3 text-end">
+                                    <div class="fw-bold text-primary">
                                         {{ $item->jumlah }}
                                     </div>
 
                                     <div class="text-muted" style="font-size: 10px;">
-                                        keluar
+                                        Keluar
                                     </div>
                                 </div>
+
                             </div>
                         @endforeach
                     </div>
