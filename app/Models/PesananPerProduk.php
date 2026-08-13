@@ -34,4 +34,6 @@ class PesananPerProduk extends Model
     public function produk(){
         return $this->belongsTo(Produk::class, 'sku', 'sku');
     }
+
+    
 }

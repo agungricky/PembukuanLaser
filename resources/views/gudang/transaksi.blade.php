@@ -97,9 +97,7 @@
 
                 <div class="modal-header">
                     <div>
-                        <h5 class="modal-title fw-bold">
-                            Detail Kebuthan Terhadap Pesanan
-                        </h5>
+                        <h5 class="modal-title fw-bold" id="modalTitle"></h5>
                         <small class="text-muted" id="detailSku"></small>
                     </div>
 
@@ -111,11 +109,11 @@
                         <table id="detailTable" class="table table-hover align-middle w-100">
                             <thead class="table-light">
                                 <tr>
-                                    <th>No</th>
-                                    <th>No Pesanan</th>
-                                    <th>Nama Customer</th>
+                                    <th style="width: 50px;">No</th>
+                                    <th>Pesanan</th>
                                     <th>Produk</th>
-                                    <th class="text-center">Jumlah</th>
+                                    <th class="text-center">Qty</th>
+                                    <th>Pengiriman</th>
                                     <th class="text-center">Status</th>
                                     <th>Tanggal</th>
                                 </tr>
@@ -125,16 +123,60 @@
                         </table>
                     </div>
                 </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
-                        Tutup
-                    </button>
-                </div>
             </div>
         </div>
     </div>
 @endsection
+
+@push('styles')
+    <style>
+        #detailModal .dt-length {
+            margin-left: 16px;
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+
+        #detailModal .dt-search {
+            display: flex !important;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 12px !important;
+            margin: 0 !important;
+            gap: 6px;
+        }
+
+        #detailModal .dt-search label {
+            font-size: 11px;
+            color: #6c757d;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        #detailModal .dt-search input {
+            width: 160px !important;
+            height: 30px;
+            padding: 4px 9px;
+            font-size: 11px;
+            border: 1px solid #dee2e6;
+            border-radius: 7px;
+            background: #fff;
+            outline: none;
+
+            margin: 0 !important;
+        }
+
+        #detailModal .dt-search input:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.08);
+        }
+
+        #detailModal .dt-layout-row:first-child {
+            align-items: center !important;
+            margin: 0 !important;
+            padding-top: 0 !important;
+        }
+    </style>
+@endpush
 
 @push('scripts')
     <script>
@@ -168,12 +210,12 @@
                                         </td>
                                         <td class="py-3 px-4 text-start">
                                             <div class="d-flex flex-column">
-                                                <span class="fw-semibold text-dark sku">
+                                                <span class="fw-semibold text-dark">
                                                     ${item.produk?.nama_produk ?? '-'}
                                                 </span>
 
                                                 <span class="text-muted" style="font-size: 11px;">
-                                                   SKU : ${item.produk?.sku ?? '-'}
+                                                   SKU : <span class="sku">${item.produk?.sku ?? '-'}</span>
                                                 </span>
                                             </div>
                                         </td>
@@ -220,12 +262,12 @@
                                             ${
                                                 (item.produk?.stok_produk?.jumlah_tersedia ?? 0) >= (item.kebutuhan ?? 0)
                                                 ? `
-                                                                                                                                                                    <span class="badge bg-success">Tersedia</span>
-                                                                                                                                                                `
+                                                                                                                                                                                <span class="badge bg-success">Tersedia</span>
+                                                                                                                                                                            `
                                                 : `
-                                                                                                                                                                    <span class="badge bg-danger">Kurang</span>
-                                                                                                                                                                    <input type="hidden" class="status-stok" value="kurang">
-                                                                                                                                                                `
+                                                                                                                                                                                <span class="badge bg-danger">Kurang</span>
+                                                                                                                                                                                <input type="hidden" class="status-stok" value="kurang">
+                                                                                                                                                                            `
                                             }
                                         </td>
                                         <td class="py-3 px-4 text-center">
@@ -299,24 +341,24 @@
 
                                 ${filter === 'diambil'
                                     ? `
-                                                                                    <td class="py-3 px-4 text-center">
-                                                                                        <span class="fw-bold text-primary">
-                                                                                            ${
-                                                                                                item.created_at
-                                                                                                    ? new Date(item.created_at)
-                                                                                                        .toLocaleDateString('id-ID')
-                                                                                                    : '-'
-                                                                                            }
-                                                                                        </span>
-                                                                                    </td>
-                                                                                `
+                                                                                                <td class="py-3 px-4 text-center">
+                                                                                                    <span class="fw-bold text-primary">
+                                                                                                        ${
+                                                                                                            item.created_at
+                                                                                                                ? new Date(item.created_at)
+                                                                                                                    .toLocaleDateString('id-ID')
+                                                                                                                : '-'
+                                                                                                        }
+                                                                                                    </span>
+                                                                                                </td>
+                                                                                            `
                                     : `
-                                                                                    <td class="py-3 px-4 text-center">
-                                                                                        <span class="fw-bold text-primary">
-                                                                                            ${item.stok_produk?.jumlah_tersedia ?? 0}
-                                                                                        </span>
-                                                                                    </td>
-                                                                                `
+                                                                                                <td class="py-3 px-4 text-center">
+                                                                                                    <span class="fw-bold text-primary">
+                                                                                                        ${item.stok_produk?.jumlah_tersedia ?? 0}
+                                                                                                    </span>
+                                                                                                </td>
+                                                                                            `
                                 }
 
 
@@ -491,8 +533,6 @@
                         .trim();
                 }).get();
 
-                console.log(selectedSku);
-
                 Swal.fire({
                     title: 'Konfirmasi',
                     text: `Tandai ${selected.length} barang sebagai sudah disiapkan?`,
@@ -511,6 +551,7 @@
                             },
                             dataType: "JSON",
                             success: function(response) {
+                                console.log(response);
                                 if (response.success) {
                                     Swal.fire({
                                         icon: 'success',
@@ -620,9 +661,11 @@
 
             });
 
+            // Button View Detail
             let detailTable = null;
             $('#stockTableBody').on('click', '.btnDetail', function(e) {
                 e.stopPropagation();
+
                 const sku = $(this).data('sku');
 
                 if (!sku || String(sku).trim() === '') {
@@ -631,93 +674,167 @@
                         title: 'Data tidak valid',
                         text: 'Data pesanan tidak valid.'
                     });
-
                     return;
                 }
 
-                $('#detailSku').html(`
+                $('#modalTitle').text('Detail Kebutuhan Terhadap Pesanan');
+                $('#detailSku').html(
+                    `
                     <div class="d-flex align-items-center gap-2">
                         <span class="text-muted fw-semibold">SKU Produk :</span>
-                        <span class="fw-bold text-primary">${sku}</span>
+                        <span class="badge bg-primary-subtle text-primary fs-6">
+                            ${sku}
+                        </span>
                     </div>
                 `);
+
+                if ($.fn.DataTable.isDataTable('#detailTable')) {
+                    $('#detailTable').DataTable().destroy();
+                }
 
                 $('#detailTableBody').empty();
 
                 $.ajax({
                     type: "GET",
-                    url: "{{ route('kebutuhan.detailpesanan', ':filter') }}".replace(':filter', filter),
+                    url: "{{ route('kebutuhan.detailpesanan', ['filter' => ':filter', 'sku' => ':sku']) }}"
+                        .replace(':filter', filter)
+                        .replace(':sku', sku),
                     dataType: "JSON",
                     success: function(response) {
-                        $.each(data, function(index, item) {
+                        $('#detailTableBody').empty();
+                        $.each(response, function(index, item) {
+                            const pesanan = item.pesanan ?? {};
+                            const namaPembeli = pesanan.nama_pembeli ?? '-';
+                            const username = pesanan.username ?? '-';
+                            const kurir = pesanan.kurir ?? '-';
+                            const noResi = pesanan.no_resi ?? '-';
+                            const status = pesanan.status ?? '-';
+                            const tanggal = pesanan.tanggal ?
+                                new Date(pesanan.tanggal).toLocaleDateString('id-ID', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric'
+                                }) : '-';
+                            let statusBadge = 'bg-secondary-subtle text-secondary';
+
+                            if (status === 'proses') {
+                                statusBadge = 'bg-warning-subtle text-warning';
+                            } else if (status === 'selesai') {
+                                statusBadge = 'bg-success-subtle text-success';
+                            } else if (status === 'batal') {
+                                statusBadge = 'bg-danger-subtle text-danger';
+                            } else if (status === 'packing') {
+                                statusBadge = 'bg-info-subtle text-info';
+                            }
+
                             $('#detailTableBody').append(`
                                 <tr>
-                                    <td>${index + 1}</td>
-
-                                    <td>
-                                        <span class="fw-semibold">
-                                            ${item.no_pesanan}
-                                        </span>
-                                    </td>
-
-                                    <td>
-                                        ${item.customer}
-                                    </td>
-
-                                    <td>
-                                        ${item.produk}
-                                    </td>
-
                                     <td class="text-center">
-                                        <span class="fw-bold">
-                                            ${item.jumlah}
+                                        <span class="fw-bold text-muted">
+                                            ${index + 1}
                                         </span>
                                     </td>
-
-                                    <td class="text-center">
-                                        <span class="badge bg-primary-subtle text-primary">
-                                            ${item.status}
-                                        </span>
-                                    </td>
-
                                     <td>
-                                        ${item.tanggal}
+                                        <div class="fw-bold text-dark">
+                                            ${item.no_pesanan ?? '-'}
+                                        </div>
+
+                                        <div class="small mt-1">
+                                            <i class="fa-solid fa-user text-muted me-1"></i>
+                                            ${namaPembeli}
+                                        </div>
+                                        <div class="text-muted" style="font-size: 11px;">
+                                            @${username}
+                                        </div>
+                                    </td>
+                                    <td style="max-width: 300px;">
+                                        <div class="fw-semibold text-dark">
+                                            ${item.produk.nama_produk ?? '-'}
+                                        </div>
+                                        <div class="d-flex gap-2 mt-1 flex-wrap">
+                                            <span class="badge bg-light text-dark border">
+                                                ${item.produk.variasi ?? '-'}
+                                            </span>
+                                            <span class="badge bg-primary-subtle text-primary">
+                                                ${item.sku ?? '-'}
+                                            </span>
+                                        </div>
+                                        <div class="text-muted mt-1" style="font-size: 11px;">
+                                            Rp ${Number(item.harga ?? 0).toLocaleString('id-ID')}
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge rounded-pill bg-primary fs-6 px-3">
+                                            ${item.jumlah ?? 0}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">
+                                            ${kurir}
+                                        </div>
+
+                                        <div class="text-muted mt-1" style="font-size: 11px;">
+                                            <i class="fa-solid fa-barcode me-1"></i>
+                                            ${noResi}
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge ${statusBadge} text-uppercase">
+                                            ${status}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">
+                                            ${tanggal}
+                                        </div>
+                                        <hr class="m-0 p-0">
+                                        <div class="text-muted mt-1" style="font-size: 11px;">
+                                            <i class="fa-solid fa-store me-1"></i>
+                                            ${item.pesanan.toko.nama_toko ?? '-'}
+                                        </div>
                                     </td>
                                 </tr>
                             `);
                         });
+
+
+                        detailTable = $('#detailTable').DataTable({
+                            pageLength: 10,
+                            lengthChange: true,
+                            searching: true,
+                            ordering: true,
+                            autoWidth: false,
+                            responsive: true,
+
+                            language: {
+                                search: '',
+                                searchPlaceholder: 'Cari pesanan...',
+                                emptyTable: 'Tidak ada data pesanan',
+                                zeroRecords: 'Data tidak ditemukan',
+                                info: 'Menampilkan _START_ - _END_ dari _TOTAL_ pesanan',
+                                infoEmpty: 'Tidak ada data'
+                            },
+
+                            columnDefs: [{
+                                targets: 0,
+                                orderable: false,
+                                searchable: true
+                            }]
+                        });
+                    },
+
+                    error: function(xhr) {
+                        console.log(xhr.responseText);
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: 'Gagal mengambil detail pesanan.'
+                        });
                     }
                 });
 
-                // Masukkan ke tbody
 
-
-                // Hancurkan DataTable lama jika ada
-                if ($.fn.DataTable.isDataTable('#detailTable')) {
-                    $('#detailTable').DataTable().destroy();
-                }
-
-                // Buat DataTable
-                detailTable = $('#detailTable').DataTable({
-                    pageLength: 10,
-                    lengthChange: false,
-                    searching: true,
-                    ordering: true,
-                    autoWidth: false,
-                    responsive: true,
-                    language: {
-                        search: '',
-                        searchPlaceholder: 'Cari data...',
-                        emptyTable: 'Tidak ada data pesanan'
-                    },
-                    columnDefs: [{
-                        targets: 0,
-                        orderable: false,
-                        searchable: false
-                    }]
-                });
-
-                // Buka modal
                 const modal = new bootstrap.Modal(
                     document.getElementById('detailModal')
                 );

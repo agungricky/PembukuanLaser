@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\kategori;
 use App\Models\mutasi_stok;
 use App\Models\Pesanan;
+use App\Models\PesananPerProduk;
 use App\Models\Produk;
 use App\Models\stok_produk;
 use Carbon\Carbon;
@@ -285,11 +286,12 @@ class GudangController extends Controller
                 }
             }
 
+            return response()->json($kebutuhan);
+
             // =========================
             // BUAT MUTASI STOK
             // =========================
             foreach ($kebutuhan as $sku => $data) {
-
                 mutasi_stok::create([
                     'stok_produk_id' => $data['stok_produk_id'],
                     'user_id' => auth()->id(),
@@ -300,7 +302,6 @@ class GudangController extends Controller
             }
 
             DB::commit();
-
             return response()->json([
                 'success' => true,
                 'message' => 'Barang berhasil disiapkan',
@@ -645,42 +646,19 @@ class GudangController extends Controller
         return response()->json($data);
     }
 
-    public function detailpesanan($sku){
-         if ($sku === 'siapkan') {
-            $pesanan = Pesanan::with('pesanan_per_produk.produk')
-                ->where('status', 'proses')
-                ->get();
-            
-            return response()->json($pesanan);
+    public function detailpesanan($filter, $sku)
+    {
+        if ($filter === 'siapkan') {
+            $data = PesananPerProduk::with('pesanan.toko', 'produk')
+                ->where('sku', $sku)
+                ->where('status_pesanan', '0')
+                ->whereHas('pesanan', function ($query) {
+                    $query->where('status', 'proses');
+                })->get();
 
-            $kebutuhan = [];
-            foreach ($pesanan as $value) {
-                foreach ($value->pesanan_per_produk as $item) {
-                    $sku = $item->sku;
-                    $jumlah = $item->jumlah;
+            return response()->json($data);
 
-                    if ($item->status_pesanan == 0) {
-                        if (isset($kebutuhan[$sku])) {
-                            $kebutuhan[$sku] += $jumlah;
-                        } else {
-                            $kebutuhan[$sku] = $jumlah;
-                        }
-                    }
-                }
-            }
-
-            $kebutuhanProduk = [];
-            foreach ($kebutuhan as $sku => $jumlah) {
-                $produk = Produk::with('stok_produk')->where('sku', $sku)->first();
-                $kebutuhanProduk[] = [
-                    'produk' => $produk,
-                    'kebutuhan' => $jumlah,
-                ];
-            }
-
-            return response()->json($kebutuhanProduk);
-
-        } elseif ($sku === 'siap') {
+        } elseif ($filter === 'siap') {
             $kebutuhanProduk = mutasi_stok::with('stok_produk.produk')
                 ->where('jenis_mutasi', 'siap')
                 ->orderBy('updated_at', 'DESC')
@@ -688,7 +666,7 @@ class GudangController extends Controller
 
             return response()->json($kebutuhanProduk);
 
-        } elseif ($sku === 'diambil') {
+        } elseif ($filter === 'diambil') {
             $kebutuhanProduk = mutasi_stok::with('stok_produk.produk')
                 ->where('jenis_mutasi', 'keluar')
                 ->orderBy('updated_at', 'DESC')
