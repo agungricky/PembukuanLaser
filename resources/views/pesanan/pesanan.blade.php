@@ -41,7 +41,7 @@
                 </div>
 
                 {{-- Tanggal --}}
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="input-group">
                         <span class="input-group-text bg-white">
                             <i class="bi bi-calendar-event"></i>
@@ -69,22 +69,31 @@
                 </div>
 
                 {{-- Tombol --}}
-                <div class="col-md-4 text-md-end">
-                    <div class="d-inline-flex gap-2">
+                <div class="col-md-5 text-md-end">
+                    <div class="d-inline-flex gap-2 flex-wrap justify-content-md-end">
+
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-funnel me-1"></i>
                             Terapkan
                         </button>
 
-                        <a href="{{ route('pesanan.index') }}" class="btn btn-outline-secondary">
+                        <a href="{{ route('pesanan.index') }}"
+                            class="btn btn-outline-secondary">
                             Reset
                         </a>
 
                         <a href="{{ route('pesanan.import') }}"
                             class="btn btn-success d-flex align-items-center gap-1 shadow-sm">
-                            <i class="bi bi-upload"></i>
-                            Import
+                            <i class="bi bi-file-earmark-spreadsheet"></i>
+                            Import Pesanan
                         </a>
+
+                        <a href="{{ route('resi.import') }}"
+                            class="btn btn-danger d-flex align-items-center gap-1 shadow-sm">
+                            <i class="bi bi-file-earmark-pdf"></i>
+                            Import PDF Resi
+                        </a>
+
                     </div>
                 </div>
             </div>
