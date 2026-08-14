@@ -21,25 +21,47 @@ class AuthController extends Controller
 
         $credentials = $request->only('name', 'password');
 
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
+        if (!Auth::attempt($credentials)) {
 
-            $user = Auth::user();
-
-            if ($user->role === 'packing') {
-                return redirect()->route('packing.pesanan');
-            }elseif($user->role === 'manager' || $user->role === 'pegawai'){
-                return redirect()->intended('/dashboard');
-            }elseif($user->role === 'gudang'){
-                return redirect()->intended('/gudang');
-            }
+            return back()->withErrors([
+                'name' => 'Nama atau password salah.',
+            ]);
         }
 
-        return back()->withErrors([
-            'name' => 'Nama atau password salah.',
-        ]);
+        $request->session()->regenerate();
+
+        $user = Auth::user();
+
+        if ($user->role === 'packing') {
+
+            return redirect()->route('packing.pesanan');
+
+        } elseif ($user->role === 'manager' || $user->role === 'pegawai') {
+
+            return redirect()->intended('/dashboard');
+
+        } elseif ($user->role === 'gudang') {
+
+            return redirect()->intended('/gudang');
+
+        } elseif ($user->role === 'editor') {
+
+            return redirect()->route('editor.index');
+
+        }
+
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()
+            ->route('login')
+            ->withErrors([
+                'name' => 'Role pengguna tidak dikenali.',
+            ]);
     }
-    
+
     public function logout(Request $request)
     {
         Auth::logout();

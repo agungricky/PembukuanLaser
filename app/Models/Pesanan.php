@@ -20,6 +20,12 @@ class Pesanan extends Model
         'no_pesanan',
         'tanggal',
         'no_resi',
+
+        'resi_printed_at',
+        'resi_last_printed_at',
+        'resi_printed_by',
+        'resi_print_count',
+
         'id_toko',
         'id_user',
         'nama_pembeli',
@@ -38,13 +44,17 @@ class Pesanan extends Model
     ];
 
     protected $casts = [
-        'tanggal'        => 'date',
-        'tanggal_kirim'  => 'datetime',
+        'tanggal'              => 'date',
+        'tanggal_kirim'        => 'datetime',
 
-        'total_hpp'      => 'decimal:2',
-        'total_harga'    => 'decimal:2',
-        'total_admin'    => 'decimal:2',
-        'pencairan'      => 'decimal:2',
+        'resi_printed_at'      => 'datetime',
+        'resi_last_printed_at' => 'datetime',
+        'resi_print_count'     => 'integer',
+
+        'total_hpp'            => 'decimal:2',
+        'total_harga'          => 'decimal:2',
+        'total_admin'          => 'decimal:2',
+        'pencairan'            => 'decimal:2',
     ];
 
     public function produk()
@@ -89,5 +99,25 @@ class Pesanan extends Model
 
     public function pesanan_per_produk(){
         return $this->hasMany(PesananPerProduk::class, 'no_pesanan', 'no_pesanan');
+    }
+
+    public function resiPages()
+    {
+        return $this->hasMany(
+            ResiPage::class,
+            'no_pesanan',
+            'no_pesanan'
+        )
+        ->orderBy('urutan')
+        ->orderBy('halaman');
+    }
+
+    public function resiPrinter()
+    {
+        return $this->belongsTo(
+            User::class,
+            'resi_printed_by',
+            'id'
+        )->withTrashed();
     }
 }
