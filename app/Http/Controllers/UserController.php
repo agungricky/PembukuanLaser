@@ -72,4 +72,9 @@ class UserController extends Controller
 
         return redirect()->route('users.index')->with('success', 'User berhasil dinonaktifkan.');
     }
+
+    public function datauser($role){
+        $user = User::where('role', $role)->get();
+        return response()->json($user);
+    }
 }

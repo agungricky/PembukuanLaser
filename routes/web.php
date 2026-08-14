@@ -22,11 +22,14 @@ use App\Http\Controllers\SkuController;
 use App\Http\Controllers\stokProdukController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\UserController;
+use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EditorController;
 use App\Http\Controllers\ResiImportController;
 
 Route::middleware(['web', 'auth'])->group(function () {
+
+    Route::get('/user/{role}', [UserController::class, 'datauser'])->name('user.data');
 
     // ===================== ADMIN PENJUALAN ===================== //
     Route::middleware(['role:pegawai'])->group(function () {
@@ -188,7 +191,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/riwayat-aktivitas/gudang', [GudangController::class, 'riwayataktivitas'])->name('gudang.aktivitas');
         Route::get('/riwayat-aktivitas/data', [GudangController::class, 'riwayatAktivitasData'])->name('gudang.riwayataktivitas.data');
         Route::get('/card-detail/{card}', [GudangController::class, 'detailcard'])->name('gudang.detailcard.json');
-        Route::get('/kebutuhan/detail-pesanan/{sku}', [GudangController::class, 'detailpesanan'])->name('kebutuhan.detailpesanan');
+        Route::get('/kebutuhan/detail-pesanan/{filter}/{sku}', [GudangController::class, 'detailpesanan'])->name('kebutuhan.detailpesanan');
     });
 });
 

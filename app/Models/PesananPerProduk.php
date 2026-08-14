@@ -19,6 +19,8 @@ class PesananPerProduk extends Model
         'hpp',
         'harga',
         'sku',
+        'status_pesanan',
+        'mutasi_stok_id'
     ];
 
     protected $casts = [
@@ -53,4 +55,10 @@ class PesananPerProduk extends Model
             'id_per_produk'
         );
     }
+
+    public function mutasi(){
+        return $this->belongsTo(mutasi_stok::class, 'mutasi_stok_id', 'id');
+    }
+
+    
 }
