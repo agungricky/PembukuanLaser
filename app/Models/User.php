@@ -49,7 +49,39 @@ class User extends Authenticatable
         );
     }
 
-    public function mutasi_stok(){
-        return $this->belongsTo(mutasi_stok::class, 'stok_produk_id', 'id');
+    public function mutasi_stok()
+    {
+        return $this->hasMany(
+            mutasi_stok::class,
+            'user_id',
+            'id'
+        );
+    }
+
+    public function editorRequests()
+    {
+        return $this->hasMany(
+            EditorRequest::class,
+            'editor_imported_by',
+            'id'
+        );
+    }
+
+    public function resiImports()
+    {
+        return $this->hasMany(
+            ResiImport::class,
+            'user_id',
+            'id'
+        );
+    }
+
+    public function resiPrints()
+    {
+        return $this->hasMany(
+            Pesanan::class,
+            'resi_printed_by',
+            'id'
+        );
     }
 }

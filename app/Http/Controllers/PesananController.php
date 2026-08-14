@@ -16,52 +16,52 @@ class PesananController extends Controller
     public function index(Request $request)
     {
         $allowed = [10, 20, 25, 50, 100];
-    
+
         $perPage = (int) $request->input('per_page', 20);
-    
+
         if (!in_array($perPage, $allowed, true)) {
             $perPage = 20;
         }
-    
+
         $keyword = trim((string) $request->input('no_pesanan', ''));
         $range   = trim((string) $request->input('tanggal', ''));
-    
+
         // Default bulan berjalan
         $startStr = now()->startOfMonth()->toDateString();
         $endStr   = now()->toDateString();
-    
+
         // Jika user memilih tanggal
         if ($range !== '') {
-    
+
             try {
-    
+
                 if (str_contains($range, ' s.d ')) {
-    
+
                     [$s, $e] = array_map('trim', explode(' s.d ', $range, 2));
-    
+
                     $start = Carbon::createFromFormat('Y-m-d', $s);
                     $end   = Carbon::createFromFormat('Y-m-d', $e);
-    
+
                 } else {
-    
+
                     $start = Carbon::createFromFormat('Y-m-d', $range);
                     $end   = Carbon::createFromFormat('Y-m-d', $range);
-    
+
                 }
-    
+
                 if ($end->lt($start)) {
                     [$start, $end] = [$end, $start];
                 }
-    
+
                 $startStr = $start->toDateString();
                 $endStr   = $end->toDateString();
-    
+
             } catch (\Throwable $e) {
                 // gunakan default bulan berjalan
             }
-    
+
         }
-    
+
         $pesanan = Pesanan::select([
                 'no_pesanan',
                 'tanggal',
@@ -85,52 +85,52 @@ class PesananController extends Controller
                     );
                 }
             ])
-    
+
             ->when($keyword !== '', function ($q) use ($keyword) {
-    
+
                 $q->where(function ($sub) use ($keyword) {
-    
+
                     $sub->where('no_pesanan', 'like', "%{$keyword}%")
                         ->orWhere('no_resi', 'like', "%{$keyword}%");
-    
+
                 });
-    
+
             })
-    
+
             // Hanya gunakan filter tanggal jika tidak sedang mencari keyword
             ->when($keyword === '', function ($q) use ($startStr, $endStr) {
-    
+
                 $q->whereBetween('tanggal', [$startStr, $endStr]);
-    
+
             })
-    
+
             ->orderByDesc('tanggal')
             ->orderByDesc('no_pesanan')
             ->paginate($perPage)
             ->withQueryString();
-    
+
         $totalItems = DB::table('pesanan_per_produk as pp')
             ->join('pesanan as p', 'pp.no_pesanan', '=', 'p.no_pesanan')
-    
+
             ->when($keyword !== '', function ($q) use ($keyword) {
-    
+
                 $q->where(function ($sub) use ($keyword) {
-    
+
                     $sub->where('p.no_pesanan', 'like', "%{$keyword}%")
                         ->orWhere('p.no_resi', 'like', "%{$keyword}%");
-    
+
                 });
-    
+
             })
-    
+
             ->when($keyword === '', function ($q) use ($startStr, $endStr) {
-    
+
                 $q->whereBetween('p.tanggal', [$startStr, $endStr]);
-    
+
             })
-    
+
             ->sum('pp.jumlah');
-    
+
         return view('pesanan.pesanan', [
             'pesanan' => $pesanan,
             'total'   => (int) $totalItems,
@@ -145,7 +145,7 @@ class PesananController extends Controller
         $pesanan = Pesanan::where('no_pesanan', $id)->with('toko')->first();
         return response()->json($pesanan);
     }
-    
+
     public function importPage()
     {
         $daftarToko = Toko::select(
@@ -418,53 +418,83 @@ class PesananController extends Controller
         $biayaAdmin = (float) ($toko->biaya_admin ?? 0);
         $biayaTambahan = (float) ($toko->biaya_tambahan ?? 0);
 
+        $imported = 0;
+        $skipped = [];
+
         DB::beginTransaction();
 
         try {
-            foreach ($payload as $item) {
-                $noPesanan = $item['no_pesanan'] ?? null;
 
-                if (!$noPesanan) {
+            foreach ($payload as $item) {
+
+                $noPesanan = trim((string) ($item['no_pesanan'] ?? ''));
+
+                if ($noPesanan === '') {
                     throw new \Exception('Nomor pesanan tidak boleh kosong.');
                 }
 
-                DB::table('pesanan')->updateOrInsert(
-                    ['no_pesanan' => $noPesanan],
-                    [
-                        'tanggal' => $tanggal,
-                        'no_resi' => $item['no_resi'] ?? '',
-                        'id_toko' => $idToko,
-                        'id_user' => $idUser,
-                        'nama_pembeli' => $item['nama_pembeli'] ?? '',
-                        'username' => $item['username'] ?? '',
-                        'kurir' => $item['kurir'] ?? '',
-                        'status' => 'proses',
-                        'total_hpp' => 0,
-                        'total_harga' => 0,
-                        'total_admin' => 0,
-                        'pencairan' => null,
-                        'notes' => null,
-                    ]
-                );
-
-                DB::table('pesanan_per_produk')
+                $sudahAda = DB::table('pesanan')
                     ->where('no_pesanan', $noPesanan)
-                    ->delete();
+                    ->exists();
+
+                if ($sudahAda) {
+                    $skipped[] = $noPesanan;
+                    continue;
+                }
+
+                DB::table('pesanan')->insert([
+                    'no_pesanan' => $noPesanan,
+                    'tanggal' => $tanggal,
+
+                    'no_resi' => !empty($item['no_resi'])
+                        ? trim((string) $item['no_resi'])
+                        : null,
+
+                    'id_toko' => $idToko,
+                    'id_user' => $idUser,
+
+                    'nama_pembeli' => trim((string) ($item['nama_pembeli'] ?? '')),
+                    'username' => trim((string) ($item['username'] ?? '')),
+                    'kurir' => trim((string) ($item['kurir'] ?? '')),
+
+                    'status' => 'proses',
+
+                    'total_hpp' => 0,
+                    'total_harga' => 0,
+                    'total_admin' => 0,
+
+                    'pencairan' => null,
+                    'notes' => null,
+                ]);
 
                 $totalHpp = 0;
                 $totalHarga = 0;
 
                 foreach ($item['produk'] ?? [] as $prd) {
-                    $nama = $prd['nama_produk'] ?? '';
-                    $variasi = $prd['variasi'] ?? '';
-                    $jumlah = (int) ($prd['jumlah'] ?? 1);
+
+                    $namaProduk = trim(
+                        (string) ($prd['nama_produk'] ?? '')
+                    );
+
+                    $variasi = trim(
+                        (string) ($prd['variasi'] ?? '')
+                    );
+
+                    $jumlah = max(
+                        1,
+                        (int) ($prd['jumlah'] ?? 1)
+                    );
+
                     $harga = (float) ($prd['harga'] ?? 0);
                     $hpp = (float) ($prd['hpp'] ?? 0);
-                    $sku = $prd['sku'] ?? null;
+
+                    $sku = !empty($prd['sku'])
+                        ? trim((string) $prd['sku'])
+                        : null;
 
                     DB::table('pesanan_per_produk')->insert([
                         'no_pesanan' => $noPesanan,
-                        'nama_produk' => $nama,
+                        'nama_produk' => $namaProduk,
                         'variasi' => $variasi,
                         'jumlah' => $jumlah,
                         'hpp' => $hpp,
@@ -472,15 +502,24 @@ class PesananController extends Controller
                         'sku' => $sku,
                     ]);
 
-                    $totalHpp += $hpp * $jumlah;
-                    $totalHarga += $harga * $jumlah;
+                    $totalHpp += ($hpp * $jumlah);
+                    $totalHarga += ($harga * $jumlah);
                 }
 
                 if ($biayaAdmin > 1 && $biayaAdmin <= 100) {
-                    $totalAdmin = ($totalHarga * ($biayaAdmin / 100)) + $biayaTambahan;
+
+                    $totalAdmin =
+                        ($totalHarga * ($biayaAdmin / 100))
+                        + $biayaTambahan;
+
                 } elseif ($biayaAdmin > 0 && $biayaAdmin <= 1) {
-                    $totalAdmin = ($totalHarga * $biayaAdmin) + $biayaTambahan;
+
+                    $totalAdmin =
+                        ($totalHarga * $biayaAdmin)
+                        + $biayaTambahan;
+
                 } else {
+
                     $totalAdmin = $biayaTambahan;
                 }
 
@@ -491,6 +530,8 @@ class PesananController extends Controller
                         'total_harga' => $totalHarga,
                         'total_admin' => $totalAdmin,
                     ]);
+
+                $imported++;
             }
 
             DB::commit();
@@ -499,8 +540,14 @@ class PesananController extends Controller
 
             return response()->json([
                 'status' => 'success',
+                'message' => 'Import selesai.',
+                'imported' => $imported,
+                'skipped_count' => count($skipped),
+                'skipped' => $skipped,
             ]);
+
         } catch (\Throwable $e) {
+
             DB::rollBack();
 
             return response()->json([

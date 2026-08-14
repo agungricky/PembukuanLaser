@@ -31,4 +31,12 @@ class Toko extends Model
     {
         return $this->hasMany(Pesanan::class, 'id_toko', 'id_toko');
     }
+    public function resiImports()
+    {
+        return $this->hasMany(
+            ResiImport::class,
+            'id_toko',
+            'id_toko'
+        );
+    }
 }

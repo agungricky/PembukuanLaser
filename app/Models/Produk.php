@@ -13,7 +13,14 @@ class Produk extends Model
     protected $keyType = 'string';
     public $timestamps = false;
 
-    protected $fillable = ['sku', 'hpp'];
+    protected $fillable = [
+        'sku',
+        'nama_produk',
+        'variasi',
+        'hpp',
+        'status',
+        'kategori_id',
+    ];
 
     protected $casts = [
         'hpp' => 'decimal:2',
@@ -29,7 +36,12 @@ class Produk extends Model
         return $this->hasMany(PesananPerProduk::class, 'sku', 'sku');
     }
 
-    public function kategori(){
-        return $this->belongsTo(kategori::class);
+    public function kategori()
+    {
+        return $this->belongsTo(
+            kategori::class,
+            'kategori_id',
+            'id'
+        );
     }
 }

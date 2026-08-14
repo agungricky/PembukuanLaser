@@ -7,5 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class RoleKesalahan extends Model
 {
     protected $table = 'role_kesalahans';
-    protected $fillable = ['devisi', 'jenis_kesalahan'];
+    protected $fillable = [
+        'divisi',
+        'jenis_kesalahan'
+    ];
 }

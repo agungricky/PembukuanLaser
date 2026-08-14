@@ -24,6 +24,8 @@ use App\Http\Controllers\TokoController;
 use App\Http\Controllers\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\EditorController;
+use App\Http\Controllers\ResiImportController;
 
 Route::middleware(['web', 'auth'])->group(function () {
 
@@ -41,11 +43,38 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::resource('users', UserController::class)->only(['index', 'store', 'update', 'destroy']);
     });
 
+    // ===================== EDITOR ===================== //
+    Route::middleware(['role:editor,manager'])->group(function () {
+        Route::prefix('editor')
+            ->controller(EditorController::class)
+            ->group(function () {
+                Route::get('/', 'index')
+                    ->name('editor.index');
+
+                Route::get('/download-plat', 'downloadPlat')
+                    ->name('editor.download.plat');
+
+                Route::post('/import', 'importEditor')
+                    ->name('editor.import');
+            });
+    });
+
     // ===================== PACKING ===================== //
     Route::middleware(['role:packing'])->group(function () {
-        Route::get('/packing/pesanan', [PackingPesananController::class, 'index'])->name('packing.pesanan');
-        Route::post('/packing/scan', [PackingPesananController::class, 'scan'])->name('packing.scan');
-        Route::get('/packing/stats', [PackingPesananController::class, 'stats'])->name('packing.stats');
+        Route::get('/packing/pesanan', [PackingPesananController::class, 'index'])
+            ->name('packing.pesanan');
+
+        Route::post('/packing/scan', [PackingPesananController::class, 'scan'])
+            ->name('packing.scan');
+
+        Route::get('/packing/stats', [PackingPesananController::class, 'stats'])
+            ->name('packing.stats');
+
+        Route::post('/packing/cari-request', [PackingPesananController::class, 'cariRequest'])
+            ->name('packing.cariRequest');
+
+        Route::post('/packing/cetak-resi', [PackingPesananController::class, 'cetakResi'])
+            ->name('packing.cetakResi');
     });
 
     // ===================== Admin & Manager ===================== //
@@ -72,6 +101,13 @@ Route::middleware(['web', 'auth'])->group(function () {
                 Route::get('get-toko/{market}', 'getTokoByMarketplace')->name('pesanan.getToko');
 
                 Route::get('pesanan-detail/{id}', 'pesananDetail')->name('pesanan.detail');
+            });
+
+        Route::prefix('resi')->controller(ResiImportController::class)
+            ->group(function () {
+                Route::get('/import', 'index')->name('resi.import');
+                Route::post('/preview', 'preview')->name('resi.preview');
+                Route::post('/simpan', 'store')->name('resi.store');
             });
 
         Route::controller(PesananDetailController::class)
