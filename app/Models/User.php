@@ -50,6 +50,6 @@ class User extends Authenticatable
     }
 
     public function mutasi_stok(){
-        return $this->belongsTo(mutasi_stok::class);
+        return $this->belongsTo(mutasi_stok::class, 'stok_produk_id', 'id');
     }
 }

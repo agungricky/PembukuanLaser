@@ -20,6 +20,14 @@ class mutasi_stok extends Model
     }
 
     public function user(){
-        return $this->belongsTo(stok_produk::class);
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function ambilBarang(){
+        return $this->belongsTo(User::class, 'pengambil_id', 'id');
+    }
+
+    public function pesanan_per_produk(){
+        return $this->hasMany(PesananPerProduk::class, 'mutasi_stok_id', 'id');
     }
 }

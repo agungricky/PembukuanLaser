@@ -18,6 +18,8 @@ class PesananPerProduk extends Model
         'hpp',
         'harga',
         'sku',
+        'status_pesanan',
+        'mutasi_stok_id'
     ];
 
     protected $casts = [
@@ -33,6 +35,10 @@ class PesananPerProduk extends Model
 
     public function produk(){
         return $this->belongsTo(Produk::class, 'sku', 'sku');
+    }
+
+    public function mutasi(){
+        return $this->belongsTo(mutasi_stok::class, 'mutasi_stok_id', 'id');
     }
 
     
