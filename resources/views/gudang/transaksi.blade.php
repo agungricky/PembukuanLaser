@@ -96,6 +96,8 @@
         </section>
     </main>
 
+    @include('layouts.footer')
+
     <!-- Modal Detail -->
     <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">

@@ -7,7 +7,9 @@ use App\Models\mutasi_stok;
 use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
 use App\Models\Produk;
+use App\Models\retur;
 use App\Models\stok_produk;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +29,7 @@ class GudangController extends Controller
             ->whereDate('created_at', $tanggalHariIni)
             ->sum('jumlah');
         $mutasi_keluar = mutasi_stok::where('jenis_mutasi', 'keluar')
+            ->orWhere('jenis_mutasi', 'sampel')
             ->whereDate('created_at', $tanggalHariIni)
             ->sum('jumlah');
         $banyakMutasi = mutasi_stok::whereDate('created_at', $tanggalHariIni)->count();
@@ -36,6 +39,7 @@ class GudangController extends Controller
         $stokHabis = stok_produk::where('jumlah_tersedia', '=', 0)->count();
         $terlaris = mutasi_stok::with('stok_produk.produk')
             ->where('jenis_mutasi', 'keluar')
+            ->orWhere('jenis_mutasi', 'sampel')
             ->get()
             ->groupBy('stok_produk_id')
             ->map(function ($items) {
@@ -674,5 +678,147 @@ class GudangController extends Controller
             return response()->json($kebutuhanProduk);
 
         }
+    }
+
+    public function barangsampel()
+    {
+        $produk = mutasi_stok::with('user', 'ambilBarang', 'stok_produk.produk.kategori')
+            ->where('jenis_mutasi', 'sampel')
+            ->orderBy('created_at', 'DESC')
+            ->get();
+        $allproduk = produk::with('kategori')->where('status', 'aktif')->get();
+        $user = User::where('role', 'pegawai')->get();
+
+        return view('gudang.sampel', compact('produk', 'allproduk', 'user'));
+    }
+
+    public function sampelcreate(Request $request)
+    {
+        $request->validate([
+            'produk_id' => ['required', 'exists:produk,sku'],
+            'nama_peminta' => ['required', 'exists:users,id'],
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $stok = stok_produk::where('sku_id', $request->produk_id)->first();
+
+            if (! $stok) {
+                $stok = stok_produk::create([
+                    'sku_id' => $request->produk_id,
+                    'jumlah_tersedia' => $request->jumlah,
+                    'min_stok' => '5',
+                ]);
+            }
+
+            if ($stok->jumlah_tersedia < $request->jumlah) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Permintaan gagal Stok Tidak Cukup.',
+                ], 500);
+            }
+
+            stok_produk::where('sku_id', $request->produk_id)->update([
+                'jumlah_tersedia' => $stok->jumlah_tersedia - $request->jumlah,
+            ]);
+
+            mutasi_stok::create([
+                'stok_produk_id' => $stok->id,
+                'user_id' => auth()->id(),
+                'pengambil_id' => $request->nama_peminta,
+                'jenis_mutasi' => 'sampel',
+                'jumlah' => $request->jumlah,
+                'keterangan' => 'Permintaan sampel',
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Permintaan sampel berhasil dibuat.',
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function barangretur()
+    {
+
+        $pesanan = Pesanan::with('pesanan_per_produk.retur', 'user', 'toko')
+            ->where('status', 'pengembalian')
+            ->Orwhere('status', 'pengiriman_gagal')
+            ->orderBy('tanggal', 'DESC')
+            ->take(2)
+            ->get();
+
+        // dd($pesanan->toArray());
+        return view('gudang.retur', compact('pesanan'));
+    }
+
+    public function detailRetur($no_pesanan)
+    {
+        $pesanan = PesananPerProduk::with('pesanan.toko')->where('no_pesanan', $no_pesanan)->get();
+
+        if (! $pesanan) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pesanan tidak ditemukan.',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => $pesanan,
+        ]);
+    }
+
+    public function returCreate(Request $request)
+    {
+        $request->validate([
+            'produk' => ['required', 'array', 'min:1'],
+            'produk.*.per_produk_id' => ['required', 'integer', 'exists:pesanan_per_produk,id_per_produk'],
+            'produk.*.diterima' => ['required', 'integer', 'min:0'],
+        ]);
+
+        DB::beginTransaction();
+        try {
+            foreach ($request->produk as $produk) {
+                if ($produk['diterima'] <= 0) {
+                    continue;
+                }
+
+                retur::create([
+                    'per_produk_id' => $produk['per_produk_id'],
+                    'diterima' => $produk['diterima'],
+                ]);
+
+                $perProduk = PesananPerProduk::where('id_per_produk', $produk['per_produk_id'])->first();
+                Sampe sini lanjut senin
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Data retur berhasil disimpan.',
+            ]);
+
+        } catch (\Throwable $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+
     }
 }

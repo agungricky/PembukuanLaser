@@ -307,7 +307,7 @@
                         <i class="fa-solid fa-chevron-down small"></i>
                     </a>
 
-                    <div class="collapse {{ request()->routeIs('transaksi.*') ? 'show' : '' }}"
+                    <div class="collapse {{ request()->routeIs('transaksi.*', 'gudang.*', ) ? 'show' : '' }}"
                         id="transaksiMenu">
 
                         <a href="{{ route('transaksi.show', ['transaksi' => 'siapkan']) }}"
@@ -331,12 +331,12 @@
                             <small>Sudah Diambil</small>
                         </a>
 
-                        <a href="" class="sidebar-sublink">
+                        <a href="{{ route('gudang.retur') }}" class="sidebar-sublink {{ Route::is('gudang.retur') ? 'active' : '' }}">
                             <i class="fa-solid fa-rotate-left"></i>
                             <small>Barang Retur</small>
                         </a>
 
-                        <a href="" class="sidebar-sublink">
+                        <a href="{{ route('gudang.sampel') }}" class="sidebar-sublink {{ Route::is('gudang.sampel') ? 'active' : '' }}">
                             <i class="fa-solid fa-vial"></i>
                             <small>Barang Sampel</small>
                         </a>

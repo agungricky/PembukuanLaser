@@ -192,6 +192,11 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/riwayat-aktivitas/data', [GudangController::class, 'riwayatAktivitasData'])->name('gudang.riwayataktivitas.data');
         Route::get('/card-detail/{card}', [GudangController::class, 'detailcard'])->name('gudang.detailcard.json');
         Route::get('/kebutuhan/detail-pesanan/{filter}/{sku}', [GudangController::class, 'detailpesanan'])->name('kebutuhan.detailpesanan');
+        Route::get('/sampel', [GudangController::class, 'barangsampel'])->name('gudang.sampel');
+        Route::post('/sampel/create', [GudangController::class, 'sampelcreate'])->name('gudang.sampel.create');
+        Route::get('/retur', [GudangController::class, 'barangretur'])->name('gudang.retur');
+        Route::get('/retur/perpesanan/{no_pesanan}', [GudangController::class, 'detailRetur'])->name('gudang.retur.json');
+        Route::post('/gudang/retur/create', [GudangController::class, 'returCreate'])->name('gudang.retur.create');
     });
 });
 

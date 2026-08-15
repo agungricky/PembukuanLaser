@@ -9,7 +9,7 @@ class mutasi_stok extends Model
     protected $fillable = [
         'stok_produk_id',
         'user_id',
-        'pesanan_perproduk_id',
+        'pengambil_id',
         'jenis_mutasi',
         'keterangan',
         'jumlah'
