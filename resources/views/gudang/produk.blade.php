@@ -35,13 +35,14 @@
 
                 <!-- Controls: Filters & Table Search -->
                 <div class="d-flex flex-nowrap align-items-center gap-2">
-                    <!-- Table Search Input -->
+
                     <div class="input-group input-group-sm" style="max-width: 240px;">
                         <span class="input-group-text bg-light border-end-0">
                             <i class="fa-solid fa-magnifying-glass text-muted"></i>
                         </span>
+
                         <input type="text" id="searchTable" placeholder="Cari SKU / Produk..."
-                            class="form-control form-control-sm border-start-0 bg-light" />
+                            class="form-control form-control-sm border-start-0 bg-light">
                     </div>
 
                     <select id="per_page" class="form-select form-select-sm" style="width: auto;">
@@ -50,6 +51,18 @@
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
+
+                    <button type="button" class="btn btn-sm btn-light border text-success text-nowrap"
+                        data-bs-toggle="modal" data-bs-target="#importExcelModal">
+                        <i class="fa-solid fa-file-arrow-up me-1"></i>
+                        Import Excel
+                    </button>
+
+                    <a href="" class="btn btn-sm btn-light border text-success text-nowrap">
+                        <i class="fa-solid fa-file-excel me-1"></i>
+                        Export Excel
+                    </a>
+
                 </div>
             </div>
 
@@ -199,6 +212,48 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="importExcelModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+
+                <form action="" method="POST" enctype="multipart/form-data">
+
+                    @csrf
+
+                    <div class="modal-header">
+                        <h6 class="modal-title">
+                            Import Produk Custom
+                        </h6>
+
+                        <button type="button" class="btn-close" data-bs-dismiss="modal">
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+                        <label class="form-label small">
+                            Pilih File Excel
+                        </label>
+
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                            Batal
+                        </button>
+
+                        <button type="submit" class="btn btn-success">
+                            <i class="fa-solid fa-file-import me-1"></i>
+                            Import
+                        </button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
@@ -277,9 +332,9 @@
                 $('#keterangan')
                     .prop('disabled', false)
                     .prop('required', true);
-                
+
                 $('#jumlahadd').addClass("d-none");
-                 $('#jumlah_add')
+                $('#jumlah_add')
                     .prop('disabled', true)
                     .prop('required', false);
 

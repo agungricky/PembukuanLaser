@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EditorController;
 use App\Http\Controllers\GudangController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IklanController;
@@ -18,14 +19,13 @@ use App\Http\Controllers\PesananDiterimaController;
 use App\Http\Controllers\PesananKirimController;
 use App\Http\Controllers\PesananProsesController;
 use App\Http\Controllers\ProdukController;
+use App\Http\Controllers\produkcustomController;
+use App\Http\Controllers\ResiImportController;
 use App\Http\Controllers\SkuController;
 use App\Http\Controllers\stokProdukController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\UserController;
-use App\Models\User;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\EditorController;
-use App\Http\Controllers\ResiImportController;
 
 Route::middleware(['web', 'auth'])->group(function () {
 
@@ -197,6 +197,11 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/retur', [GudangController::class, 'barangretur'])->name('gudang.retur');
         Route::get('/retur/perpesanan/{no_pesanan}', [GudangController::class, 'detailRetur'])->name('gudang.retur.json');
         Route::post('/gudang/retur/create', [GudangController::class, 'returCreate'])->name('gudang.retur.create');
+
+        Route::resource('/produk-custom', produkcustomController::class);
+
+        Route::get('/produk/export', [GudangController::class, 'export'])->name('produk.export');
+        Route::post('/produk/import', [GudangController::class, 'import'])->name('produk.import');
     });
 });
 

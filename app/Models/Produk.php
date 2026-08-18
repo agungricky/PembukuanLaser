@@ -44,4 +44,8 @@ class Produk extends Model
             'id'
         );
     }
+
+    public function produk_custom(){
+        return $this->hasMany(produkCustom::class, 'sku_id', 'sku');
+    }
 }

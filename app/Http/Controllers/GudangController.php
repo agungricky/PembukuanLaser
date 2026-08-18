@@ -12,6 +12,7 @@ use App\Models\stok_produk;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class GudangController extends Controller
@@ -752,25 +753,37 @@ class GudangController extends Controller
     {
 
         $pesanan = Pesanan::with('pesanan_per_produk.retur', 'user', 'toko')
-            ->where('status', 'pengembalian')
-            ->Orwhere('status', 'pengiriman_gagal')
+            ->whereIn('status', ['pengembalian', 'pengiriman_gagal'])
+            ->whereHas('pesanan_per_produk.retur')
             ->orderBy('tanggal', 'DESC')
-            ->take(2)
             ->get();
 
-        // dd($pesanan->toArray());
         return view('gudang.retur', compact('pesanan'));
     }
 
     public function detailRetur($no_pesanan)
     {
-        $pesanan = PesananPerProduk::with('pesanan.toko')->where('no_pesanan', $no_pesanan)->get();
+        $pesanan = PesananPerProduk::with('pesanan.toko')
+            ->where('no_pesanan', $no_pesanan)
+            ->whereHas('pesanan', function ($query) {
+                $query->where('tanggal', '>=', now()->subMonths(3));
+            })
+            ->get();
 
-        if (! $pesanan) {
+        if ($pesanan->isEmpty()) {
             return response()->json([
                 'status' => false,
                 'message' => 'Pesanan tidak ditemukan.',
             ], 404);
+        }
+
+        $status = $pesanan->first()->pesanan->status;
+
+        if (! in_array($status, ['pengembalian', 'pengiriman_gagal'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pesanan masih dalam proses pengiriman minta admin penjualan melakukan update pesanan.',
+            ], 422);
         }
 
         return response()->json([
@@ -800,7 +813,19 @@ class GudangController extends Controller
                 ]);
 
                 $perProduk = PesananPerProduk::where('id_per_produk', $produk['per_produk_id'])->first();
-                Sampe sini lanjut senin
+                stok_produk::where('sku_id', $perProduk->sku)
+                    ->increment('jumlah_tersedia', $produk['diterima']);
+
+                $stok_id = stok_produk::where('sku_id', $perProduk->sku)->first();
+                mutasi_stok::create([
+                    'stok_produk_id' => $stok_id->id,
+                    'user_id' => Auth::id(),
+                    'pengambil_id' => null,
+                    'jenis_mutasi' => 'masuk',
+                    'jumlah' => $produk['diterima'],
+                    'keterangan' => 'Barang masuk dari retur',
+                ]);
+
             }
 
             DB::commit();
@@ -811,7 +836,6 @@ class GudangController extends Controller
             ]);
 
         } catch (\Throwable $e) {
-
             DB::rollBack();
 
             return response()->json([

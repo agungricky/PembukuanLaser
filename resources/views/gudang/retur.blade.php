@@ -82,7 +82,6 @@
 
                             @foreach ($item->pesanan_per_produk as $produk)
                                 <tr>
-
                                     {{-- DATA PESANAN: hanya tampil di row pertama --}}
                                     @if ($loop->first)
                                         <!-- PESANAN -->
@@ -194,7 +193,7 @@
                                                     Masuk Stok
                                                 </div>
                                                 <div class="fw-semibold text-success" style="font-size: 13px;">
-                                                    {{ $produk->jumlah_diterima ?? 0 }}
+                                                    {{ $produk->retur->diterima ?? 0 }}
                                                 </div>
                                             </div>
                                         </div>
@@ -330,7 +329,7 @@
 
                         <i class="fa-solid fa-circle-exclamation text-warning fs-3"></i>
 
-                        <div class="fw-semibold mt-2">
+                        <div class="fw-semibold mt-2" id="message">
                             Pesanan tidak ditemukan
                         </div>
 
@@ -370,8 +369,6 @@
 
         $('#btnCariPesanan').on('click', function() {
             const noPesanan = $('#no_pesanan_retur').val().trim();
-            console.log(noPesanan);
-
 
             if (!noPesanan) {
                 Swal.fire({
@@ -393,10 +390,10 @@
                 url: "{{ route('gudang.retur.json', ':no_pesanan') }}".replace(':no_pesanan', noPesanan),
                 dataType: 'JSON',
                 success: function(response) {
+                    console.log(response);
                     $('#loadingRetur').addClass('d-none');
 
                     const pesanan = response.data;
-                    console.log(pesanan)
                     $('#detailNoPesanan').text(pesanan[0].no_pesanan ?? '-');
                     $('#detailPembeli').text(pesanan[0].pesanan.nama_pembeli ?? '-');
                     $('#detailToko').text(pesanan[0].pesanan.toko.nama_toko ?? '-');
@@ -467,8 +464,12 @@
                 },
 
                 error: function(xhr) {
+                    const message = xhr.responseJSON?.message || 'Data tidak ditemukan.';
+                    
                     $('#loadingRetur').addClass('d-none');
-                    $('#returNotFound').removeClass('d-none');
+                    $('#returNotFound')
+                        .removeClass('d-none')
+                        .text(message);
                     $('#btnSimpanRetur').prop('disabled', true);
                     $('#tableProdukRetur').html('');
                 }
@@ -517,6 +518,7 @@
                     $('#detailPesananRetur').addClass('d-none');
 
                     $('#modalRetur').modal('hide');
+                    location.reload();
                 },
 
                 error: function(xhr) {
