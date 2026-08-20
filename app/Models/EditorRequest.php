@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class EditorRequest extends Model
 {
-    protected $table = 'editor_requests';
+    use HasFactory;
 
     protected $fillable = [
         'id_per_produk',
@@ -22,10 +23,17 @@ class EditorRequest extends Model
     ];
 
     protected $casts = [
-        'jumlah_editor'      => 'integer',
-        'tanpa_heartbeat'    => 'boolean',
-        'tanpa_korlantas'    => 'boolean',
-        'editor_imported_at' => 'datetime',
+        'jumlah_editor' =>
+            'integer',
+
+        'tanpa_heartbeat' =>
+            'boolean',
+
+        'tanpa_korlantas' =>
+            'boolean',
+
+        'editor_imported_at' =>
+            'datetime',
     ];
 
     public function item()
@@ -43,6 +51,6 @@ class EditorRequest extends Model
             User::class,
             'editor_imported_by',
             'id'
-        )->withTrashed();
+        );
     }
 }

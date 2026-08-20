@@ -58,6 +58,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     // ===================== PACKING ===================== //
     Route::middleware(['role:packing'])->group(function () {
+
         Route::get('/packing/pesanan', [PackingPesananController::class, 'index'])
             ->name('packing.pesanan');
 
@@ -67,11 +68,15 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/packing/stats', [PackingPesananController::class, 'stats'])
             ->name('packing.stats');
 
+        Route::get('/packing/cetak-resi', [PackingPesananController::class, 'cetakIndex'])
+            ->name('packing.cetak.index');
+
         Route::post('/packing/cari-request', [PackingPesananController::class, 'cariRequest'])
             ->name('packing.cariRequest');
 
         Route::post('/packing/cetak-resi', [PackingPesananController::class, 'cetakResi'])
             ->name('packing.cetakResi');
+
     });
 
     // ===================== Admin & Manager ===================== //

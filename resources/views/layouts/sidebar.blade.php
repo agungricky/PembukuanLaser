@@ -270,6 +270,58 @@
         </aside>
     @endif
 
+    @if(auth()->check() && auth()->user()->role === 'packing')
+        <aside class="d-none d-lg-flex">
+            <nav class="sidebar">
+
+                <div>
+                    <div class="sidebar-heading border-bottom">
+                        # PACKING
+                    </div>
+
+                    <a href="{{ route('packing.pesanan') }}"
+                        class="sidebar-link mt-1 {{ request()->routeIs('packing.pesanan') ? 'active' : '' }}">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-barcode"></i>
+                            <span>Packing Scanner</span>
+                        </div>
+                    </a>
+
+                    <a href="{{ route('packing.cetak.index') }}"
+                        class="sidebar-link {{ request()->routeIs('packing.cetak.*') ? 'active' : '' }}">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-print"></i>
+                            <span>Cari & Cetak Resi</span>
+                        </div>
+                    </a>
+                </div>
+
+                <div>
+                    <div class="sidebar-heading border-bottom mt-3">
+                        # OPERATOR
+                    </div>
+
+                    <div class="sidebar-link packing-info">
+                        <div class="d-flex align-items-center gap-3 overflow-hidden">
+                            <i class="fa-solid fa-user"></i>
+
+                            <span class="text-truncate">
+                                {{ auth()->user()->name }}
+                            </span>
+                        </div>
+
+                        <span class="badge rounded-pill bg-primary">
+                            Packing
+                        </span>
+                    </div>
+                </div>
+
+            </nav>
+        </aside>
+    @endif
+
 
     @if(auth()->check() && auth()->user()->role === 'gudang')
         <aside class="d-none d-lg-flex">
@@ -452,6 +504,14 @@
     }
 
     .editor-info:hover {
+        background: #f8fafc;
+        color: #334155;
+    }
+        .packing-info {
+        cursor: default;
+    }
+
+    .packing-info:hover {
         background: #f8fafc;
         color: #334155;
     }
