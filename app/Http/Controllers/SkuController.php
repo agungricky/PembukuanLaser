@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\kategori;
 use App\Models\Produk;
 use Illuminate\Http\Request;
 
@@ -10,163 +11,174 @@ class SkuController extends Controller
     /**
      * Menampilkan daftar produk.
      */
-    public function index(Request $request)
+    public function index()
     {
-        $search = trim((string) $request->query('search', ''));
+        $produk = Produk::orderBy('updated_at', 'DESC')->get();
+        $kategori = kategori::all();
 
-        $produk = Produk::query()
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where(function ($subQuery) use ($search) {
-                    $subQuery
-                        ->where('sku', 'like', "%{$search}%")
-                        ->orWhere('nama_produk', 'like', "%{$search}%")
-                        ->orWhere('variasi', 'like', "%{$search}%")
-                        ->orWhere('hpp', 'like', "%{$search}%");
-                });
-            })
-
-            /*
-             * Mengurutkan SKU secara natural:
-             *
-             * BNR1
-             * BNR2
-             * BNR3
-             * ...
-             * BNR10
-             *
-             * Bukan:
-             * BNR1
-             * BNR10
-             * BNR11
-             * BNR2
-             */
-            ->orderByRaw("
-                REGEXP_REPLACE(sku, '[0-9]+$', '') ASC
-            ")
-            ->orderByRaw("
-                CASE
-                    WHEN sku REGEXP '[0-9]+$'
-                    THEN CAST(
-                        REGEXP_SUBSTR(sku, '[0-9]+$')
-                        AS UNSIGNED
-                    )
-                    ELSE 0
-                END ASC
-            ")
-            ->orderBy('sku', 'asc')
-            ->paginate(10)
-            ->withQueryString();
-
-        return view('master.sku', compact(
-            'produk',
-            'search'
-        ));
+        return view('master.sku', compact('produk', 'kategori'));
     }
 
     /**
      * Menyimpan produk baru.
      */
-    public function store(Request $request)
+    public function viewstore(Request $request)
     {
-        $data = $request->validate([
-            'sku' => [
-                'required',
-                'string',
-                'max:50',
-                'unique:produk,sku',
-            ],
-
-            'nama_produk' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'variasi' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'hpp' => [
-                'required',
-                'numeric',
-                'min:0',
-                'max:99999999.99',
-            ],
+        $request->validate([
+            'sku' => ['required', 'string', 'max:50', 'unique:produk,sku'],
+            'nama_produk' => ['nullable', 'string', 'max:255'],
+            'variasi' => ['nullable', 'string', 'max:255'],
+            'hpp' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+            'custom' => ['required'],
         ]);
 
-        $data['sku'] = strtoupper(
-            trim($data['sku'])
-        );
+        $data = Produk::where('sku', 'like', $request->sku.'%')
+            ->orderByRaw(
+                'CAST(REPLACE(sku, ?, "") AS UNSIGNED) DESC',
+                [$request->sku]
+            )->first();
 
-        $data['nama_produk'] = $this->nullableText(
-            $data['nama_produk'] ?? null
-        );
+        if ($data === null) {
+            if ($request->custom === 'Y') {
+                $view = [
+                    'sku' => $request->sku. 1 .'C',
+                    'nama_produk' => $request->nama_produk,
+                    'variasi' => $request->variasi,
+                    'hpp' => $request->hpp,
+                    'status' => 'aktif',
+                    'kategori_id' => $request->kategori_id,
+                ];
+            } elseif ($request->custom === 'T') {
+                $view = [
+                    'sku' => $request->sku. 1,
+                    'nama_produk' => $request->nama_produk,
+                    'variasi' => $request->variasi,
+                    'hpp' => $request->hpp,
+                    'status' => 'aktif',
+                    'kategori_id' => $request->kategori_id,
+                ];
+            }
 
-        $data['variasi'] = $this->nullableText(
-            $data['variasi'] ?? null
-        );
+            return response()->json([
+                'status' => true,
+                'terakhir' => ['sku' => 'SKU Tidak ditemukan atau mungkin merupakan SKU Baru'],
+                'baru' => [
+                    'sku' => $view['sku'],
+                    'nama_produk' => $view['nama_produk'],
+                    'variasi' => $view['variasi'],
+                    'hpp' => $view['hpp'],
+                    'status' => $view['status'],
+                    'kategori_id' => $view['kategori_id'],
+                ],
+            ]);
+        }
 
-        Produk::create($data);
+        $sku = $data->sku;
+        $angka = (int) preg_replace('/\D/', '', $sku);
+        $angka++;
+        $skuBaru = 'BNR'.$angka;
+        if ($request->custom === 'Y') {
+            $view = [
+                'sku' => $skuBaru.'C',
+                'nama_produk' => $request->nama_produk,
+                'variasi' => $request->variasi,
+                'hpp' => $request->hpp,
+                'status' => 'aktif',
+                'kategori_id' => $request->kategori_id,
+            ];
+        } elseif ($request->custom === 'T') {
+            $view = [
+                'sku' => $skuBaru,
+                'nama_produk' => $request->nama_produk,
+                'variasi' => $request->variasi,
+                'hpp' => $request->hpp,
+                'status' => $request->status,
+                'kategori_id' => $request->kategori_id,
+            ];
+        }
 
-        return redirect()
-            ->route('sku.index')
-            ->with(
-                'success',
-                'Produk berhasil ditambahkan.'
-            );
+        return response()->json([
+            'status' => true,
+            'terakhir' => [
+                'sku' => $data->sku,
+                'nama_produk' => $data->nama_produk,
+                'variasi' => $data->variasi,
+                'hpp' => $data->hpp,
+                'status' => $data->status,
+                'kategori_id' => $data->kategori_id,
+            ],
+            'baru' => [
+                'sku' => $view['sku'],
+                'nama_produk' => $view['nama_produk'],
+                'variasi' => $view['variasi'],
+                'hpp' => $view['hpp'],
+                'status' => $view['status'],
+                'kategori_id' => $view['kategori_id'],
+            ],
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'sku' => ['required', 'string', 'max:50', 'unique:produk,sku'],
+            'nama_produk' => ['nullable', 'string', 'max:255'],
+            'variasi' => ['nullable', 'string', 'max:255'],
+            'hpp' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
+        ]);
+
+        Produk::create([
+            'sku' => $request->sku,
+            'nama_produk' => $request->nama_produk,
+            'variasi' => $request->variasi,
+            'hpp' => $request->hpp,
+            'status' => 'aktif',
+            'kategori_id' => $request->kategori_id,
+        ]);
+
+        return response()->json([
+            'sukses' => true,
+            'message' => 'Data berhasil dibuat',
+        ]);
+    }
+
+    public function edit($sku)
+    {
+        $produk = Produk::with('kategori')->where('sku', $sku)->firstOrFail();
+
+        return response()->json([
+            'sku' => $produk->sku,
+            'nama_produk' => $produk->nama_produk,
+            'variasi' => $produk->variasi,
+            'hpp' => $produk->hpp,
+            'status' => $produk->status,
+            'kategori' => $produk->kategori?->nama_kategori ?? '-',
+            'kategori_id' => $produk->kategori?->id ?? null,
+        ]);
     }
 
     /**
      * Memperbarui produk.
      */
-    public function update(
-        Request $request,
-        string $sku
-    ) {
-        $produk = Produk::findOrFail($sku);
-
-        $data = $request->validate([
-            'nama_produk' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'variasi' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'hpp' => [
-                'required',
-                'numeric',
-                'min:0',
-                'max:99999999.99',
-            ],
+    public function update(Request $request, $sku) {
+        $request->validate([
+            'nama_produk' => ['nullable', 'string', 'max:255'],
+            'variasi' => ['nullable', 'string', 'max:255'],
+            'hpp' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
         ]);
 
-        $data['nama_produk'] = $this->nullableText(
-            $data['nama_produk'] ?? null
-        );
+        Produk::where('sku', $sku)->update([
+            'status' => $request->status,
+            'nama_produk' => $request->nama_produk,
+            'variasi' => $request->variasi,
+            'hpp' => $request->hpp,
+            'kategori_id' => $request->kategori_id,
+            'status' => $request->status,
+        ]);
 
-        $data['variasi'] = $this->nullableText(
-            $data['variasi'] ?? null
-        );
-
-        $produk->update($data);
-
-        return redirect()
-            ->route('sku.index', [
-                'search' => $request->input('search'),
-                'page'   => $request->input('page'),
-            ])
-            ->with(
-                'success',
-                'Produk berhasil diperbarui.'
-            );
+        return response()->json([
+            'message' => 'Produk berhasil diperbarui.',
+        ]);
     }
 
     /**
@@ -183,7 +195,7 @@ class SkuController extends Controller
         return redirect()
             ->route('sku.index', [
                 'search' => $request->input('search'),
-                'page'   => $request->input('page'),
+                'page' => $request->input('page'),
             ])
             ->with(
                 'success',

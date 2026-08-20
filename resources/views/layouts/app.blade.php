@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Pembukuan Laser</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     {{-- CSS --}}
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
@@ -55,8 +56,16 @@
     <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+    </script>
 
     @stack('scripts')
     @yield('scripts')
 </body>
+
 </html>

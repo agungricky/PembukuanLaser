@@ -101,7 +101,7 @@
                 </div>
 
                 <ul
-                    class="submenu {{ request()->routeIs('toko.*') || request()->routeIs('sku.*') || request()->routeIs('iklan.*') ? 'open' : '' }}">
+                    class="submenu {{ request()->routeIs('toko.*') || request()->routeIs('sku.*') || request()->routeIs('iklan.*') || request()->routeIs('kategori.*') ? 'open' : '' }}">
                     <li>
                         <a href="{{ route('toko.index') }}" class="{{ Request::is('toko') ? 'active' : '' }}">
                             <i class="bi bi-shop me-2"></i>
@@ -110,9 +110,32 @@
                     </li>
 
                     <li>
-                        <a href="{{ route('sku.index') }}" class="{{ Request::is('sku') ? 'active' : '' }}">
-                            <i class="bi bi-box-seam me-2"></i>
-                            SKU Produk
+                        <a href="{{ route('sku.index') }}"
+                            class="d-flex align-items-center justify-content-between {{ Request::is('sku') ? 'active' : '' }}">
+
+                            <span>
+                                <i class="bi bi-box-seam me-2"></i>
+                                SKU Produk
+                            </span>
+
+                            <span class="badge rounded-pill bg-danger">
+                                {{ $countProduk ?? 0 }}
+                            </span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ route('kategori.index') }}"
+                            class="d-flex align-items-center justify-content-between {{ Request::is('kategori*') ? 'active' : '' }}">
+
+                            <span>
+                                <i class="bi bi-tags me-2"></i>
+                                Kategori
+                            </span>
+
+                            <span class="badge rounded-pill bg-danger">
+                                {{ $countKategori ?? 0 }}
+                            </span>
                         </a>
                     </li>
 

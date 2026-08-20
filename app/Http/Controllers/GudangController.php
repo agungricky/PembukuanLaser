@@ -845,4 +845,6 @@ class GudangController extends Controller
         }
 
     }
+
+    
 }

@@ -390,7 +390,6 @@
                 url: "{{ route('gudang.retur.json', ':no_pesanan') }}".replace(':no_pesanan', noPesanan),
                 dataType: 'JSON',
                 success: function(response) {
-                    console.log(response);
                     $('#loadingRetur').addClass('d-none');
 
                     const pesanan = response.data;
