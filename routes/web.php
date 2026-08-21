@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EditorController;
 use App\Http\Controllers\GudangController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IklanController;
+use App\Http\Controllers\kategoriController;
 use App\Http\Controllers\kesalahanController;
 use App\Http\Controllers\PackingPesananController;
 use App\Http\Controllers\PembeliController;
@@ -18,14 +20,13 @@ use App\Http\Controllers\PesananDiterimaController;
 use App\Http\Controllers\PesananKirimController;
 use App\Http\Controllers\PesananProsesController;
 use App\Http\Controllers\ProdukController;
+use App\Http\Controllers\produkcustomController;
+use App\Http\Controllers\ResiImportController;
 use App\Http\Controllers\SkuController;
 use App\Http\Controllers\stokProdukController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\UserController;
-use App\Models\User;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\EditorController;
-use App\Http\Controllers\ResiImportController;
 
 Route::middleware(['web', 'auth'])->group(function () {
 
@@ -34,8 +35,13 @@ Route::middleware(['web', 'auth'])->group(function () {
     // ===================== ADMIN PENJUALAN ===================== //
     Route::middleware(['role:pegawai'])->group(function () {
         Route::get('/me', [UserController::class, 'me'])->name('users.me');
-
         Route::resource('/kesalahan', kesalahanController::class);
+        
+        Route::post('/produk/export', [ProdukController::class, 'export'])->name('produk.export');
+        Route::post('/produk/import', [ProdukController::class, 'import'])->name('produk.import');
+        Route::post('/produk/import/confirm', [ProdukController::class, 'confirmImport'])->name('produk.import.confirm');
+
+        Route::resource('/kategori', kategoriController::class);
     });
 
     // ===================== MANAGER ===================== //
@@ -178,7 +184,8 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::resource('toko', TokoController::class)->only(['index', 'store', 'update', 'destroy', 'show']);
 
         // SKU
-        Route::resource('sku', SkuController::class)->only(['index', 'store', 'update', 'destroy', 'show']);
+        Route::resource('sku', SkuController::class)->only(['index', 'store', 'edit', 'update', 'destroy', 'show']);
+        Route::post('/sku-view', [SkuController::class, 'viewstore'])->name('sku.viewstore');
 
         // Iklan
         Route::resource('iklan', IklanController::class)->only(['index', 'store', 'update', 'destroy', 'show']);
@@ -209,13 +216,21 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/semua-produk/{sku}', [GudangController::class, 'produkShow'])->name('produkshow.json');
         Route::patch('/update-stok/{sku}', [GudangController::class, 'updatestok'])->name('updatestok.json');
         Route::get('/kategori-produk', [GudangController::class, 'kategori'])->name('gudang.kategori');
-        Route::get('/kategori-produk/{id}', [GudangController::class, 'kategorishow'])->name('gudang.kategori.json');
         Route::get('/riwayat-aktivitas/gudang', [GudangController::class, 'riwayataktivitas'])->name('gudang.aktivitas');
         Route::get('/riwayat-aktivitas/data', [GudangController::class, 'riwayatAktivitasData'])->name('gudang.riwayataktivitas.data');
         Route::get('/card-detail/{card}', [GudangController::class, 'detailcard'])->name('gudang.detailcard.json');
         Route::get('/kebutuhan/detail-pesanan/{filter}/{sku}', [GudangController::class, 'detailpesanan'])->name('kebutuhan.detailpesanan');
+        Route::get('/sampel', [GudangController::class, 'barangsampel'])->name('gudang.sampel');
+        Route::post('/sampel/create', [GudangController::class, 'sampelcreate'])->name('gudang.sampel.create');
+        Route::get('/retur', [GudangController::class, 'barangretur'])->name('gudang.retur');
+        Route::get('/retur/perpesanan/{no_pesanan}', [GudangController::class, 'detailRetur'])->name('gudang.retur.json');
+        Route::post('/gudang/retur/create', [GudangController::class, 'returCreate'])->name('gudang.retur.create');
+
+        Route::resource('/produk-custom', produkcustomController::class);
     });
 });
+
+Route::get('/kategori-produk/{id}', [GudangController::class, 'kategorishow'])->name('gudang.kategori.json');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
@@ -225,5 +240,3 @@ Route::get('/', [HomeController::class, 'index']);
 Route::get('/emblem', [HomeController::class, 'emblem']);
 Route::get('/punyalcknihbossenggoldong', [HomeController::class, 'gancinama']);
 
-Route::resource('/stok-produk', stokProdukController::class);
-Route::patch('/tambah-stok/{id}', [stokProdukController::class, 'tambahstok'])->name('tambah.stok');

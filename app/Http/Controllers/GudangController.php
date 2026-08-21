@@ -7,9 +7,12 @@ use App\Models\mutasi_stok;
 use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
 use App\Models\Produk;
+use App\Models\retur;
 use App\Models\stok_produk;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class GudangController extends Controller
@@ -27,6 +30,7 @@ class GudangController extends Controller
             ->whereDate('created_at', $tanggalHariIni)
             ->sum('jumlah');
         $mutasi_keluar = mutasi_stok::where('jenis_mutasi', 'keluar')
+            ->orWhere('jenis_mutasi', 'sampel')
             ->whereDate('created_at', $tanggalHariIni)
             ->sum('jumlah');
         $banyakMutasi = mutasi_stok::whereDate('created_at', $tanggalHariIni)->count();
@@ -36,6 +40,7 @@ class GudangController extends Controller
         $stokHabis = stok_produk::where('jumlah_tersedia', '=', 0)->count();
         $terlaris = mutasi_stok::with('stok_produk.produk')
             ->where('jenis_mutasi', 'keluar')
+            ->orWhere('jenis_mutasi', 'sampel')
             ->get()
             ->groupBy('stok_produk_id')
             ->map(function ($items) {
@@ -507,7 +512,7 @@ class GudangController extends Controller
         |--------------------------------------------------------------------------
         */
         $query = mutasi_stok::with([
-            'stok_produk.produk.kategori',
+            'stok_produk.produk.kategori', 'user', 'ambil_barang',
         ]);
 
         /*
@@ -604,6 +609,7 @@ class GudangController extends Controller
             } else {
                 $no = $start + $index + 1;
             }
+
             $result[] = [
                 'no' => $no,
                 'produk' => $produk?->nama_produk ?? '-',
@@ -614,6 +620,9 @@ class GudangController extends Controller
                 'jumlah' => $item->jumlah ?? 0,
                 'jenis_mutasi' => $item->jenis_mutasi ?? '-',
                 'keterangan' => $item->keterangan ?? '-',
+                'admin_gudang' => $item->user?->name ?? '-',
+                'pengambil' => $item->ambil_barang?->name ?? '-',
+                'created_at' => $item->created_at,
             ];
         }
 
@@ -674,5 +683,203 @@ class GudangController extends Controller
             return response()->json($kebutuhanProduk);
 
         }
+    }
+
+    public function barangsampel()
+    {
+        $produk = mutasi_stok::with('user', 'ambilBarang', 'stok_produk.produk.kategori')
+            ->where('jenis_mutasi', 'sampel')
+            ->orderBy('created_at', 'DESC')
+            ->get();
+        $allproduk = Produk::with('kategori')->where('status', 'aktif')->get();
+        $user = User::where('role', 'pegawai')->get();
+
+        return view('gudang.sampel', compact('produk', 'allproduk', 'user'));
+    }
+
+    public function sampelcreate(Request $request)
+    {
+        $request->validate([
+            'produk_id' => ['required', 'exists:produk,sku'],
+            'nama_peminta' => ['required', 'exists:users,id'],
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $stok = stok_produk::where('sku_id', $request->produk_id)->first();
+
+            if (! $stok) {
+                $stok = stok_produk::create([
+                    'sku_id' => $request->produk_id,
+                    'jumlah_tersedia' => '0',
+                    'min_stok' => '5',
+                ]);
+            }
+
+            if ($stok->jumlah_tersedia < $request->jumlah) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Permintaan gagal Stok Tidak Cukup.',
+                ], 500);
+            }
+
+            stok_produk::where('sku_id', $request->produk_id)->update([
+                'jumlah_tersedia' => $stok->jumlah_tersedia - $request->jumlah,
+            ]);
+
+            mutasi_stok::create([
+                'stok_produk_id' => $stok->id,
+                'user_id' => auth()->id(),
+                'pengambil_id' => $request->nama_peminta,
+                'jenis_mutasi' => 'sampel',
+                'jumlah' => $request->jumlah,
+                'keterangan' => 'Permintaan sampel',
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Permintaan sampel berhasil dibuat.',
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function barangretur(Request $request)
+    {
+        $search = $request->search;
+        $perPage = $request->per_page ?? 10;
+        $pesanan = Pesanan::with([
+            'pesanan_per_produk.retur',
+            'user',
+            'toko',
+        ])->whereIn('status', [
+            'pengembalian',
+            'pengiriman_gagal',
+        ])->whereHas('pesanan_per_produk.retur')
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+
+                    $q->where('no_pesanan', 'like', '%'.$search.'%')
+                        ->orWhere('nama_pembeli', 'like', '%'.$search.'%')
+                        ->orWhere('username', 'like', '%'.$search.'%')
+                        ->orWhere('no_resi', 'like', '%'.$search.'%')
+                        ->orWhere('kurir', 'like', '%'.$search.'%')
+                        ->orWhere('status', 'like', '%'.$search.'%')
+
+                        ->orWhereHas('pesanan_per_produk', function ($produk) use ($search) {
+                            $produk->where('sku', 'like', '%'.$search.'%')
+                                ->orWhere('nama_produk', 'like', '%'.$search.'%')
+                                ->orWhere('variasi', 'like', '%'.$search.'%');
+                        })
+
+                        ->orWhereHas('user', function ($user) use ($search) {
+                            $user->where('name', 'like', '%'.$search.'%');
+                        })
+
+                        ->orWhereHas('toko', function ($toko) use ($search) {
+                            $toko->where('nama_toko', 'like', '%'.$search.'%');
+                        });
+                });
+            })
+
+            ->orderBy('tanggal', 'DESC')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('gudang.retur', compact('pesanan'));
+    }
+
+    public function detailRetur($no_pesanan)
+    {
+        $pesanan = PesananPerProduk::with('pesanan.toko')
+            ->where('no_pesanan', $no_pesanan)
+            ->whereHas('pesanan', function ($query) {
+                $query->where('tanggal', '>=', now()->subMonths(3));
+            })
+            ->get();
+
+        if ($pesanan->isEmpty()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pesanan tidak ditemukan.',
+            ], 404);
+        }
+
+        $status = $pesanan->first()->pesanan->status;
+
+        if (! in_array($status, ['pengembalian', 'pengiriman_gagal'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pesanan masih dalam proses pengiriman minta admin penjualan melakukan update pesanan.',
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => $pesanan,
+        ]);
+    }
+
+    public function returCreate(Request $request)
+    {
+        $request->validate([
+            'produk' => ['required', 'array', 'min:1'],
+            'produk.*.per_produk_id' => ['required', 'integer', 'exists:pesanan_per_produk,id_per_produk'],
+            'produk.*.diterima' => ['required', 'integer', 'min:0'],
+        ]);
+
+        DB::beginTransaction();
+        try {
+            foreach ($request->produk as $produk) {
+                if ($produk['diterima'] <= 0) {
+                    continue;
+                }
+
+                retur::create([
+                    'per_produk_id' => $produk['per_produk_id'],
+                    'diterima' => $produk['diterima'],
+                ]);
+
+                $perProduk = PesananPerProduk::where('id_per_produk', $produk['per_produk_id'])->first();
+                stok_produk::where('sku_id', $perProduk->sku)
+                    ->increment('jumlah_tersedia', $produk['diterima']);
+
+                $stok_id = stok_produk::where('sku_id', $perProduk->sku)->first();
+                mutasi_stok::create([
+                    'stok_produk_id' => $stok_id->id,
+                    'user_id' => Auth::id(),
+                    'pengambil_id' => null,
+                    'jenis_mutasi' => 'masuk',
+                    'jumlah' => $produk['diterima'],
+                    'keterangan' => 'Barang masuk dari retur',
+                ]);
+
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Data retur berhasil disimpan.',
+            ]);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+
     }
 }

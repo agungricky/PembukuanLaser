@@ -422,7 +422,7 @@ body {
 }
 
 /* Efek Coret pada tabel */
-.row-nonactive td {
+/* .row-nonactive td {
   text-decoration: line-through;
   opacity: 0.5;
-}
+} */

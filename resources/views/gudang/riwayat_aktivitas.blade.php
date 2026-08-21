@@ -64,6 +64,8 @@
                             <th scope="col" class="py-3 px-4 text-center">Produk</th>
                             <th scope="col" class="py-3 px-4 text-center">Variasi</th>
                             <th scope="col" class="py-3 px-4 text-center">Hpp</th>
+                            <th scope="col" class="py-3 px-4 text-center">Admin Gudang</th>
+                            <th scope="col" class="py-3 px-4 text-center">Diambil</th>
                             <th scope="col" class="py-3 px-4 text-center">Aktivitas</th>
                         </tr>
                     </thead>
@@ -91,13 +93,10 @@
                     url: "{{ route('gudang.riwayataktivitas.data') }}",
                     type: "GET",
                     dataSrc: function(response) {
-                        console.log('HASIL REQUEST DATATABLE:');
-                        console.log(response);
                         return response.data;
                     }
                 },
-                columns: [
-                    {
+                columns: [{
                         data: 'no',
                         name: 'no',
                         orderable: true,
@@ -129,11 +128,11 @@
                         render: function(data, type, row) {
 
                             return `
-                            <div class="fw-semibold text-center">
+                            <div class="fw-semibold text-start">
                                 ${row.variasi ?? '-'}
                             </div>
 
-                            <div class="text-muted text-center" style="font-size: 11px;">
+                            <div class="text-muted text-start" style="font-size: 11px;">
                                 Kategori : ${row.kategori ?? '-'}
                             </div>
                         `;
@@ -161,6 +160,96 @@
                                 <span class="text-primary fw-bold" style="font-size: 11px;">${row.jumlah ?? 0} pcs</span>
                             </div>
                         `;
+                        }
+                    },
+
+                    {
+                        data: null,
+                        orderable: false,
+                        render: function(data, type, row) {
+
+                            let admin = row.admin_gudang ?? '-';
+
+                            let tanggal = '-';
+                            let jam = '-';
+
+                            if (row.created_at) {
+                                let date = new Date(row.created_at);
+
+                                tanggal = date.toLocaleDateString('id-ID', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric'
+                                });
+
+                                jam = date.toLocaleTimeString('id-ID', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                });
+                            }
+
+                            return `
+                                <div class="text-center">
+                                    <div class="fw-semibold text-dark" style="font-size: 12px;">
+                                        ${admin}
+                                    </div>
+
+                                    <div class="text-muted mt-1" style="font-size: 10px;">
+                                        <i class="fa-regular fa-calendar me-1"></i>
+                                        ${tanggal}
+                                    </div>
+
+                                    <div class="text-muted" style="font-size: 10px;">
+                                        <i class="fa-regular fa-clock me-1"></i>
+                                        ${jam}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    },
+
+                    {
+                        data: null,
+                        orderable: false,
+                        render: function(data, type, row) {
+                            console.log(row)
+                            let pengambil = row.pengambil ?? '-';
+
+                            let tanggal = '-';
+                            let jam = '-';
+
+                            if (row.created_at) {
+                                let date = new Date(row.created_at);
+
+                                tanggal = date.toLocaleDateString('id-ID', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric'
+                                });
+
+                                jam = date.toLocaleTimeString('id-ID', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                });
+                            }
+
+                            return `
+                                <div class="text-center">
+                                    <div class="fw-semibold text-dark" style="font-size: 12px;">
+                                        ${pengambil}
+                                    </div>
+
+                                    <div class="text-muted mt-1" style="font-size: 10px;">
+                                        <i class="fa-regular fa-calendar me-1"></i>
+                                        ${tanggal}
+                                    </div>
+
+                                    <div class="text-muted" style="font-size: 10px;">
+                                        <i class="fa-regular fa-clock me-1"></i>
+                                        ${jam}
+                                    </div>
+                                </div>
+                            `;
                         }
                     },
 

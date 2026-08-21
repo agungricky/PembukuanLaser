@@ -35,13 +35,14 @@
 
                 <!-- Controls: Filters & Table Search -->
                 <div class="d-flex flex-nowrap align-items-center gap-2">
-                    <!-- Table Search Input -->
+
                     <div class="input-group input-group-sm" style="max-width: 240px;">
                         <span class="input-group-text bg-light border-end-0">
                             <i class="fa-solid fa-magnifying-glass text-muted"></i>
                         </span>
+
                         <input type="text" id="searchTable" placeholder="Cari SKU / Produk..."
-                            class="form-control form-control-sm border-start-0 bg-light" />
+                            class="form-control form-control-sm border-start-0 bg-light">
                     </div>
 
                     <select id="per_page" class="form-select form-select-sm" style="width: auto;">
@@ -50,6 +51,7 @@
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
+
                 </div>
             </div>
 
@@ -64,7 +66,7 @@
                             <th scope="col" class="py-3 px-4 text-center">Kategori</th>
                             <th scope="col" class="py-3 px-4 text-center">Hpp</th>
                             <th scope="col" class="py-3 px-4 text-center">Tersedia</th>
-                            <th scope="col" class="py-3 px-4 text-center">Status Stok</th>
+                            <th scope="col" class="py-3 px-4 text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -201,6 +203,15 @@
     </div>
 @endsection
 
+@push('styles')
+    <style>
+        .row-nonactive td {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+    </style>
+@endpush
+
 @push('scripts')
     <script>
         $(document).ready(function() {
@@ -277,9 +288,9 @@
                 $('#keterangan')
                     .prop('disabled', false)
                     .prop('required', true);
-                
+
                 $('#jumlahadd').addClass("d-none");
-                 $('#jumlah_add')
+                $('#jumlah_add')
                     .prop('disabled', true)
                     .prop('required', false);
 

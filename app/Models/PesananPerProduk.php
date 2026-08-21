@@ -68,5 +68,7 @@ class PesananPerProduk extends Model
         return $this->belongsTo(mutasi_stok::class, 'mutasi_stok_id', 'id');
     }
 
-    
+    public function retur(){
+        return $this->hasOne(retur::class, 'per_produk_id', 'id_per_produk');
+    }
 }

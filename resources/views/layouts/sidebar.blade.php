@@ -1,6 +1,6 @@
 <div class="sidebar">
 
-    @if(auth()->check() && in_array(auth()->user()->role, ['pegawai', 'manager']))
+    @if (auth()->check() && in_array(auth()->user()->role, ['pegawai', 'manager']))
         <div class="sidebar">
 
             <div class="menu-section">
@@ -16,40 +16,35 @@
 
                 <ul class="submenu {{ request()->routeIs('pesanan.*') ? 'open' : '' }}">
                     <li>
-                        <a href="{{ route('pesanan.index') }}"
-                            class="{{ Request::is('pesanan') ? 'active' : '' }}">
+                        <a href="{{ route('pesanan.index') }}" class="{{ Request::is('pesanan') ? 'active' : '' }}">
                             <i class="bi bi-list-ul me-2"></i>
                             Semua Pesanan
                         </a>
                     </li>
 
                     <li>
-                        <a href="{{ route('pesanan.proses') }}"
-                            class="{{ Request::is('proses') ? 'active' : '' }}">
+                        <a href="{{ route('pesanan.proses') }}" class="{{ Request::is('proses') ? 'active' : '' }}">
                             <i class="bi bi-gear me-2"></i>
                             Pesanan Diproses
                         </a>
                     </li>
 
                     <li>
-                        <a href="{{ route('pesanan.kirim') }}"
-                            class="{{ Request::is('kirim') ? 'active' : '' }}">
+                        <a href="{{ route('pesanan.kirim') }}" class="{{ Request::is('kirim') ? 'active' : '' }}">
                             <i class="bi bi-truck me-2"></i>
                             Pesanan Dikirim
                         </a>
                     </li>
 
                     <li>
-                        <a href="{{ route('pesanan.terima') }}"
-                            class="{{ Request::is('terima') ? 'active' : '' }}">
+                        <a href="{{ route('pesanan.terima') }}" class="{{ Request::is('terima') ? 'active' : '' }}">
                             <i class="bi bi-check2-circle me-2"></i>
                             Pesanan Diterima
                         </a>
                     </li>
 
                     <li>
-                        <a href="{{ route('pesanan.return') }}"
-                            class="{{ Request::is('return') ? 'active' : '' }}">
+                        <a href="{{ route('pesanan.return') }}" class="{{ Request::is('return') ? 'active' : '' }}">
                             <i class="bi bi-arrow-counterclockwise me-2"></i>
                             Batal/Return
                         </a>
@@ -64,32 +59,9 @@
                     </li>
 
                     <li>
-                        <a href="{{ route('pesanan.cek') }}"
-                            class="{{ Request::is('cek') ? 'active' : '' }}">
+                        <a href="{{ route('pesanan.cek') }}" class="{{ Request::is('cek') ? 'active' : '' }}">
                             <i class="bi bi-exclamation-triangle me-2"></i>
                             Pesanan Cek
-                        </a>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="menu-section">
-                <div class="menu-header" onclick="toggleMenu(this)">
-                    <span class="menu-title">
-                        <i class="bi bi-boxes me-2"></i>
-                        Management Stok
-                    </span>
-                    <span class="arrow">
-                        <i class="bi bi-chevron-down"></i>
-                    </span>
-                </div>
-
-                <ul class="submenu {{ request()->routeIs('stok-produk.*') ? 'open' : '' }}">
-                    <li>
-                        <a href="{{ route('stok-produk.index') }}"
-                            class="{{ Request::is('stok-produk') ? 'active' : '' }}">
-                            <i class="bi bi-shop me-2"></i>
-                            Stok Produk
                         </a>
                     </li>
                 </ul>
@@ -106,10 +78,10 @@
                     </span>
                 </div>
 
-                <ul class="submenu {{ request()->routeIs('toko.*') || request()->routeIs('sku.*') || request()->routeIs('iklan.*') ? 'open' : '' }}">
+                <ul
+                    class="submenu {{ request()->routeIs('toko.*') || request()->routeIs('sku.*') || request()->routeIs('iklan.*') || request()->routeIs('kategori.*') ? 'open' : '' }}">
                     <li>
-                        <a href="{{ route('toko.index') }}"
-                            class="{{ Request::is('toko') ? 'active' : '' }}">
+                        <a href="{{ route('toko.index') }}" class="{{ Request::is('toko') ? 'active' : '' }}">
                             <i class="bi bi-shop me-2"></i>
                             Data Toko
                         </a>
@@ -117,15 +89,36 @@
 
                     <li>
                         <a href="{{ route('sku.index') }}"
-                            class="{{ Request::is('sku') ? 'active' : '' }}">
-                            <i class="bi bi-box-seam me-2"></i>
-                            SKU Produk
+                            class="d-flex align-items-center justify-content-between {{ Request::is('sku') ? 'active' : '' }}">
+
+                            <span>
+                                <i class="bi bi-box-seam me-2"></i>
+                                SKU Produk
+                            </span>
+
+                            <span class="badge rounded-pill bg-danger">
+                                {{ $countProduk ?? 0 }}
+                            </span>
                         </a>
                     </li>
 
                     <li>
-                        <a href="{{ route('iklan.index') }}"
-                            class="{{ Request::is('iklan') ? 'active' : '' }}">
+                        <a href="{{ route('kategori.index') }}"
+                            class="d-flex align-items-center justify-content-between {{ Request::is('kategori*') ? 'active' : '' }}">
+
+                            <span>
+                                <i class="bi bi-tags me-2"></i>
+                                Kategori
+                            </span>
+
+                            <span class="badge rounded-pill bg-danger">
+                                {{ $countKategori ?? 0 }}
+                            </span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ route('iklan.index') }}" class="{{ Request::is('iklan') ? 'active' : '' }}">
                             <i class="bi bi-megaphone me-2"></i>
                             Biaya Iklan
                         </a>
@@ -144,26 +137,24 @@
                     </span>
                 </div>
 
-                <ul class="submenu {{ request()->routeIs('penjualan', 'penjualan.*') || request()->routeIs('pembeli', 'pembeli.*') || request()->routeIs('produk', 'produk.*') ? 'open' : '' }}">
+                <ul
+                    class="submenu {{ request()->routeIs('penjualan', 'penjualan.*') || request()->routeIs('pembeli', 'pembeli.*') || request()->routeIs('produk', 'produk.*') ? 'open' : '' }}">
                     <li>
-                        <a href="{{ route('penjualan') }}"
-                            class="{{ Request::is('penjualan') ? 'active' : '' }}">
+                        <a href="{{ route('penjualan') }}" class="{{ Request::is('penjualan') ? 'active' : '' }}">
                             <i class="bi bi-bar-chart-line me-2"></i>
                             Penjualan
                         </a>
                     </li>
 
                     <li>
-                        <a href="{{ route('pembeli') }}"
-                            class="{{ Request::is('pembeli') ? 'active' : '' }}">
+                        <a href="{{ route('pembeli') }}" class="{{ Request::is('pembeli') ? 'active' : '' }}">
                             <i class="bi bi-person me-2"></i>
                             Pembeli
                         </a>
                     </li>
 
                     <li>
-                        <a href="{{ route('produk') }}"
-                            class="{{ Request::is('produk') ? 'active' : '' }}">
+                        <a href="{{ route('produk') }}" class="{{ Request::is('produk') ? 'active' : '' }}">
                             <i class="bi bi-star me-2"></i>
                             Produk Terlaris
                         </a>
@@ -174,9 +165,7 @@
             @php
                 $isManager = auth()->user()->role === 'manager';
                 $targetUrl = $isManager ? route('users.index') : route('users.me');
-                $isActive = $isManager
-                    ? request()->routeIs('users.*')
-                    : request()->routeIs('users.me');
+                $isActive = $isManager ? request()->routeIs('users.*') : request()->routeIs('users.me');
             @endphp
 
             <div class="menu-section">
@@ -200,7 +189,7 @@
     @endif
 
 
-    @if(auth()->check() && auth()->user()->role === 'editor')
+    @if (auth()->check() && auth()->user()->role === 'editor')
         <aside class="d-none d-lg-flex">
             <nav class="sidebar">
 
@@ -344,7 +333,7 @@
     @endif
 
 
-    @if(auth()->check() && auth()->user()->role === 'gudang')
+    @if (auth()->check() && auth()->user()->role === 'gudang')
         <aside class="d-none d-lg-flex">
             <nav class="sidebar">
 
@@ -368,8 +357,7 @@
                         # TRANSAKSI
                     </div>
 
-                    <a class="sidebar-link justify-content-between mt-1"
-                        data-bs-toggle="collapse"
+                    <a class="sidebar-link justify-content-between mt-1" data-bs-toggle="collapse"
                         href="#transaksiMenu">
 
                         <div class="d-flex align-items-center gap-3">
@@ -380,7 +368,7 @@
                         <i class="fa-solid fa-chevron-down small"></i>
                     </a>
 
-                    <div class="collapse {{ request()->routeIs('transaksi.*') ? 'show' : '' }}"
+                    <div class="collapse {{ request()->routeIs('transaksi.*', 'gudang.sampel', 'gudang.retur', 'produk-custom.*') ? 'show' : '' }}"
                         id="transaksiMenu">
 
                         <a href="{{ route('transaksi.show', ['transaksi' => 'siapkan']) }}"
@@ -404,14 +392,22 @@
                             <small>Sudah Diambil</small>
                         </a>
 
-                        <a href="" class="sidebar-sublink">
+                        <a href="{{ route('gudang.retur') }}"
+                            class="sidebar-sublink {{ Route::is('gudang.retur') ? 'active' : '' }}">
                             <i class="fa-solid fa-rotate-left"></i>
                             <small>Barang Retur</small>
                         </a>
 
-                        <a href="" class="sidebar-sublink">
+                        <a href="{{ route('gudang.sampel') }}"
+                            class="sidebar-sublink {{ Route::is('gudang.sampel') ? 'active' : '' }}">
                             <i class="fa-solid fa-vial"></i>
                             <small>Barang Sampel</small>
+                        </a>
+
+                        <a href="{{ route('produk-custom.index') }}"
+                            class="sidebar-sublink {{ Route::is('produk-custom.index') ? 'active' : '' }}">
+                            <i class="fa-solid fa-pen-ruler"></i>
+                            <small>Produk Custom</small>
                         </a>
                     </div>
                 </div>
