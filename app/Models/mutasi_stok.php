@@ -23,7 +23,7 @@ class mutasi_stok extends Model
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
-    public function ambilBarang(){
+    public function ambil_barang(){
         return $this->belongsTo(User::class, 'pengambil_id', 'id');
     }
 

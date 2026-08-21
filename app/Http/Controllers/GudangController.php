@@ -512,7 +512,7 @@ class GudangController extends Controller
         |--------------------------------------------------------------------------
         */
         $query = mutasi_stok::with([
-            'stok_produk.produk.kategori',
+            'stok_produk.produk.kategori', 'user', 'ambil_barang',
         ]);
 
         /*
@@ -609,6 +609,7 @@ class GudangController extends Controller
             } else {
                 $no = $start + $index + 1;
             }
+
             $result[] = [
                 'no' => $no,
                 'produk' => $produk?->nama_produk ?? '-',
@@ -619,6 +620,9 @@ class GudangController extends Controller
                 'jumlah' => $item->jumlah ?? 0,
                 'jenis_mutasi' => $item->jenis_mutasi ?? '-',
                 'keterangan' => $item->keterangan ?? '-',
+                'admin_gudang' => $item->user?->name ?? '-',
+                'pengambil' => $item->ambil_barang?->name ?? '-',
+                'created_at' => $item->created_at,
             ];
         }
 
@@ -707,7 +711,7 @@ class GudangController extends Controller
             if (! $stok) {
                 $stok = stok_produk::create([
                     'sku_id' => $request->produk_id,
-                    'jumlah_tersedia' => $request->jumlah,
+                    'jumlah_tersedia' => '0',
                     'min_stok' => '5',
                 ]);
             }
