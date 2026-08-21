@@ -218,6 +218,3 @@ Route::get('/', [HomeController::class, 'index']);
 Route::get('/emblem', [HomeController::class, 'emblem']);
 Route::get('/punyalcknihbossenggoldong', [HomeController::class, 'gancinama']);
 
-Route::resource('/stok-produk', stokProdukController::class);
-Route::patch('/tambah-stok/{id}', [stokProdukController::class, 'tambahstok'])->name('tambah.stok');
-

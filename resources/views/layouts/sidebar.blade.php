@@ -70,28 +70,6 @@
             <div class="menu-section">
                 <div class="menu-header" onclick="toggleMenu(this)">
                     <span class="menu-title">
-                        <i class="bi bi-boxes me-2"></i>
-                        Management Stok
-                    </span>
-                    <span class="arrow">
-                        <i class="bi bi-chevron-down"></i>
-                    </span>
-                </div>
-
-                <ul class="submenu {{ request()->routeIs('stok-produk.*') ? 'open' : '' }}">
-                    <li>
-                        <a href="{{ route('stok-produk.index') }}"
-                            class="{{ Request::is('stok-produk') ? 'active' : '' }}">
-                            <i class="bi bi-shop me-2"></i>
-                            Stok Produk
-                        </a>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="menu-section">
-                <div class="menu-header" onclick="toggleMenu(this)">
-                    <span class="menu-title">
                         <i class="bi bi-database-fill-gear me-2"></i>
                         Data Master
                     </span>

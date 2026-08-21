@@ -35,21 +35,24 @@
 
                 <!-- Controls: Filters & Table Search -->
                 <div class="d-flex flex-nowrap align-items-center gap-2">
-                    <!-- Table Search Input -->
-                    <div class="input-group input-group-sm" style="max-width: 240px;">
-                        <span class="input-group-text bg-light border-end-0">
-                            <i class="fa-solid fa-magnifying-glass text-muted"></i>
-                        </span>
-                        <input type="text" id="searchTable" placeholder="Cari data"
-                            class="form-control form-control-sm border-start-0 bg-light" />
-                    </div>
+                    <div class="d-flex align-items-center gap-2">
 
-                    <select id="per_page" class="form-select form-select-sm" style="width: auto;">
-                        <option value="10" selected>10</option>
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
+                        <div class="input-group input-group-sm" style="max-width: 240px;">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                            </span>
+                            <input type="text" id="searchTable" value="{{ request('search') }}" placeholder="Cari data"
+                                class="form-control form-control-sm border-start-0 bg-light" />
+                        </div>
+
+                        <select id="per_page" class="form-select form-select-sm" style="width: auto;">
+                            <option value="1" {{ request('per_page', 1) == 1 ? 'selected' : '' }}>1</option>
+                            <option value="20" {{ request('per_page') == 20 ? 'selected' : '' }}>20</option>
+                            <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
+                            <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100</option>
+                        </select>
+
+                    </div>
 
                     <button type="button" class="btn btn-primary text-nowrap" data-bs-toggle="modal"
                         data-bs-target="#modalRetur">
@@ -60,14 +63,14 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle mb-0 pb-0">
                     <thead class="table-light">
                         <tr>
                             <th>Pesanan</th>
-                            <th>Pembeli</th>
+                            <th style="min-width: 180px;">Pembeli</th>
                             <th>Pengiriman</th>
                             <th>Status</th>
-                            <th>Keuangan</th>
+                            {{-- <th>Keuangan</th> --}}
                             <th>Produk</th>
                             <th>SKU / Variasi</th>
                             <th class="text-center">Jumlah</th>
@@ -104,7 +107,7 @@
                                         <!-- PEMBELI -->
                                         <td rowspan="{{ $perproduk }}" class="px-3">
                                             <div class="fw-semibold text-dark">
-                                                {{ \Illuminate\Support\Str::limit($item->nama_pembeli ?? '-', 10, '...') }}
+                                                {{ \Illuminate\Support\Str::limit($item->nama_pembeli ?? '-', 20, '...') }}
                                             </div>
 
                                             <div class="text-muted" style="font-size: 11px;">
@@ -114,7 +117,7 @@
                                         </td>
 
                                         <!-- PENGIRIMAN -->
-                                        <td rowspan="{{ $perproduk }}" class="px-3">
+                                        <td rowspan="{{ $perproduk }}" class="px-1">
                                             <div class="fw-semibold text-dark" style="font-size: 12px;">
                                                 {{ $item->no_resi ?? '-' }}
                                             </div>
@@ -138,7 +141,7 @@
                                         </td>
 
                                         <!-- KEUANGAN -->
-                                        <td rowspan="{{ $perproduk }}" class="px-3">
+                                        {{-- <td rowspan="{{ $perproduk }}" class="px-3">
                                             <div class="text-muted" style="font-size: 10px;">
                                                 Total HPP
                                             </div>
@@ -154,7 +157,7 @@
                                             <div class="fw-semibold text-danger text-nowrap">
                                                 Rp {{ number_format($item->pencairan ?? 0, 0, ',', '.') }}
                                             </div>
-                                        </td>
+                                        </td> --}}
                                     @endif
 
 
@@ -204,6 +207,46 @@
                         @endforeach
                     </tbody>
                 </table>
+                <div class="d-flex justify-content-between align-items-center w-100 py-2">
+
+                    <div class="text-muted small ms-3">
+                        Menampilkan
+                        {{ $pesanan->firstItem() ?? 0 }}
+                        -
+                        {{ $pesanan->lastItem() ?? 0 }}
+                        dari
+                        {{ $pesanan->total() }}
+                        pesanan
+                    </div>
+
+                    <nav class="me-3">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item {{ $pesanan->onFirstPage() ? 'disabled' : '' }}">
+                                <a class="page-link" href="{{ $pesanan->previousPageUrl() ?? '#' }}">
+                                    &laquo;
+                                </a>
+                            </li>
+
+                            @for ($page = 1; $page <= $pesanan->lastPage(); $page++)
+                                <li class="page-item {{ $pesanan->currentPage() == $page ? 'active' : '' }}">
+
+                                    <a class="page-link" href="{{ $pesanan->url($page) }}">
+                                        {{ $page }}
+                                    </a>
+
+                                </li>
+                            @endfor
+
+                            <li class="page-item {{ !$pesanan->hasMorePages() ? 'disabled' : '' }}">
+                                <a class="page-link" href="{{ $pesanan->nextPageUrl() ?? '#' }}">
+                                    &raquo;
+                                </a>
+                            </li>
+
+                        </ul>
+                    </nav>
+
+                </div>
             </div>
 
         </section>
@@ -358,48 +401,50 @@
 
 @push('scripts')
     <script>
-        $('#modalRetur').on('shown.bs.modal', function() {
-            $('#no_pesanan_retur').val('');
-            $('#tableProdukRetur').html('');
-            $('#detailPesananRetur').addClass('d-none');
-            $('#returNotFound').addClass('d-none');
-            $('#loadingRetur').addClass('d-none');
-            $('#btnSimpanRetur').prop('disabled', true);
-        });
+        $(document).ready(function() {
+            $('#modalRetur').on('shown.bs.modal', function() {
+                $('#no_pesanan_retur').val('');
+                $('#tableProdukRetur').html('');
+                $('#detailPesananRetur').addClass('d-none');
+                $('#returNotFound').addClass('d-none');
+                $('#loadingRetur').addClass('d-none');
+                $('#btnSimpanRetur').prop('disabled', true);
+            });
 
-        $('#btnCariPesanan').on('click', function() {
-            const noPesanan = $('#no_pesanan_retur').val().trim();
+            $('#btnCariPesanan').on('click', function() {
+                const noPesanan = $('#no_pesanan_retur').val().trim();
 
-            if (!noPesanan) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Nomor Pesanan',
-                    text: 'Masukkan nomor pesanan terlebih dahulu.'
-                });
+                if (!noPesanan) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Nomor Pesanan',
+                        text: 'Masukkan nomor pesanan terlebih dahulu.'
+                    });
 
-                return;
-            }
+                    return;
+                }
 
-            $('#detailPesananRetur').addClass('d-none');
-            $('#returNotFound').addClass('d-none');
-            $('#loadingRetur').removeClass('d-none');
-            $('#btnSimpanRetur').prop('disabled', true);
+                $('#detailPesananRetur').addClass('d-none');
+                $('#returNotFound').addClass('d-none');
+                $('#loadingRetur').removeClass('d-none');
+                $('#btnSimpanRetur').prop('disabled', true);
 
-            $.ajax({
-                type: 'GET',
-                url: "{{ route('gudang.retur.json', ':no_pesanan') }}".replace(':no_pesanan', noPesanan),
-                dataType: 'JSON',
-                success: function(response) {
-                    $('#loadingRetur').addClass('d-none');
+                $.ajax({
+                    type: 'GET',
+                    url: "{{ route('gudang.retur.json', ':no_pesanan') }}".replace(':no_pesanan',
+                        noPesanan),
+                    dataType: 'JSON',
+                    success: function(response) {
+                        $('#loadingRetur').addClass('d-none');
 
-                    const pesanan = response.data;
-                    $('#detailNoPesanan').text(pesanan[0].no_pesanan ?? '-');
-                    $('#detailPembeli').text(pesanan[0].pesanan.nama_pembeli ?? '-');
-                    $('#detailToko').text(pesanan[0].pesanan.toko.nama_toko ?? '-');
+                        const pesanan = response.data;
+                        $('#detailNoPesanan').text(pesanan[0].no_pesanan ?? '-');
+                        $('#detailPembeli').text(pesanan[0].pesanan.nama_pembeli ?? '-');
+                        $('#detailToko').text(pesanan[0].pesanan.toko.nama_toko ?? '-');
 
-                    let html = '';
-                    pesanan.forEach(function(item) {
-                        html += `
+                        let html = '';
+                        pesanan.forEach(function(item) {
+                            html += `
                             <tr class="align-middle">
 
                                 <!-- PRODUK -->
@@ -455,98 +500,123 @@
 
                             </tr>
                         `;
-                    });
+                        });
 
-                    $('#tableProdukRetur').html(html);
-                    $('#detailPesananRetur').removeClass('d-none');
-                    $('#btnSimpanRetur').prop('disabled', false);
-                },
+                        $('#tableProdukRetur').html(html);
+                        $('#detailPesananRetur').removeClass('d-none');
+                        $('#btnSimpanRetur').prop('disabled', false);
+                    },
 
-                error: function(xhr) {
-                    const message = xhr.responseJSON?.message || 'Data tidak ditemukan.';
-                    
-                    $('#loadingRetur').addClass('d-none');
-                    $('#returNotFound')
-                        .removeClass('d-none')
-                        .text(message);
-                    $('#btnSimpanRetur').prop('disabled', true);
-                    $('#tableProdukRetur').html('');
+                    error: function(xhr) {
+                        const message = xhr.responseJSON?.message || 'Data tidak ditemukan.';
+
+                        $('#loadingRetur').addClass('d-none');
+                        $('#returNotFound')
+                            .removeClass('d-none')
+                            .text(message);
+                        $('#btnSimpanRetur').prop('disabled', true);
+                        $('#tableProdukRetur').html('');
+                    }
+                });
+            });
+
+            // Tekan enter cari pesanan
+            $('#no_pesanan_retur').on('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+
+                    $('#btnCariPesanan').click();
                 }
             });
-        });
 
-        // Tekan enter cari pesanan
-        $('#no_pesanan_retur').on('keydown', function(e) {
-            if (e.key === 'Enter') {
+            $('#FormRetur').on('submit', function(e) {
                 e.preventDefault();
 
-                $('#btnCariPesanan').click();
-            }
-        });
+                const data = $(this).serialize();
 
-        $('#FormRetur').on('submit', function(e) {
-            e.preventDefault();
-
-            const data = $(this).serialize();
-
-            $.ajax({
-                type: 'POST',
-                url: "{{ route('gudang.retur.create') }}",
-                data: data,
-                dataType: 'JSON',
-                beforeSend: function() {
-                    $('#btnSimpanRetur')
-                        .prop('disabled', true)
-                        .html(`
+                $.ajax({
+                    type: 'POST',
+                    url: "{{ route('gudang.retur.create') }}",
+                    data: data,
+                    dataType: 'JSON',
+                    beforeSend: function() {
+                        $('#btnSimpanRetur')
+                            .prop('disabled', true)
+                            .html(`
                     <span class="spinner-border spinner-border-sm me-1"></span>
                     Menyimpan...
                 `);
-                },
+                    },
 
-                success: function(response) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil',
-                        text: response.message ?? 'Data retur berhasil disimpan.',
-                        timer: 1800,
-                        showConfirmButton: false
-                    });
+                    success: function(response) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: response.message ?? 'Data retur berhasil disimpan.',
+                            timer: 1800,
+                            showConfirmButton: false
+                        });
 
-                    $('#FormRetur')[0].reset();
-                    $('#tableProdukRetur').html('');
-                    $('#detailPesananRetur').addClass('d-none');
+                        $('#FormRetur')[0].reset();
+                        $('#tableProdukRetur').html('');
+                        $('#detailPesananRetur').addClass('d-none');
 
-                    $('#modalRetur').modal('hide');
-                    location.reload();
-                },
+                        $('#modalRetur').modal('hide');
+                        location.reload();
+                    },
 
-                error: function(xhr) {
-                    let message = xhr.responseJSON?.message ??
-                        'Terjadi kesalahan. Silakan coba kembali.';
+                    error: function(xhr) {
+                        let message = xhr.responseJSON?.message ??
+                            'Terjadi kesalahan. Silakan coba kembali.';
 
-                    if (xhr.status === 422 && xhr.responseJSON?.errors) {
-                        message = Object.values(xhr.responseJSON.errors)
-                            .flat()
-                            .join('<br>');
-                    }
+                        if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                            message = Object.values(xhr.responseJSON.errors)
+                                .flat()
+                                .join('<br>');
+                        }
 
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal',
-                        html: message,
-                        confirmButtonText: 'OK'
-                    });
-                },
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            html: message,
+                            confirmButtonText: 'OK'
+                        });
+                    },
 
-                complete: function() {
-                    $('#btnSimpanRetur')
-                        .prop('disabled', false)
-                        .html(`
+                    complete: function() {
+                        $('#btnSimpanRetur')
+                            .prop('disabled', false)
+                            .html(`
                     <i class="fa-solid fa-box-open me-1"></i>
                     Simpan Retur
                 `);
-                }
+                    }
+                });
             });
+
+            let searchTimer;
+            $('#searchTable').on('input', function() {
+                clearTimeout(searchTimer);
+                let search = $(this).val();
+                searchTimer = setTimeout(function() {
+                    const url = new URL(window.location.href);
+                    if (search) {
+                        url.searchParams.set('search', search);
+                    } else {
+                        url.searchParams.delete('search');
+                    }
+                    url.searchParams.delete('page');
+                    window.location.href = url.toString();
+                }, 500);
+            });
+
+            $('#per_page').on('change', function() {
+                const url = new URL(window.location.href);
+                url.searchParams.set('per_page', $(this).val());
+                url.searchParams.delete('page');
+                window.location.href = url.toString();
+            });
+
         });
     </script>
 @endpush

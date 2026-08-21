@@ -687,7 +687,7 @@ class GudangController extends Controller
             ->where('jenis_mutasi', 'sampel')
             ->orderBy('created_at', 'DESC')
             ->get();
-        $allproduk = produk::with('kategori')->where('status', 'aktif')->get();
+        $allproduk = Produk::with('kategori')->where('status', 'aktif')->get();
         $user = User::where('role', 'pegawai')->get();
 
         return view('gudang.sampel', compact('produk', 'allproduk', 'user'));
@@ -749,14 +749,47 @@ class GudangController extends Controller
         }
     }
 
-    public function barangretur()
+    public function barangretur(Request $request)
     {
+        $search = $request->search;
+        $perPage = $request->per_page ?? 10;
+        $pesanan = Pesanan::with([
+            'pesanan_per_produk.retur',
+            'user',
+            'toko',
+        ])->whereIn('status', [
+            'pengembalian',
+            'pengiriman_gagal',
+        ])->whereHas('pesanan_per_produk.retur')
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
 
-        $pesanan = Pesanan::with('pesanan_per_produk.retur', 'user', 'toko')
-            ->whereIn('status', ['pengembalian', 'pengiriman_gagal'])
-            ->whereHas('pesanan_per_produk.retur')
+                    $q->where('no_pesanan', 'like', '%'.$search.'%')
+                        ->orWhere('nama_pembeli', 'like', '%'.$search.'%')
+                        ->orWhere('username', 'like', '%'.$search.'%')
+                        ->orWhere('no_resi', 'like', '%'.$search.'%')
+                        ->orWhere('kurir', 'like', '%'.$search.'%')
+                        ->orWhere('status', 'like', '%'.$search.'%')
+
+                        ->orWhereHas('pesanan_per_produk', function ($produk) use ($search) {
+                            $produk->where('sku', 'like', '%'.$search.'%')
+                                ->orWhere('nama_produk', 'like', '%'.$search.'%')
+                                ->orWhere('variasi', 'like', '%'.$search.'%');
+                        })
+
+                        ->orWhereHas('user', function ($user) use ($search) {
+                            $user->where('name', 'like', '%'.$search.'%');
+                        })
+
+                        ->orWhereHas('toko', function ($toko) use ($search) {
+                            $toko->where('nama_toko', 'like', '%'.$search.'%');
+                        });
+                });
+            })
+
             ->orderBy('tanggal', 'DESC')
-            ->get();
+            ->paginate($perPage)
+            ->withQueryString();
 
         return view('gudang.retur', compact('pesanan'));
     }
@@ -845,6 +878,4 @@ class GudangController extends Controller
         }
 
     }
-
-    
 }
