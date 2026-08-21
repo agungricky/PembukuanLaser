@@ -4,173 +4,186 @@
 
 <div class="container-fluid">
 
-    {{-- HEADER --}}
-    <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <div>
-            <h4 class="mb-1">
-                Editor
-            </h4>
-
-            <div class="text-muted small">
-                Pekerjaan Editor & VBA Corel
-            </div>
+    <div class="mb-4">
+        <h4 class="fw-bold mb-1">Dashboard Editor</h4>
+        <div class="text-muted small">
+            Monitoring pekerjaan Editor dan Part Produksi
         </div>
-
     </div>
 
+    @include('editor.partials.alert')
 
-    {{-- ALERT --}}
-    @if(session('success'))
-        <div class="alert alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger">
-            {{ session('error') }}
-        </div>
-    @endif
-
-    @if(session('import_errors') && count(session('import_errors')))
-        <div class="alert alert-warning">
-            <div class="fw-semibold mb-2">
-                Data yang dilewati:
-            </div>
-
-            @foreach(session('import_errors') as $error)
-                <div>{{ $error }}</div>
-            @endforeach
-        </div>
-    @endif
-
-
-    {{-- CARD --}}
     <div class="row g-3 mb-4">
 
-        <div class="col-md-4">
-
+        <div class="col-xl-3 col-md-6">
             <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="text-muted small">
+                        Part Aktif
+                    </div>
 
-                <div class="card-body">
+                    <div class="fs-2 fw-bold text-primary">
+                        {{ number_format($totalPartAktif) }}
+                    </div>
 
-                    <div class="text-muted small mb-1">
+                    <div class="small text-muted">
+                        open / sedang diedit
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="text-muted small">
                         Belum Dikerjakan
                     </div>
 
-                    <div class="fs-3 fw-bold">
+                    <div class="fs-2 fw-bold text-warning">
                         {{ number_format($totalBelumEditor) }}
                     </div>
 
-                    <div class="text-muted small">
+                    <div class="small text-muted">
                         item
                     </div>
-
                 </div>
-
             </div>
-
         </div>
 
-
-        <div class="col-md-4">
-
+        <div class="col-xl-3 col-md-6">
             <div class="card border-0 shadow-sm h-100">
-
-                <div class="card-body">
-
-                    <div class="text-muted small mb-1">
-                        Sudah Import Editor
+                <div class="card-body p-4">
+                    <div class="text-muted small">
+                        Sudah Dikunci
                     </div>
 
-                    <div class="fs-3 fw-bold text-success">
+                    <div class="fs-2 fw-bold text-success">
                         {{ number_format($totalSelesaiEditor) }}
                     </div>
 
-                    <div class="text-muted small">
+                    <div class="small text-muted">
                         item
                     </div>
-
                 </div>
-
             </div>
+        </div>
 
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body p-4">
+                    <div class="text-muted small">
+                        Menunggu Request
+                    </div>
+
+                    <div class="fs-2 fw-bold text-danger">
+                        {{ number_format($totalMenunggu) }}
+                    </div>
+
+                    <div class="small text-muted">
+                        item
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
 
-
-    {{-- DOWNLOAD --}}
     <div class="card border-0 shadow-sm">
 
-        <div class="card-header bg-white">
-            <strong>
-                Pekerjaan Plat
-            </strong>
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <strong>Part Terbaru</strong>
+
+                <a href="{{ route('editor.part.index') }}"
+                    class="btn btn-sm btn-outline-primary">
+                    Lihat Semua
+                </a>
+            </div>
         </div>
 
-        <div class="card-body">
+        <div class="table-responsive">
 
-            <p class="text-muted">
-                Download data pesanan yang akan dikerjakan
-                menggunakan Excel dan VBA Corel.
-            </p>
+            <table class="table align-middle mb-0">
 
-            <a
-                href="{{ route('editor.download.plat') }}"
-                class="btn btn-success"
-            >
-                <i class="bi bi-file-earmark-excel me-1"></i>
+                <thead class="table-light">
+                    <tr>
+                        <th>Part</th>
+                        <th>Tanggal</th>
+                        <th>Item</th>
+                        <th>Pending</th>
+                        <th>Locked</th>
+                        <th>Skip</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
 
-                Download Excel Editor
-            </a>
+                <tbody>
+
+                    @forelse($partsTerbaru as $part)
+
+                        <tr>
+                            <td>
+                                <a href="{{ route('editor.part.show', $part) }}"
+                                    class="fw-bold text-decoration-none">
+                                    {{ $part->kode_part }}
+                                </a>
+                            </td>
+
+                            <td>
+                                {{ $part->tanggal_part->format('d/m/Y') }}
+                            </td>
+
+                            <td>
+                                {{ $part->jumlah_item }}
+                            </td>
+
+                            <td>
+                                {{ $part->pending_count }}
+                            </td>
+
+                            <td class="text-success fw-semibold">
+                                {{ $part->locked_count }}
+                            </td>
+
+                            <td class="text-danger fw-semibold">
+                                {{ $part->skipped_count }}
+                            </td>
+
+                            <td>
+                                @if($part->status === 'open')
+                                    <span class="badge bg-success">
+                                        OPEN
+                                    </span>
+                                @elseif($part->status === 'downloaded')
+                                    <span class="badge bg-warning text-dark">
+                                        DIEDIT
+                                    </span>
+                                @else
+                                    <span class="badge bg-secondary">
+                                        SELESAI
+                                    </span>
+                                @endif
+                            </td>
+                        </tr>
+
+                    @empty
+
+                        <tr>
+                            <td colspan="7"
+                                class="text-center text-muted py-5">
+                                Belum ada Part Produksi.
+                            </td>
+                        </tr>
+
+                    @endforelse
+
+                </tbody>
+
+            </table>
 
         </div>
 
-    </div>
-
-    <div class="card border-0 shadow-sm mt-3">
-        <div class="card-header bg-white">
-            <strong>Import Hasil Editor</strong>
-        </div>
-
-        <div class="card-body">
-
-            <form action="{{ route('editor.import') }}"
-                method="POST"
-                enctype="multipart/form-data">
-
-                @csrf
-
-                <div class="mb-3">
-                    <label class="form-label">
-                        File Excel Hasil Editor
-                    </label>
-
-                    <input type="file"
-                        name="file_editor"
-                        class="form-control"
-                        accept=".xlsx,.xls,.xlsm"
-                        required>
-                </div>
-
-                @error('file_editor')
-                    <div class="alert alert-danger py-2">
-                        {{ $message }}
-                    </div>
-                @enderror
-
-                <button type="submit"
-                    class="btn btn-primary">
-
-                    <i class="fa-solid fa-file-arrow-up me-1"></i>
-                    Import Hasil Editor
-                </button>
-
-            </form>
-
-        </div>
     </div>
 
 </div>

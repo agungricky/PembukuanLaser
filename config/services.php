@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'qpdf' => [
+        'path' => env('QPDF_PATH', 'qpdf'),
+    ],
+
 ];

@@ -2,96 +2,132 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EditorRequest;
 use App\Models\Pesanan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use App\Models\EditorRequest;
-use setasign\Fpdi\Fpdi;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
+use setasign\Fpdi\Fpdi;
 
 class PackingPesananController extends Controller
 {
+    private const PACKING_MARKETPLACES = [
+        'Shopee',
+        'Tiktok',
+    ];
+
     public function index(Request $request)
     {
         $query = Pesanan::with([
-                'toko:id_toko,nama_toko'
-            ])
+            'toko:id_toko,nama_toko,marketplace',
+        ])
             ->where('status', 'proses')
             ->orderByDesc('tanggal')
             ->orderByDesc('no_pesanan');
 
         if ($request->filled('no_pesanan')) {
-
-            $keyword = trim($request->no_pesanan);
+            $keyword = trim(
+                (string) $request->no_pesanan
+            );
 
             $query->where(function ($q) use ($keyword) {
-
-                $q->where('no_pesanan', 'like', "%{$keyword}%")
-                  ->orWhere('no_resi', 'like', "%{$keyword}%");
-
+                $q->where(
+                    'no_pesanan',
+                    'like',
+                    "%{$keyword}%"
+                )
+                    ->orWhere(
+                        'no_resi',
+                        'like',
+                        "%{$keyword}%"
+                    );
             });
-
         }
 
         if ($request->filled('tanggal')) {
-
-            $raw = trim((string) $request->tanggal);
+            $raw = trim(
+                (string) $request->tanggal
+            );
 
             try {
-
                 if (str_contains($raw, ' s.d ')) {
+                    [$startRaw, $endRaw] = explode(
+                        ' s.d ',
+                        $raw,
+                        2
+                    );
 
-                    [$startRaw, $endRaw] = explode(' s.d ', $raw, 2);
+                    $start = Carbon::parse(
+                        $startRaw
+                    )->startOfDay();
 
-                    $start = Carbon::parse($startRaw)->startOfDay();
-                    $end   = Carbon::parse($endRaw)->endOfDay();
-
+                    $end = Carbon::parse(
+                        $endRaw
+                    )->endOfDay();
                 } else {
+                    $start = Carbon::parse(
+                        $raw
+                    )->startOfDay();
 
-                    $start = Carbon::parse($raw)->startOfDay();
-                    $end   = Carbon::parse($raw)->endOfDay();
-
+                    $end = Carbon::parse(
+                        $raw
+                    )->endOfDay();
                 }
 
                 if ($end->lt($start)) {
-                    [$start, $end] = [$end, $start];
+                    [$start, $end] = [
+                        $end,
+                        $start,
+                    ];
                 }
 
-                $query->whereBetween('tanggal', [
-                    $start->toDateString(),
-                    $end->toDateString(),
-                ]);
-
+                $query->whereBetween(
+                    'tanggal',
+                    [
+                        $start->toDateString(),
+                        $end->toDateString(),
+                    ]
+                );
             } catch (\Throwable $e) {
-
-                Log::warning('Filter tanggal packing gagal.', [
-                    'tanggal' => $raw,
-                    'error'   => $e->getMessage(),
-                ]);
-
+                Log::warning(
+                    'Filter tanggal packing gagal.',
+                    [
+                        'tanggal' => $raw,
+                        'error' => $e->getMessage(),
+                    ]
+                );
             }
-
         }
 
         $pesanan = $query->get();
 
         $jumlahPesanan = $pesanan->count();
 
-        $hariIni = Pesanan::whereDate('tanggal_kirim', today())
-            ->where('id_user_kirim', Auth::id())
+        $hariIni = Pesanan::whereDate(
+            'tanggal_kirim',
+            today()
+        )
+            ->where(
+                'id_user_kirim',
+                Auth::id()
+            )
             ->count();
 
-        $kurirHariIni = $this->getKurirHariIni();
+        $kurirHariIni =
+            $this->getKurirHariIni();
 
-        return view('packing.pesanan', [
-            'pesanan'       => $pesanan,
-            'jumlahPesanan' => $jumlahPesanan,
-            'hariIni'       => $hariIni,
-            'kurirHariIni'  => $kurirHariIni,
-        ]);
+        return view(
+            'packing.pesanan',
+            compact(
+                'pesanan',
+                'jumlahPesanan',
+                'hariIni',
+                'kurirHariIni'
+            )
+        );
     }
 
     public function scan(Request $request)
@@ -104,312 +140,690 @@ class PackingPesananController extends Controller
         }
 
         $request->validate([
-            'no_pesanan' => ['required', 'string', 'max:100'],
+            'no_pesanan' => [
+                'required',
+                'string',
+                'max:100',
+            ],
         ]);
 
-        $kode = preg_replace('/\s+/', '', trim($request->no_pesanan));
-
-        Log::info('Packing Scan', [
-            'user_id' => Auth::id(),
-            'kode'    => $kode,
-        ]);
+        $kode = preg_replace(
+            '/\s+/',
+            '',
+            trim(
+                (string) $request->no_pesanan
+            )
+        );
 
         $pesanan = Pesanan::with('toko')
-            ->where('status', 'proses')
+            ->where(
+                'status',
+                'proses'
+            )
             ->where(function ($q) use ($kode) {
-                $q->where('no_resi', $kode)
-                  ->orWhere('no_pesanan', $kode);
+                $q->where(
+                    'no_resi',
+                    $kode
+                )
+                    ->orWhere(
+                        'no_pesanan',
+                        $kode
+                    );
             })
             ->first();
 
         if (!$pesanan) {
-
-            $pesananLama = Pesanan::where(function ($q) use ($kode) {
-                    $q->where('no_resi', $kode)
-                      ->orWhere('no_pesanan', $kode);
-                })
-                ->first();
+            $pesananLama = Pesanan::where(
+                function ($q) use ($kode) {
+                    $q->where(
+                        'no_resi',
+                        $kode
+                    )
+                        ->orWhere(
+                            'no_pesanan',
+                            $kode
+                        );
+                }
+            )->first();
 
             if ($pesananLama) {
-
                 return response()->json([
                     'success' => false,
-                    'message' => "⚠ Pesanan {$pesananLama->no_pesanan} sudah berstatus {$pesananLama->status}",
+                    'message' =>
+                        "⚠ Pesanan {$pesananLama->no_pesanan} sudah berstatus {$pesananLama->status}",
                 ], 409);
-
             }
 
             return response()->json([
                 'success' => false,
-                'message' => '❌ No. Pesanan / Resi tidak ditemukan',
+                'message' =>
+                    '❌ No. Pesanan / Resi tidak ditemukan',
             ], 404);
-
         }
 
-        DB::transaction(function () use ($pesanan) {
+        DB::transaction(
+            function () use ($pesanan) {
+                $pesanan->status =
+                    'kirim';
 
-            $pesanan->status = 'kirim';
-            $pesanan->id_user_kirim = Auth::id();
-            $pesanan->tanggal_kirim = now();
+                $pesanan->id_user_kirim =
+                    Auth::id();
 
-            $pesanan->save();
+                $pesanan->tanggal_kirim =
+                    now();
 
-        });
+                $pesanan->save();
+            }
+        );
 
-        $ekspedisi = $this->detectEkspedisi($pesanan->kurir);
+        $ekspedisi =
+            $this->detectEkspedisi(
+                $pesanan->kurir
+            );
 
-        Log::info('Packing Success', [
-            'no_pesanan' => $pesanan->no_pesanan,
-            'no_resi'    => $pesanan->no_resi,
-            'kurir'      => $pesanan->kurir,
-            'user_id'    => Auth::id(),
-            'scan_time'  => $pesanan->tanggal_kirim,
-        ]);
+        $sisaProses = Pesanan::where(
+            'status',
+            'proses'
+        )->count();
 
-        $sisaProses = Pesanan::where('status', 'proses')->count();
-
-        $hariIni = Pesanan::whereDate('tanggal_kirim', today())
-            ->where('id_user_kirim', Auth::id())
+        $hariIni = Pesanan::whereDate(
+            'tanggal_kirim',
+            today()
+        )
+            ->where(
+                'id_user_kirim',
+                Auth::id()
+            )
             ->count();
 
-        $kurirHariIni = $this->getKurirHariIni();
+        $kurirHariIni =
+            $this->getKurirHariIni();
 
         return response()->json([
-
             'success' => true,
 
-            'message' => "✅ {$pesanan->no_pesanan} berhasil dikirim",
+            'message' =>
+                "✅ {$pesanan->no_pesanan} berhasil dikirim",
 
-            'no_pesanan' => $pesanan->no_pesanan,
+            'no_pesanan' =>
+                $pesanan->no_pesanan,
 
-            'no_resi' => $pesanan->no_resi,
+            'no_resi' =>
+                $pesanan->no_resi,
 
-            'scan_time' => $pesanan->tanggal_kirim->format('H:i:s'),
+            'scan_time' =>
+                $pesanan
+                    ->tanggal_kirim
+                    ->format('H:i:s'),
 
-            'status' => 'kirim',
+            'status' =>
+                'kirim',
 
-            'ekspedisi' => $ekspedisi,
+            'ekspedisi' =>
+                $ekspedisi,
 
-            'remaining_proses' => $sisaProses,
+            'remaining_proses' =>
+                $sisaProses,
 
-            'hari_ini' => $hariIni,
+            'hari_ini' =>
+                $hariIni,
 
             'kurir_hari_ini' => [
+                'spx' =>
+                    (int) (
+                        $kurirHariIni->spx ?? 0
+                    ),
 
-                'spx' => (int) ($kurirHariIni->spx ?? 0),
+                'jnt' =>
+                    (int) (
+                        $kurirHariIni->jnt ?? 0
+                    ),
 
-                'jnt' => (int) ($kurirHariIni->jnt ?? 0),
+                'anteraja' =>
+                    (int) (
+                        $kurirHariIni->anteraja ?? 0
+                    ),
 
-                'anteraja' => (int) ($kurirHariIni->anteraja ?? 0),
-
-                'jne' => (int) ($kurirHariIni->jne ?? 0),
-
+                'jne' =>
+                    (int) (
+                        $kurirHariIni->jne ?? 0
+                    ),
             ],
-
         ]);
     }
 
     public function stats()
     {
-        $hariIni = Pesanan::whereDate('tanggal_kirim', today())
-            ->where('id_user_kirim', Auth::id())
+        $hariIni = Pesanan::whereDate(
+            'tanggal_kirim',
+            today()
+        )
+            ->where(
+                'id_user_kirim',
+                Auth::id()
+            )
             ->count();
 
-        $totalProses = Pesanan::where('status', 'proses')->count();
+        $totalProses = Pesanan::where(
+            'status',
+            'proses'
+        )->count();
 
-        $kurirHariIni = $this->getKurirHariIni();
+        $kurirHariIni =
+            $this->getKurirHariIni();
 
         return response()->json([
-            'hari_ini' => $hariIni,
+            'hari_ini' =>
+                $hariIni,
 
-            'total' => $totalProses,
+            'total' =>
+                $totalProses,
 
             'kurir_hari_ini' => [
-                'spx'       => (int) ($kurirHariIni->spx ?? 0),
-                'jnt'       => (int) ($kurirHariIni->jnt ?? 0),
-                'anteraja' => (int) ($kurirHariIni->anteraja ?? 0),
-                'jne'       => (int) ($kurirHariIni->jne ?? 0),
+                'spx' =>
+                    (int) (
+                        $kurirHariIni->spx ?? 0
+                    ),
+
+                'jnt' =>
+                    (int) (
+                        $kurirHariIni->jnt ?? 0
+                    ),
+
+                'anteraja' =>
+                    (int) (
+                        $kurirHariIni->anteraja ?? 0
+                    ),
+
+                'jne' =>
+                    (int) (
+                        $kurirHariIni->jne ?? 0
+                    ),
             ],
         ]);
     }
 
-    private function getKurirHariIni()
+    public function cetakIndex()
     {
-        return Pesanan::whereDate('tanggal_kirim', today())
-            ->where('id_user_kirim', Auth::id())
-            ->selectRaw("
-                SUM(CASE WHEN LOWER(kurir) LIKE '%spx%' THEN 1 ELSE 0 END) AS spx,
-                SUM(
-                    CASE
-                        WHEN LOWER(kurir) LIKE '%j&t%'
-                          OR LOWER(kurir) LIKE '%jnt%'
-                        THEN 1
-                        ELSE 0
-                    END
-                ) AS jnt,
-                SUM(CASE WHEN LOWER(kurir) LIKE '%anteraja%' THEN 1 ELSE 0 END) AS anteraja,
-                SUM(CASE WHEN LOWER(kurir) LIKE '%jne%' THEN 1 ELSE 0 END) AS jne
-            ")
-            ->first();
-    }
-
-    private function detectEkspedisi(?string $kurir): string
-    {
-        $kurir = strtolower(trim($kurir ?? ''));
-
-        if (str_contains($kurir, 'spx')) {
-            return 'spx';
-        }
-
-        if (
-            str_contains($kurir, 'j&t') ||
-            str_contains($kurir, 'jnt')
-        ) {
-            return 'jnt';
-        }
-
-        if (str_contains($kurir, 'anteraja')) {
-            return 'anteraja';
-        }
-
-        if (str_contains($kurir, 'jne')) {
-            return 'jne';
-        }
-
-        return 'unknown';
+        return view(
+            'packing.cetak-resi'
+        );
     }
 
     public function cariRequest(Request $request)
     {
         $request->validate([
-            'request_search' => ['required', 'string', 'max:255'],
+            'request_search' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'no_pesanan' => [
+                'nullable',
+                'string',
+                'max:50',
+            ],
         ]);
 
-        $keyword = strtoupper(
-            trim((string) $request->request_search)
-        );
+        $keyword =
+            $this->normalizeRequestSearch(
+                $request->request_search
+            );
 
-        $keyword = preg_replace('/\s+/', ' ', $keyword);
+        if (!$keyword) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'Masukkan request customer.',
+            ], 422);
+        }
+
+        if (mb_strlen($keyword) < 4) {
+            return response()->json([
+                'success' => false,
+                'message' =>
+                    'Pencarian terlalu pendek. Masukkan minimal 4 karakter.',
+            ], 422);
+        }
 
         $requests = EditorRequest::with([
-                'item.pesanan.toko',
-            ])
-            ->where('request_search', $keyword)
-            ->whereHas('item.pesanan', function ($q) {
-                $q->where('status', 'proses');
-            })
-            ->get();
+            'item.pesanan.produk.editorRequests',
+            'item.pesanan.toko',
+        ])
+            ->whereHas(
+                'item.pesanan',
+                function ($q) {
+                    $q->where(
+                        'status',
+                        'proses'
+                    )
+                        ->whereHas(
+                            'toko',
+                            function ($toko) {
+                                $toko->whereIn(
+                                    'marketplace',
+                                    self::PACKING_MARKETPLACES
+                                );
+                            }
+                        );
+                }
+            )
+            ->where(
+                'request_search',
+                'like',
+                '%' . $keyword . '%'
+            )
+            ->orderByRaw(
+                'CASE WHEN request_search = ? THEN 0 ELSE 1 END',
+                [$keyword]
+            )
+            ->orderBy('id')
+            ->get()
+            ->filter(
+                fn ($item) =>
+                    $item->item &&
+                    $item->item->pesanan
+            )
+            ->values();
 
         if ($requests->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Request customer tidak ditemukan.',
+                'message' =>
+                    'Request customer tidak ditemukan.',
             ], 404);
         }
 
-        $orders = $requests
-            ->filter(fn ($item) => $item->item && $item->item->pesanan)
-            ->groupBy(fn ($item) => $item->item->no_pesanan);
+        if ($request->filled('no_pesanan')) {
+            $noPesanan =
+                (string) $request->no_pesanan;
 
-        if ($orders->count() > 1) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Request yang sama ditemukan pada lebih dari satu pesanan aktif.',
-            ], 409);
+            $editorRequest =
+                $requests->first(
+                    function ($item) use ($noPesanan) {
+                        return (
+                            (string) $item
+                                ->item
+                                ->no_pesanan ===
+                            $noPesanan
+                        );
+                    }
+                );
+
+            if (!$editorRequest) {
+                return response()->json([
+                    'success' => false,
+                    'message' =>
+                        'Pesanan yang dipilih tidak ditemukan.',
+                ], 404);
+            }
+
+            return $this
+                ->responseDetailRequest(
+                    $editorRequest
+                );
         }
 
-        $editorRequest = $requests->first();
+        $orders = $requests->groupBy(
+            fn ($item) =>
+                (string) $item
+                    ->item
+                    ->no_pesanan
+        );
 
-        if (!$editorRequest->item || !$editorRequest->item->pesanan) {
+        if ($orders->count() > 1) {
+            $candidates =
+                $orders
+                    ->map(
+                        function (
+                            $matchedRequests,
+                            $noPesanan
+                        ) {
+                            $matchedRequest =
+                                $matchedRequests
+                                    ->first();
+
+                            $pesanan =
+                                $matchedRequest
+                                    ->item
+                                    ->pesanan;
+
+                            return [
+                                'no_pesanan' =>
+                                    (string) $noPesanan,
+
+                                'marketplace' =>
+                                    $pesanan
+                                        ->toko
+                                        ?->marketplace,
+
+                                'nama_pembeli' =>
+                                    $pesanan
+                                        ->nama_pembeli,
+
+                                'no_resi' =>
+                                    $pesanan
+                                        ->no_resi,
+
+                                'produk' =>
+                                    $this
+                                        ->buildProdukPayload(
+                                            $pesanan
+                                        ),
+
+                                'requests' =>
+                                    $this
+                                        ->buildRequestPayload(
+                                            $pesanan
+                                        ),
+                            ];
+                        }
+                    )
+                    ->values();
+
+            return response()->json([
+                'success' => true,
+
+                'multiple' => true,
+
+                'message' =>
+                    'Ditemukan beberapa pesanan. Pilih pesanan yang benar.',
+
+                'candidates' =>
+                    $candidates,
+            ]);
+        }
+
+        return $this
+            ->responseDetailRequest(
+                $requests->first()
+            );
+    }
+
+    private function responseDetailRequest(
+        EditorRequest $editorRequest
+    ) {
+        if (
+            !$editorRequest->item ||
+            !$editorRequest
+                ->item
+                ->pesanan
+        ) {
             return response()->json([
                 'success' => false,
-                'message' => 'Data pesanan tidak ditemukan.',
+                'message' =>
+                    'Data pesanan tidak ditemukan.',
             ], 404);
         }
 
         $pesanan = Pesanan::with([
+            'produk.editorRequests',
+            'resiPages.import',
+            'resiPrinter',
+            'toko',
+        ])
+            ->where(
+                'no_pesanan',
+                $editorRequest
+                    ->item
+                    ->no_pesanan
+            )
+            ->where(
+                'status',
+                'proses'
+            )
+            ->whereHas(
                 'toko',
-                'produk.editorRequest',
-                'resiPages.import',
-            ])
-            ->where('no_pesanan', $editorRequest->item->no_pesanan)
-            ->where('status', 'proses')
+                function ($q) {
+                    $q->whereIn(
+                        'marketplace',
+                        self::PACKING_MARKETPLACES
+                    );
+                }
+            )
             ->first();
 
         if (!$pesanan) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pesanan sudah tidak berstatus proses.',
+                'message' =>
+                    'Pesanan tidak ditemukan atau sudah tidak berstatus proses.',
             ], 409);
         }
 
-        $produk = $pesanan->produk->map(function ($item) {
-            return [
-                'id_per_produk' => $item->id_per_produk,
-                'sku' => $item->sku,
-                'nama_produk' => $item->nama_produk,
-                'variasi' => $item->variasi,
-                'jumlah' => (int) $item->jumlah,
+        $marketplace =
+            (string) (
+                $pesanan
+                    ->toko
+                    ?->marketplace ?? ''
+            );
 
-                'plat_lengkap' => $item->editorRequest?->plat_lengkap,
-                'nama' => $item->editorRequest?->nama,
-                'tanggal_bulan_tahun' => $item->editorRequest?->tanggal_bulan_tahun,
-            ];
-        })->values();
-
-        $resiPages = $pesanan->resiPages
-            ->sortBy([
-                ['urutan', 'asc'],
-                ['halaman', 'asc'],
-            ])
-            ->values();
+        $resiPages =
+            $this->getResiPages(
+                $pesanan
+            );
 
         return response()->json([
-            'success' => true,
+            'success' =>
+                true,
 
-            'request' => [
-                'request_search' => $editorRequest->request_search,
-                'plat_lengkap' => $editorRequest->plat_lengkap,
-                'nama' => $editorRequest->nama,
-            ],
+            'multiple' =>
+                false,
+
+            'requests' =>
+                $this->buildRequestPayload(
+                    $pesanan
+                ),
 
             'pesanan' => [
-                'no_pesanan' => $pesanan->no_pesanan,
-                'no_resi' => $pesanan->no_resi,
-                'nama_pembeli' => $pesanan->nama_pembeli,
-                'username' => $pesanan->username,
-                'kurir' => $pesanan->kurir,
-                'toko' => $pesanan->toko?->nama_toko ?? '-',
-                'marketplace' => $pesanan->toko?->marketplace ?? '-',
+                'no_pesanan' =>
+                    $pesanan
+                        ->no_pesanan,
 
-                'produk' => $produk,
+                'no_resi' =>
+                    $pesanan
+                        ->no_resi,
 
-                'pdf_tersedia' => $resiPages->isNotEmpty(),
+                'nama_pembeli' =>
+                    $pesanan
+                        ->nama_pembeli,
 
-                'halaman_resi' => $resiPages
-                    ->pluck('halaman')
-                    ->values(),
+                'marketplace' =>
+                    $marketplace,
 
-                'jumlah_halaman_resi' => $resiPages->count(),
+                'produk' =>
+                    $this
+                        ->buildProdukPayload(
+                            $pesanan
+                        ),
 
-                'sudah_print' => !is_null($pesanan->resi_printed_at),
+                'pdf_tersedia' =>
+                    $resiPages
+                        ->isNotEmpty(),
 
-                'print_count' => (int) ($pesanan->resi_print_count ?? 0),
+                'jumlah_halaman_resi' =>
+                    $resiPages
+                        ->count(),
+
+                'sudah_print' =>
+                    !is_null(
+                        $pesanan
+                            ->resi_printed_at
+                    ),
+
+                'print_count' =>
+                    (int) (
+                        $pesanan
+                            ->resi_print_count ??
+                        0
+                    ),
+
+                'first_printed_at' =>
+                    $pesanan
+                        ->resi_printed_at
+                        ? Carbon::parse(
+                            $pesanan
+                                ->resi_printed_at
+                        )->format(
+                            'd/m/Y H:i:s'
+                        )
+                        : null,
+
+                'first_printed_by' =>
+                    $pesanan
+                        ->resiPrinter
+                        ? $pesanan
+                            ->resiPrinter
+                            ->name
+                        : null,
             ],
         ]);
     }
 
-    public function cetakResi(Request $request)
-    {
+    private function buildProdukPayload(
+        Pesanan $pesanan
+    ) {
+        return $pesanan
+            ->produk
+            ->map(function ($item) {
+                return [
+                    'id_per_produk' =>
+                        $item
+                            ->id_per_produk,
+
+                    'nama_produk' =>
+                        $item
+                            ->nama_produk,
+
+                    'variasi' =>
+                        $item
+                            ->variasi,
+
+                    'sku' =>
+                        $item
+                            ->sku,
+
+                    'jumlah' =>
+                        (int) $item
+                            ->jumlah,
+                ];
+            })
+            ->values();
+    }
+
+    private function buildRequestPayload(
+        Pesanan $pesanan
+    ) {
+        return $pesanan
+            ->produk
+            ->flatMap(
+                function ($item) {
+                    return $item
+                        ->editorRequests
+                        ->map(
+                            function ($editor) use ($item) {
+                                return [
+                                    'id' =>
+                                        $editor->id,
+
+                                    'id_per_produk' =>
+                                        $item
+                                            ->id_per_produk,
+
+                                    'sku' =>
+                                        $item
+                                            ->sku,
+
+                                    'plat_lengkap' =>
+                                        $editor
+                                            ->plat_lengkap,
+
+                                    'nama' =>
+                                        $editor
+                                            ->nama,
+
+                                    'tanggal_bulan_tahun' =>
+                                        $editor
+                                            ->tanggal_bulan_tahun,
+
+                                    'jumlah' =>
+                                        (int) $editor
+                                            ->jumlah_editor,
+
+                                    'request_search' =>
+                                        $editor
+                                            ->request_search,
+                                ];
+                            }
+                        );
+                }
+            )
+            ->values();
+    }
+
+    private function getResiPages(
+        Pesanan $pesanan
+    ) {
+        return $pesanan
+            ->resiPages
+            ->filter(
+                function ($page) {
+                    return $page->import !== null;
+                }
+            )
+            ->sortBy([
+                [
+                    'urutan',
+                    'asc',
+                ],
+                [
+                    'halaman',
+                    'asc',
+                ],
+            ])
+            ->values();
+    }
+
+    public function cetakResi(
+        Request $request
+    ) {
         $request->validate([
-            'no_pesanan' => ['required', 'string', 'max:50'],
+            'no_pesanan' => [
+                'required',
+                'string',
+                'max:50',
+            ],
+
+            'allow_reprint' => [
+                'nullable',
+                'boolean',
+            ],
         ]);
 
         $pesanan = Pesanan::with([
-                'resiPages.import',
-            ])
-            ->where('no_pesanan', $request->no_pesanan)
-            ->where('status', 'proses')
+            'resiPages.import',
+            'resiPrinter',
+            'produk.editorRequests',
+            'toko',
+        ])
+            ->where(
+                'no_pesanan',
+                $request->no_pesanan
+            )
+            ->where(
+                'status',
+                'proses'
+            )
+            ->whereHas(
+                'toko',
+                function ($q) {
+                    $q->whereIn(
+                        'marketplace',
+                        self::PACKING_MARKETPLACES
+                    );
+                }
+            )
             ->first();
 
         if (!$pesanan) {
@@ -419,19 +833,29 @@ class PackingPesananController extends Controller
             );
         }
 
-        if ($pesanan->resi_printed_at) {
+        if (
+            $pesanan->resi_printed_at &&
+            !$request->boolean(
+                'allow_reprint'
+            )
+        ) {
             return back()->with(
                 'error',
-                'Resi pesanan ini sudah pernah dicetak.'
+                'Resi sudah pernah dicetak. Konfirmasi cetak ulang diperlukan.'
             );
         }
 
-        $pages = $pesanan->resiPages
-            ->sortBy([
-                ['urutan', 'asc'],
-                ['halaman', 'asc'],
-            ])
-            ->values();
+        $marketplace =
+            (string) (
+                $pesanan
+                    ->toko
+                    ?->marketplace ?? ''
+            );
+
+        $pages =
+            $this->getResiPages(
+                $pesanan
+            );
 
         if ($pages->isEmpty()) {
             return back()->with(
@@ -440,24 +864,45 @@ class PackingPesananController extends Controller
             );
         }
 
-        $tempDirectory = storage_path(
-            'app/private/print_temp'
-        );
+        $requestLines =
+            $this->getRequestPdfLines(
+                $pesanan
+            );
+
+        $tempDirectory =
+            storage_path(
+                'app/private/print_temp'
+            );
 
         File::ensureDirectoryExists(
             $tempDirectory
         );
 
-        $tempPath = $tempDirectory
-            . DIRECTORY_SEPARATOR
-            . 'resi_'
-            . $pesanan->no_pesanan
-            . '_'
-            . uniqid()
-            . '.pdf';
+        $safeNoPesanan =
+            preg_replace(
+                '/[^A-Za-z0-9\-_]/',
+                '_',
+                (string) $pesanan
+                    ->no_pesanan
+            );
+
+        $tempPath =
+            $tempDirectory .
+            DIRECTORY_SEPARATOR .
+            'resi_' .
+            $safeNoPesanan .
+            '_' .
+            uniqid() .
+            '.pdf';
+
+        $preparedSources = [];
 
         try {
             $pdf = new Fpdi();
+
+            $pdf->SetAutoPageBreak(
+                false
+            );
 
             foreach ($pages as $page) {
                 if (!$page->import) {
@@ -467,7 +912,8 @@ class PackingPesananController extends Controller
                 }
 
                 $sourcePath = storage_path(
-                    'app/private/' . ltrim(
+                    'app/private/' .
+                    ltrim(
                         $page->import->path_file,
                         '/'
                     )
@@ -475,19 +921,37 @@ class PackingPesananController extends Controller
 
                 if (!File::exists($sourcePath)) {
                     throw new \Exception(
-                        "File PDF sumber tidak ditemukan."
+                        'File PDF sumber tidak ditemukan.'
                     );
                 }
 
-                $pdf->setSourceFile($sourcePath);
+                if (!isset(
+                    $preparedSources[$sourcePath]
+                )) {
+                    $preparedSources[$sourcePath] =
+                        $this->preparePdfForFpdi(
+                            $sourcePath,
+                            $marketplace,
+                            $tempDirectory
+                        );
+                }
 
-                $template = $pdf->importPage(
-                    (int) $page->halaman
+                $preparedPdf =
+                    $preparedSources[$sourcePath];
+
+                $pdf->setSourceFile(
+                    $preparedPdf['path']
                 );
 
-                $size = $pdf->getTemplateSize(
-                    $template
-                );
+                $template =
+                    $pdf->importPage(
+                        (int) $page->halaman
+                    );
+
+                $size =
+                    $pdf->getTemplateSize(
+                        $template
+                    );
 
                 $pdf->AddPage(
                     $size['orientation'],
@@ -500,6 +964,15 @@ class PackingPesananController extends Controller
                 $pdf->useTemplate(
                     $template
                 );
+
+                if (!empty($requestLines)) {
+                    $this->drawRequestOnPdf(
+                        $pdf,
+                        $size,
+                        $requestLines,
+                        $marketplace
+                    );
+                }
             }
 
             $pdf->Output(
@@ -507,48 +980,592 @@ class PackingPesananController extends Controller
                 $tempPath
             );
 
-            DB::transaction(function () use ($pesanan) {
-                $now = now();
+            $this->cleanupPreparedPdfs(
+                $preparedSources
+            );
 
-                if (!$pesanan->resi_printed_at) {
-                    $pesanan->resi_printed_at = $now;
+            DB::transaction(
+                function () use ($pesanan) {
+                    $lockedPesanan =
+                        Pesanan::where(
+                            'no_pesanan',
+                            $pesanan
+                                ->no_pesanan
+                        )
+                            ->lockForUpdate()
+                            ->first();
+
+                    if (!$lockedPesanan) {
+                        throw new \Exception(
+                            'Pesanan tidak ditemukan.'
+                        );
+                    }
+
+                    $now =
+                        now();
+
+                    if (
+                        !$lockedPesanan
+                            ->resi_printed_at
+                    ) {
+                        $lockedPesanan
+                            ->resi_printed_at =
+                            $now;
+
+                        $lockedPesanan
+                            ->resi_printed_by =
+                            Auth::id();
+                    }
+
+                    $lockedPesanan
+                        ->resi_last_printed_at =
+                        $now;
+
+                    $lockedPesanan
+                        ->resi_print_count =
+                        (
+                            (int)
+                            $lockedPesanan
+                                ->resi_print_count
+                        ) + 1;
+
+                    $lockedPesanan->save();
                 }
-
-                $pesanan->resi_last_printed_at = $now;
-                $pesanan->resi_printed_by = Auth::id();
-
-                $pesanan->resi_print_count =
-                    ((int) $pesanan->resi_print_count) + 1;
-
-                $pesanan->save();
-            });
+            );
 
             return response()
                 ->file(
                     $tempPath,
                     [
-                        'Content-Type' => 'application/pdf',
+                        'Content-Type' =>
+                            'application/pdf',
 
                         'Content-Disposition' =>
-                            'inline; filename="RESI_'
-                            . $pesanan->no_pesanan
-                            . '.pdf"',
+                            'inline; filename="RESI_' .
+                            $safeNoPesanan .
+                            '.pdf"',
                     ]
                 )
-                ->deleteFileAfterSend(true);
+                ->deleteFileAfterSend(
+                    true
+                );
 
         } catch (\Throwable $e) {
-            File::delete($tempPath);
+            File::delete(
+                $tempPath
+            );
 
-            Log::error('Cetak resi packing gagal.', [
-                'no_pesanan' => $pesanan->no_pesanan,
-                'error' => $e->getMessage(),
-            ]);
+            $this->cleanupPreparedPdfs(
+                $preparedSources
+            );
 
-            return back()->with(
-                'error',
-                'Gagal menyiapkan resi: ' . $e->getMessage()
+            Log::error(
+                'Cetak resi packing gagal.',
+                [
+                    'marketplace' =>
+                        $marketplace,
+
+                    'no_pesanan' =>
+                        $pesanan->no_pesanan,
+
+                    'error' =>
+                        $e->getMessage(),
+
+                    'file' =>
+                        $e->getFile(),
+
+                    'line' =>
+                        $e->getLine(),
+                ]
+            );
+
+            return response(
+                '
+                <div style="
+                    font-family:Arial,sans-serif;
+                    max-width:800px;
+                    margin:40px auto;
+                    padding:30px;
+                ">
+                    <h2 style="color:#dc3545;">
+                        Gagal Cetak Resi
+                    </h2>
+
+                    <p>
+                        <strong>Marketplace:</strong>
+                        ' . e($marketplace) . '
+                    </p>
+
+                    <p>
+                        <strong>No. Pesanan:</strong>
+                        ' . e($pesanan->no_pesanan) . '
+                    </p>
+
+                    <p>
+                        <strong>Error:</strong>
+                        ' . e($e->getMessage()) . '
+                    </p>
+                </div>
+                ',
+                500
             );
         }
+    }
+
+    private function getRequestPdfLines(
+        Pesanan $pesanan
+    ): array {
+        return $pesanan
+            ->produk
+            ->flatMap(
+                function ($item) {
+                    return $item
+                        ->editorRequests
+                        ->map(
+                            function ($editor) {
+                                $parts = [];
+
+                                if (
+                                    $editor
+                                        ->plat_lengkap
+                                ) {
+                                    $parts[] =
+                                        trim(
+                                            $editor
+                                                ->plat_lengkap
+                                        );
+                                }
+
+                                if (
+                                    $editor
+                                        ->nama
+                                ) {
+                                    $parts[] =
+                                        trim(
+                                            $editor
+                                                ->nama
+                                        );
+                                }
+
+                                if (
+                                    $editor
+                                        ->tanggal_bulan_tahun
+                                ) {
+                                    $parts[] =
+                                        trim(
+                                            $editor
+                                                ->tanggal_bulan_tahun
+                                        );
+                                }
+
+                                if (empty($parts)) {
+                                    return null;
+                                }
+
+                                return implode(
+                                    ' | ',
+                                    $parts
+                                );
+                            }
+                        );
+                }
+            )
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function drawRequestOnPdf(
+        Fpdi $pdf,
+        array $size,
+        array $requestLines,
+        string $marketplace
+    ): void {
+        if (empty($requestLines)) {
+            return;
+        }
+
+        if (
+            strcasecmp(
+                $marketplace,
+                'Tiktok'
+            ) === 0
+        ) {
+            $this->drawTikTokRequestOnPdf(
+                $pdf,
+                $size,
+                $requestLines
+            );
+
+            return;
+        }
+
+        $this->drawShopeeRequestOnPdf(
+            $pdf,
+            $size,
+            $requestLines
+        );
+    }
+
+    private function drawShopeeRequestOnPdf(
+        Fpdi $pdf,
+        array $size,
+        array $requestLines
+    ): void {
+        $pageWidth =
+            (float) $size['width'];
+
+        $pageHeight =
+            (float) $size['height'];
+
+        $marginX = 6;
+
+        $contentWidth =
+            $pageWidth -
+            ($marginX * 2);
+
+        $jumlahRequest =
+            count($requestLines);
+
+        if ($jumlahRequest === 1) {
+            $fontSize = 25;
+            $lineHeight = 10;
+            $marginPerRequest = 4;
+
+        } elseif ($jumlahRequest === 2) {
+            $fontSize = 18;
+            $lineHeight = 8;
+            $marginPerRequest = 4;
+
+        } elseif ($jumlahRequest === 3) {
+            $fontSize = 15;
+            $lineHeight = 7;
+            $marginPerRequest = 3;
+
+        } else {
+            $fontSize = 12;
+            $lineHeight = 6;
+            $marginPerRequest = 2;
+        }
+
+        $startY =
+            $pageHeight *
+            0.80;
+
+        $pdf->SetTextColor(
+            0,
+            0,
+            0
+        );
+
+        $pdf->SetFont(
+            'Arial',
+            'B',
+            $fontSize
+        );
+
+        foreach ($requestLines as $line) {
+            $pdf->SetXY(
+                $marginX,
+                $startY
+            );
+
+            $pdf->MultiCell(
+                $contentWidth,
+                $lineHeight,
+                $this->pdfText(
+                    $line
+                ),
+                0,
+                'C'
+            );
+
+            $startY =
+                $pdf->GetY() +
+                $marginPerRequest;
+        }
+    }
+
+    private function drawTikTokRequestOnPdf(
+        Fpdi $pdf,
+        array $size,
+        array $requestLines
+    ): void {
+        $pageWidth = (float) $size['width'];
+        $pageHeight = (float) $size['height'];
+
+        $marginX = 6;
+        $contentWidth = $pageWidth - ($marginX * 2);
+        $jumlahRequest = count($requestLines);
+
+        if ($jumlahRequest === 1) {
+            $fontSize = 25;
+            $lineHeight = 10;
+            $marginPerRequest = 4;
+        } elseif ($jumlahRequest === 2) {
+            $fontSize = 18;
+            $lineHeight = 8;
+            $marginPerRequest = 4;
+        } elseif ($jumlahRequest === 3) {
+            $fontSize = 15;
+            $lineHeight = 7;
+            $marginPerRequest = 3;
+        } else {
+            $fontSize = 12;
+            $lineHeight = 6;
+            $marginPerRequest = 2;
+        }
+
+        $startY = $pageHeight * 0.78;
+
+        $pdf->SetTextColor(
+            0,
+            0,
+            0
+        );
+
+        $pdf->SetFont(
+            'Arial',
+            'B',
+            $fontSize
+        );
+
+        foreach ($requestLines as $line) {
+            $pdf->SetXY(
+                $marginX,
+                $startY
+            );
+
+            $pdf->MultiCell(
+                $contentWidth,
+                $lineHeight,
+                $this->pdfText($line),
+                0,
+                'C'
+            );
+
+            $startY =
+                $pdf->GetY() +
+                $marginPerRequest;
+        }
+    }
+
+    private function preparePdfForFpdi(
+        string $sourcePath,
+        string $marketplace,
+        string $tempDirectory
+    ): array {
+        if (strcasecmp($marketplace, 'Tiktok') !== 0) {
+            return [
+                'path' => $sourcePath,
+                'temporary' => false,
+            ];
+        }
+
+        $normalizedPath =
+            $tempDirectory .
+            DIRECTORY_SEPARATOR .
+            'normalized_' .
+            uniqid('', true) .
+            '.pdf';
+
+        $qpdf = config(
+            'services.qpdf.path',
+            'qpdf'
+        );
+
+        $command =
+            escapeshellarg($qpdf) .
+            ' --object-streams=disable ' .
+            escapeshellarg($sourcePath) .
+            ' ' .
+            escapeshellarg($normalizedPath) .
+            ' 2>&1';
+
+        $output = [];
+        $exitCode = 0;
+
+        exec(
+            $command,
+            $output,
+            $exitCode
+        );
+
+        if (
+            $exitCode !== 0 ||
+            !File::exists($normalizedPath)
+        ) {
+            File::delete(
+                $normalizedPath
+            );
+
+            throw new \Exception(
+                'Gagal memproses PDF TikTok dengan qpdf. ' .
+                implode(' ', $output)
+            );
+        }
+
+        return [
+            'path' => $normalizedPath,
+            'temporary' => true,
+        ];
+    }
+
+    private function cleanupPreparedPdfs(
+        array $preparedSources
+    ): void {
+        foreach (
+            $preparedSources
+            as $preparedPdf
+        ) {
+            if (
+                ($preparedPdf['temporary'] ?? false) &&
+                !empty($preparedPdf['path']) &&
+                File::exists(
+                    $preparedPdf['path']
+                )
+            ) {
+                File::delete(
+                    $preparedPdf['path']
+                );
+            }
+        }
+    }
+
+    private function pdfText(
+        ?string $text
+    ): string {
+        $converted =
+            @iconv(
+                'UTF-8',
+                'windows-1252//TRANSLIT',
+                (string) $text
+            );
+
+        return $converted !== false
+            ? $converted
+            : (string) $text;
+    }
+
+    private function normalizeRequestSearch(
+        ?string $value
+    ): ?string {
+        $value =
+            mb_strtoupper(
+                trim(
+                    (string) $value
+                )
+            );
+
+        $value =
+            preg_replace(
+                '/[^\p{L}\p{N}]+/u',
+                '',
+                $value
+            );
+
+        return $value !== ''
+            ? $value
+            : null;
+    }
+
+    private function getKurirHariIni()
+    {
+        return Pesanan::whereDate(
+            'tanggal_kirim',
+            today()
+        )
+            ->where(
+                'id_user_kirim',
+                Auth::id()
+            )
+            ->selectRaw("
+                SUM(
+                    CASE
+                        WHEN LOWER(kurir) LIKE '%spx%'
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS spx,
+
+                SUM(
+                    CASE
+                        WHEN LOWER(kurir) LIKE '%j&t%'
+                            OR LOWER(kurir) LIKE '%jnt%'
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS jnt,
+
+                SUM(
+                    CASE
+                        WHEN LOWER(kurir) LIKE '%anteraja%'
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS anteraja,
+
+                SUM(
+                    CASE
+                        WHEN LOWER(kurir) LIKE '%jne%'
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS jne
+            ")
+            ->first();
+    }
+
+    private function detectEkspedisi(
+        ?string $kurir
+    ): string {
+        $kurir =
+            strtolower(
+                trim(
+                    $kurir ?? ''
+                )
+            );
+
+        if (
+            str_contains(
+                $kurir,
+                'spx'
+            )
+        ) {
+            return 'spx';
+        }
+
+        if (
+            str_contains(
+                $kurir,
+                'j&t'
+            ) ||
+            str_contains(
+                $kurir,
+                'jnt'
+            )
+        ) {
+            return 'jnt';
+        }
+
+        if (
+            str_contains(
+                $kurir,
+                'anteraja'
+            )
+        ) {
+            return 'anteraja';
+        }
+
+        if (
+            str_contains(
+                $kurir,
+                'jne'
+            )
+        ) {
+            return 'jne';
+        }
+
+        return 'unknown';
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Carbon\Carbon;
 use App\Imports\PesananExcelService;
+use App\Services\EditorPartService;
 use Illuminate\Support\Str;
 
 class PesananController extends Controller
@@ -388,171 +389,478 @@ class PesananController extends Controller
         return '';
     }
 
-    public function simpanImport(Request $request)
-    {
+    public function simpanImport(
+        Request $request,
+        EditorPartService $partService
+    ) {
         $request->validate([
-            'pesanan' => ['required', 'array', 'min:1'],
-            'tanggal_import' => ['required', 'date'],
-            'id_toko' => ['required', 'integer', 'exists:toko,id_toko'],
-            'nama_user' => ['nullable', 'string'],
+            'pesanan' => [
+                'required',
+                'array',
+                'min:1',
+            ],
+
+            'tanggal_import' => [
+                'required',
+                'date',
+            ],
+
+            'id_toko' => [
+                'required',
+                'integer',
+                'exists:toko,id_toko',
+            ],
+
+            'nama_user' => [
+                'nullable',
+                'string',
+            ],
         ]);
 
-        $payload = $request->input('pesanan', []);
-        $tanggal = Carbon::parse($request->input('tanggal_import'))->startOfDay();
-        $idUser = auth()->id();
-        $idToko = (int) $request->input('id_toko');
+        $payload =
+            $request->input(
+                'pesanan',
+                []
+            );
 
-        $toko = Toko::select(
-            'id_toko',
-            'biaya_admin',
-            'biaya_tambahan'
-        )->find($idToko);
+        $tanggal =
+            Carbon::parse(
+                $request->input(
+                    'tanggal_import'
+                )
+            )->startOfDay();
+
+        $idUser =
+            auth()->id();
+
+        $idToko =
+            (int) $request->input(
+                'id_toko'
+            );
+
+        $toko =
+            Toko::select(
+                'id_toko',
+                'marketplace',
+                'biaya_admin',
+                'biaya_tambahan'
+            )->find(
+                $idToko
+            );
 
         if (!$toko) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Data toko tidak ditemukan.',
+                'message' =>
+                    'Data toko tidak ditemukan.',
             ], 422);
         }
 
-        $biayaAdmin = (float) ($toko->biaya_admin ?? 0);
-        $biayaTambahan = (float) ($toko->biaya_tambahan ?? 0);
+        $previewRaw =
+            Session::get(
+                'preview_pesanan',
+                []
+            );
+
+        if (is_string($previewRaw)) {
+            $previewRaw =
+                json_decode(
+                    $previewRaw,
+                    true
+                );
+
+            if (!is_array($previewRaw)) {
+                $previewRaw = [];
+            }
+        }
+
+        $previewByOrder =
+            collect($previewRaw)
+                ->filter(
+                    fn ($row) =>
+                        is_array($row) &&
+                        !empty(
+                            $row['no_pesanan']
+                        )
+                )
+                ->keyBy(
+                    fn ($row) =>
+                        trim(
+                            (string)
+                            $row['no_pesanan']
+                        )
+                );
+
+        $biayaAdmin =
+            (float) (
+                $toko->biaya_admin
+                ?? 0
+            );
+
+        $biayaTambahan =
+            (float) (
+                $toko->biaya_tambahan
+                ?? 0
+            );
 
         $imported = 0;
         $skipped = [];
+        $platItemIds = [];
 
         DB::beginTransaction();
 
         try {
-
             foreach ($payload as $item) {
-
-                $noPesanan = trim((string) ($item['no_pesanan'] ?? ''));
+                $noPesanan =
+                    trim(
+                        (string) (
+                            $item[
+                                'no_pesanan'
+                            ]
+                            ?? ''
+                        )
+                    );
 
                 if ($noPesanan === '') {
-                    throw new \Exception('Nomor pesanan tidak boleh kosong.');
+                    throw new \Exception(
+                        'Nomor pesanan tidak boleh kosong.'
+                    );
                 }
 
-                $sudahAda = DB::table('pesanan')
-                    ->where('no_pesanan', $noPesanan)
-                    ->exists();
+                $sudahAda =
+                    DB::table(
+                        'pesanan'
+                    )
+                        ->where(
+                            'no_pesanan',
+                            $noPesanan
+                        )
+                        ->exists();
 
                 if ($sudahAda) {
-                    $skipped[] = $noPesanan;
+                    $skipped[] =
+                        $noPesanan;
+
                     continue;
                 }
 
-                DB::table('pesanan')->insert([
-                    'no_pesanan' => $noPesanan,
-                    'tanggal' => $tanggal,
+                $previewItem =
+                    $previewByOrder->get(
+                        $noPesanan,
+                        []
+                    );
 
-                    'no_resi' => !empty($item['no_resi'])
-                        ? trim((string) $item['no_resi'])
+                $batasKirimAt =
+                    $previewItem[
+                        'batas_kirim_at'
+                    ]
+                    ?? $item[
+                        'batas_kirim_at'
+                    ]
+                    ?? null;
+
+                $batasKirimRaw =
+                    $previewItem[
+                        'batas_kirim_raw'
+                    ]
+                    ?? $item[
+                        'batas_kirim_raw'
+                    ]
+                    ?? null;
+
+                $batasKirimSource =
+                    $previewItem[
+                        'batas_kirim_source'
+                    ]
+                    ?? $item[
+                        'batas_kirim_source'
+                    ]
+                    ?? null;
+
+                DB::table(
+                    'pesanan'
+                )->insert([
+                    'no_pesanan' =>
+                        $noPesanan,
+
+                    'tanggal' =>
+                        $tanggal,
+
+                    'no_resi' =>
+                        !empty(
+                            $item['no_resi']
+                        )
+                        ? trim(
+                            (string)
+                            $item['no_resi']
+                        )
                         : null,
 
-                    'id_toko' => $idToko,
-                    'id_user' => $idUser,
+                    'id_toko' =>
+                        $idToko,
 
-                    'nama_pembeli' => trim((string) ($item['nama_pembeli'] ?? '')),
-                    'username' => trim((string) ($item['username'] ?? '')),
-                    'kurir' => trim((string) ($item['kurir'] ?? '')),
+                    'id_user' =>
+                        $idUser,
 
-                    'status' => 'proses',
+                    'nama_pembeli' =>
+                        trim(
+                            (string) (
+                                $item[
+                                    'nama_pembeli'
+                                ]
+                                ?? ''
+                            )
+                        ),
 
-                    'total_hpp' => 0,
-                    'total_harga' => 0,
-                    'total_admin' => 0,
+                    'username' =>
+                        trim(
+                            (string) (
+                                $item['username']
+                                ?? ''
+                            )
+                        ),
 
-                    'pencairan' => null,
-                    'notes' => null,
+                    'kurir' =>
+                        trim(
+                            (string) (
+                                $item['kurir']
+                                ?? ''
+                            )
+                        ),
+
+                    'status' =>
+                        'proses',
+
+                    'total_hpp' =>
+                        0,
+
+                    'total_harga' =>
+                        0,
+
+                    'total_admin' =>
+                        0,
+
+                    'pencairan' =>
+                        null,
+
+                    'notes' =>
+                        null,
+
+                    'batas_kirim_at' =>
+                        $batasKirimAt,
+
+                    'batas_kirim_raw' =>
+                        $batasKirimRaw,
+
+                    'batas_kirim_source' =>
+                        $batasKirimSource,
                 ]);
 
                 $totalHpp = 0;
                 $totalHarga = 0;
 
-                foreach ($item['produk'] ?? [] as $prd) {
+                foreach (
+                    $item['produk'] ?? []
+                    as $prd
+                ) {
+                    $namaProduk =
+                        trim(
+                            (string) (
+                                $prd[
+                                    'nama_produk'
+                                ]
+                                ?? ''
+                            )
+                        );
 
-                    $namaProduk = trim(
-                        (string) ($prd['nama_produk'] ?? '')
-                    );
+                    $variasi =
+                        trim(
+                            (string) (
+                                $prd['variasi']
+                                ?? ''
+                            )
+                        );
 
-                    $variasi = trim(
-                        (string) ($prd['variasi'] ?? '')
-                    );
+                    $jumlah =
+                        max(
+                            1,
+                            (int) (
+                                $prd['jumlah']
+                                ?? 1
+                            )
+                        );
 
-                    $jumlah = max(
-                        1,
-                        (int) ($prd['jumlah'] ?? 1)
-                    );
+                    $harga =
+                        (float) (
+                            $prd['harga']
+                            ?? 0
+                        );
 
-                    $harga = (float) ($prd['harga'] ?? 0);
-                    $hpp = (float) ($prd['hpp'] ?? 0);
+                    $hpp =
+                        (float) (
+                            $prd['hpp']
+                            ?? 0
+                        );
 
-                    $sku = !empty($prd['sku'])
-                        ? trim((string) $prd['sku'])
+                    $sku =
+                        !empty(
+                            $prd['sku']
+                        )
+                        ? strtoupper(
+                            trim(
+                                (string)
+                                $prd['sku']
+                            )
+                        )
                         : null;
 
-                    DB::table('pesanan_per_produk')->insert([
-                        'no_pesanan' => $noPesanan,
-                        'nama_produk' => $namaProduk,
-                        'variasi' => $variasi,
-                        'jumlah' => $jumlah,
-                        'hpp' => $hpp,
-                        'harga' => $harga,
-                        'sku' => $sku,
-                    ]);
+                    $idPerProduk =
+                        DB::table(
+                            'pesanan_per_produk'
+                        )->insertGetId(
+                            [
+                                'no_pesanan' =>
+                                    $noPesanan,
 
-                    $totalHpp += ($hpp * $jumlah);
-                    $totalHarga += ($harga * $jumlah);
+                                'nama_produk' =>
+                                    $namaProduk,
+
+                                'variasi' =>
+                                    $variasi,
+
+                                'jumlah' =>
+                                    $jumlah,
+
+                                'hpp' =>
+                                    $hpp,
+
+                                'harga' =>
+                                    $harga,
+
+                                'sku' =>
+                                    $sku,
+                            ],
+                            'id_per_produk'
+                        );
+
+                    if (
+                        $sku &&
+                        str_starts_with(
+                            $sku,
+                            'PLT'
+                        )
+                    ) {
+                        $platItemIds[] =
+                            (int)
+                            $idPerProduk;
+                    }
+
+                    $totalHpp +=
+                        $hpp * $jumlah;
+
+                    $totalHarga +=
+                        $harga * $jumlah;
                 }
 
-                if ($biayaAdmin > 1 && $biayaAdmin <= 100) {
-
+                if (
+                    $biayaAdmin > 1 &&
+                    $biayaAdmin <= 100
+                ) {
                     $totalAdmin =
-                        ($totalHarga * ($biayaAdmin / 100))
+                        (
+                            $totalHarga *
+                            (
+                                $biayaAdmin
+                                / 100
+                            )
+                        )
                         + $biayaTambahan;
-
-                } elseif ($biayaAdmin > 0 && $biayaAdmin <= 1) {
-
+                } elseif (
+                    $biayaAdmin > 0 &&
+                    $biayaAdmin <= 1
+                ) {
                     $totalAdmin =
-                        ($totalHarga * $biayaAdmin)
+                        (
+                            $totalHarga *
+                            $biayaAdmin
+                        )
                         + $biayaTambahan;
-
                 } else {
-
-                    $totalAdmin = $biayaTambahan;
+                    $totalAdmin =
+                        $biayaTambahan;
                 }
 
-                DB::table('pesanan')
-                    ->where('no_pesanan', $noPesanan)
+                DB::table(
+                    'pesanan'
+                )
+                    ->where(
+                        'no_pesanan',
+                        $noPesanan
+                    )
                     ->update([
-                        'total_hpp' => $totalHpp,
-                        'total_harga' => $totalHarga,
-                        'total_admin' => $totalAdmin,
+                        'total_hpp' =>
+                            $totalHpp,
+
+                        'total_harga' =>
+                            $totalHarga,
+
+                        'total_admin' =>
+                            $totalAdmin,
                     ]);
 
                 $imported++;
             }
 
+            $hasilPart =
+                $partService
+                    ->alokasikanItemBaru(
+                        $platItemIds,
+                        $idUser
+                    );
+
             DB::commit();
 
-            Session::forget('preview_pesanan');
+            Session::forget(
+                'preview_pesanan'
+            );
 
             return response()->json([
-                'status' => 'success',
-                'message' => 'Import selesai.',
-                'imported' => $imported,
-                'skipped_count' => count($skipped),
-                'skipped' => $skipped,
+                'status' =>
+                    'success',
+
+                'message' =>
+                    'Import selesai.',
+
+                'imported' =>
+                    $imported,
+
+                'skipped_count' =>
+                    count($skipped),
+
+                'skipped' =>
+                    $skipped,
+
+                'part_items' =>
+                    $hasilPart['items'],
+
+                'parts_baru' =>
+                    $hasilPart['parts_baru'],
+
+                'part_oversize' =>
+                    $hasilPart['oversize'],
             ]);
 
         } catch (\Throwable $e) {
-
             DB::rollBack();
 
+            report($e);
+
             return response()->json([
-                'status' => 'error',
-                'message' => $e->getMessage(),
+                'status' =>
+                    'error',
+
+                'message' =>
+                    $e->getMessage(),
             ], 500);
         }
     }
