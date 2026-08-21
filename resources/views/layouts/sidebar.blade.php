@@ -213,26 +213,47 @@
                         # PEKERJAAN
                     </div>
 
-                    <a href="{{ route('editor.download.plat') }}" class="sidebar-link mt-1">
+                    <a href="{{ route('editor.part.index') }}"
+                        class="sidebar-link mt-1 {{ request()->routeIs('editor.part.*') ? 'active' : '' }}">
 
                         <div class="d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-file-arrow-down"></i>
-                            <span>Download Excel</span>
+                            <i class="fa-solid fa-layer-group"></i>
+                            <span>Part Produksi</span>
+                        </div>
+                    </a>
+
+                    <a href="{{ route('editor.menunggu.index') }}"
+                        class="sidebar-link {{ request()->routeIs('editor.menunggu.*') ? 'active' : '' }}">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-comments"></i>
+                            <span>Menunggu Request</span>
+                        </div>
+                    </a>
+
+                    <a href="{{ route('editor.import.page') }}"
+                        class="sidebar-link {{ request()->routeIs('editor.import.page') ? 'active' : '' }}">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-file-arrow-up"></i>
+                            <span>Import Hasil Editor</span>
                         </div>
                     </a>
                 </div>
 
                 <div>
                     <div class="sidebar-heading border-bottom mt-3">
-                        # PROSES
+                        # RIWAYAT
                     </div>
 
-                    <div class="sidebar-link editor-info">
+                    <a href="{{ route('editor.riwayat.index') }}"
+                        class="sidebar-link {{ request()->routeIs('editor.riwayat.*') ? 'active' : '' }}">
+
                         <div class="d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-pen-ruler"></i>
-                            <span>Editor & VBA Corel</span>
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            <span>Riwayat Part</span>
                         </div>
-                    </div>
+                    </a>
                 </div>
 
                 <div>
@@ -243,6 +264,7 @@
                     <div class="sidebar-link editor-info">
                         <div class="d-flex align-items-center gap-3 overflow-hidden">
                             <i class="fa-solid fa-user-pen"></i>
+
                             <span class="text-truncate">
                                 {{ auth()->user()->name }}
                             </span>
@@ -250,6 +272,58 @@
 
                         <span class="badge rounded-pill bg-primary">
                             Editor
+                        </span>
+                    </div>
+                </div>
+
+            </nav>
+        </aside>
+    @endif
+
+    @if(auth()->check() && auth()->user()->role === 'packing')
+        <aside class="d-none d-lg-flex">
+            <nav class="sidebar">
+
+                <div>
+                    <div class="sidebar-heading border-bottom">
+                        # PACKING
+                    </div>
+
+                    <a href="{{ route('packing.pesanan') }}"
+                        class="sidebar-link mt-1 {{ request()->routeIs('packing.pesanan') ? 'active' : '' }}">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-barcode"></i>
+                            <span>Packing Scanner</span>
+                        </div>
+                    </a>
+
+                    <a href="{{ route('packing.cetak.index') }}"
+                        class="sidebar-link {{ request()->routeIs('packing.cetak.*') ? 'active' : '' }}">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-print"></i>
+                            <span>Cari & Cetak Resi</span>
+                        </div>
+                    </a>
+                </div>
+
+                <div>
+                    <div class="sidebar-heading border-bottom mt-3">
+                        # OPERATOR
+                    </div>
+
+                    <div class="sidebar-link packing-info">
+                        <div class="d-flex align-items-center gap-3 overflow-hidden">
+                            <i class="fa-solid fa-user"></i>
+
+                            <span class="text-truncate">
+                                {{ auth()->user()->name }}
+                            </span>
+                        </div>
+
+                        <span class="badge rounded-pill bg-primary">
+                            Packing
                         </span>
                     </div>
                 </div>
@@ -447,6 +521,14 @@
     }
 
     .editor-info:hover {
+        background: #f8fafc;
+        color: #334155;
+    }
+        .packing-info {
+        cursor: default;
+    }
+
+    .packing-info:hover {
         background: #f8fafc;
         color: #334155;
     }

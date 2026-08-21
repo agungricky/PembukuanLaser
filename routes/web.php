@@ -50,23 +50,41 @@ Route::middleware(['web', 'auth'])->group(function () {
     });
 
     // ===================== EDITOR ===================== //
-    Route::middleware(['role:editor,manager'])->group(function () {
-        Route::prefix('editor')
-            ->controller(EditorController::class)
-            ->group(function () {
-                Route::get('/', 'index')
-                    ->name('editor.index');
+    Route::prefix('editor') ->name('editor.')->middleware('auth')->group(function () {
+        Route::get('/', [EditorController::class, 'index'])
+            ->name('index');
 
-                Route::get('/download-plat', 'downloadPlat')
-                    ->name('editor.download.plat');
+        Route::get('/part', [EditorController::class, 'partIndex'])
+            ->name('part.index');
 
-                Route::post('/import', 'importEditor')
-                    ->name('editor.import');
-            });
+        Route::get('/part/{part}', [EditorController::class, 'partShow'])
+            ->name('part.show');
+
+        Route::get('/part/{part}/download', [EditorController::class, 'downloadPlat'])
+            ->name('part.download');
+
+        Route::get('/menunggu', [EditorController::class, 'menungguIndex'])
+            ->name('menunggu.index');
+
+        Route::post('/menunggu/{partItem}/siap', [EditorController::class, 'menungguSiap'])
+            ->name('menunggu.siap');
+
+        Route::get('/import', [EditorController::class, 'importPage'])
+            ->name('import.page');
+
+        Route::post('/import', [EditorController::class, 'importEditor'])
+            ->name('import');
+
+        Route::get('/riwayat', [EditorController::class, 'riwayatIndex'])
+            ->name('riwayat.index');
+
+        Route::get('/part/{part}/barcode',[EditorController::class, 'barcodePart'])
+            ->name('part.barcode');
     });
 
     // ===================== PACKING ===================== //
     Route::middleware(['role:packing'])->group(function () {
+
         Route::get('/packing/pesanan', [PackingPesananController::class, 'index'])
             ->name('packing.pesanan');
 
@@ -76,11 +94,15 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/packing/stats', [PackingPesananController::class, 'stats'])
             ->name('packing.stats');
 
+        Route::get('/packing/cetak-resi', [PackingPesananController::class, 'cetakIndex'])
+            ->name('packing.cetak.index');
+
         Route::post('/packing/cari-request', [PackingPesananController::class, 'cariRequest'])
             ->name('packing.cariRequest');
 
         Route::post('/packing/cetak-resi', [PackingPesananController::class, 'cetakResi'])
             ->name('packing.cetakResi');
+
     });
 
     // ===================== Admin & Manager ===================== //

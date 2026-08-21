@@ -2,30 +2,36 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class EditorRequest extends Model
 {
-    protected $table = 'editor_requests';
+    use HasFactory;
 
     protected $fillable = [
         'id_per_produk',
+        'editor_part_id',
         'plat_lengkap',
         'nama',
         'tanggal_bulan_tahun',
         'jumlah_editor',
+        'status_request',
         'tanpa_heartbeat',
         'tanpa_korlantas',
         'request_search',
         'editor_imported_by',
         'editor_imported_at',
+        'locked_at',
+        'locked_by',
     ];
 
     protected $casts = [
-        'jumlah_editor'      => 'integer',
-        'tanpa_heartbeat'    => 'boolean',
-        'tanpa_korlantas'    => 'boolean',
+        'jumlah_editor' => 'integer',
+        'tanpa_heartbeat' => 'boolean',
+        'tanpa_korlantas' => 'boolean',
         'editor_imported_at' => 'datetime',
+        'locked_at' => 'datetime',
     ];
 
     public function item()
@@ -43,6 +49,24 @@ class EditorRequest extends Model
             User::class,
             'editor_imported_by',
             'id'
-        )->withTrashed();
+        );
+    }
+
+    public function part()
+    {
+        return $this->belongsTo(
+            EditorPart::class,
+            'editor_part_id',
+            'id'
+        );
+    }
+
+    public function locker()
+    {
+        return $this->belongsTo(
+            User::class,
+            'locked_by',
+            'id'
+        );
     }
 }

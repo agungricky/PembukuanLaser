@@ -27,20 +27,13 @@
     <div class="container-fluid">
         <div class="row">
             {{-- SIDEBAR --}}
-            @unless (auth()->check() && auth()->user()->role === 'packing')
+            @if(auth()->check())
                 <div class="col-md-2 sidebar">
                     @include('layouts.sidebar')
                 </div>
-            @endunless
+            @endif
 
-
-            {{-- CONTENT --}}
-            <div
-                class="
-                    {{ auth()->check() && auth()->user()->role === 'packing' ? 'col-12' : 'col-md-10' }}
-                    content
-                ">
-
+            <div class="{{ auth()->check() ? 'col-md-10' : 'col-12' }} content">
                 @yield('content')
             </div>
         </div>
