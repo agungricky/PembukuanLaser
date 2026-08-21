@@ -224,27 +224,47 @@
                         # PEKERJAAN
                     </div>
 
-                    <a href="{{ route('editor.download.plat') }}"
-                        class="sidebar-link mt-1">
+                    <a href="{{ route('editor.part.index') }}"
+                        class="sidebar-link mt-1 {{ request()->routeIs('editor.part.*') ? 'active' : '' }}">
 
                         <div class="d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-file-arrow-down"></i>
-                            <span>Download Excel</span>
+                            <i class="fa-solid fa-layer-group"></i>
+                            <span>Part Produksi</span>
+                        </div>
+                    </a>
+
+                    <a href="{{ route('editor.menunggu.index') }}"
+                        class="sidebar-link {{ request()->routeIs('editor.menunggu.*') ? 'active' : '' }}">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-comments"></i>
+                            <span>Menunggu Request</span>
+                        </div>
+                    </a>
+
+                    <a href="{{ route('editor.import.page') }}"
+                        class="sidebar-link {{ request()->routeIs('editor.import.page') ? 'active' : '' }}">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-file-arrow-up"></i>
+                            <span>Import Hasil Editor</span>
                         </div>
                     </a>
                 </div>
 
                 <div>
                     <div class="sidebar-heading border-bottom mt-3">
-                        # PROSES
+                        # RIWAYAT
                     </div>
 
-                    <div class="sidebar-link editor-info">
+                    <a href="{{ route('editor.riwayat.index') }}"
+                        class="sidebar-link {{ request()->routeIs('editor.riwayat.*') ? 'active' : '' }}">
+
                         <div class="d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-pen-ruler"></i>
-                            <span>Editor & VBA Corel</span>
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            <span>Riwayat Part</span>
                         </div>
-                    </div>
+                    </a>
                 </div>
 
                 <div>
@@ -255,6 +275,7 @@
                     <div class="sidebar-link editor-info">
                         <div class="d-flex align-items-center gap-3 overflow-hidden">
                             <i class="fa-solid fa-user-pen"></i>
+
                             <span class="text-truncate">
                                 {{ auth()->user()->name }}
                             </span>

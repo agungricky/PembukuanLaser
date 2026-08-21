@@ -53,4 +53,12 @@ class PesananPerProduk extends Model
             'id_per_produk'
         );
     }
+    public function editorPartItems()
+    {
+        return $this->hasMany(
+            EditorPartItem::class,
+            'id_per_produk',
+            'id_per_produk'
+        );
+    }
 }

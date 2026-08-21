@@ -50,6 +50,7 @@ class Pesanan extends Model
         'resi_printed_at'      => 'datetime',
         'resi_last_printed_at' => 'datetime',
         'resi_print_count'     => 'integer',
+        'batas_kirim_at' => 'datetime',
 
         'total_hpp'            => 'decimal:2',
         'total_harga'          => 'decimal:2',
