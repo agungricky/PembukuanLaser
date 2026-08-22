@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Imports\PesananExcelService;
 use App\Models\Pesanan;
 use App\Models\Toko;
+use App\Services\EditorPartService;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
-use Carbon\Carbon;
-use App\Imports\PesananExcelService;
-use App\Services\EditorPartService;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class PesananController extends Controller
 {
@@ -20,16 +21,16 @@ class PesananController extends Controller
 
         $perPage = (int) $request->input('per_page', 20);
 
-        if (!in_array($perPage, $allowed, true)) {
+        if (! in_array($perPage, $allowed, true)) {
             $perPage = 20;
         }
 
         $keyword = trim((string) $request->input('no_pesanan', ''));
-        $range   = trim((string) $request->input('tanggal', ''));
+        $range = trim((string) $request->input('tanggal', ''));
 
         // Default bulan berjalan
         $startStr = now()->startOfMonth()->toDateString();
-        $endStr   = now()->toDateString();
+        $endStr = now()->toDateString();
 
         // Jika user memilih tanggal
         if ($range !== '') {
@@ -41,12 +42,12 @@ class PesananController extends Controller
                     [$s, $e] = array_map('trim', explode(' s.d ', $range, 2));
 
                     $start = Carbon::createFromFormat('Y-m-d', $s);
-                    $end   = Carbon::createFromFormat('Y-m-d', $e);
+                    $end = Carbon::createFromFormat('Y-m-d', $e);
 
                 } else {
 
                     $start = Carbon::createFromFormat('Y-m-d', $range);
-                    $end   = Carbon::createFromFormat('Y-m-d', $range);
+                    $end = Carbon::createFromFormat('Y-m-d', $range);
 
                 }
 
@@ -55,7 +56,7 @@ class PesananController extends Controller
                 }
 
                 $startStr = $start->toDateString();
-                $endStr   = $end->toDateString();
+                $endStr = $end->toDateString();
 
             } catch (\Throwable $e) {
                 // gunakan default bulan berjalan
@@ -64,15 +65,15 @@ class PesananController extends Controller
         }
 
         $pesanan = Pesanan::select([
-                'no_pesanan',
-                'tanggal',
-                'nama_pembeli',
-                'kurir',
-                'status',
-                'status_cek',
-                'no_resi',
-                'total_harga',
-            ])
+            'no_pesanan',
+            'tanggal',
+            'nama_pembeli',
+            'kurir',
+            'status',
+            'status_cek',
+            'no_resi',
+            'total_harga',
+        ])
             ->with([
                 'produk' => function ($q) {
                     $q->select(
@@ -84,7 +85,7 @@ class PesananController extends Controller
                         'hpp',
                         'sku'
                     );
-                }
+                },
             ])
 
             ->when($keyword !== '', function ($q) use ($keyword) {
@@ -134,7 +135,7 @@ class PesananController extends Controller
 
         return view('pesanan.pesanan', [
             'pesanan' => $pesanan,
-            'total'   => (int) $totalItems,
+            'total' => (int) $totalItems,
             'perPage' => $perPage,
             'allowed' => $allowed,
             'keyword' => $keyword,
@@ -142,8 +143,10 @@ class PesananController extends Controller
         ]);
     }
 
-    public function pesananDetail($id){
+    public function pesananDetail($id)
+    {
         $pesanan = Pesanan::where('no_pesanan', $id)->with('toko')->first();
+
         return response()->json($pesanan);
     }
 
@@ -171,7 +174,7 @@ class PesananController extends Controller
 
     public function detectMarketplace(array $sheet): ?string
     {
-        if (!isset($sheet[1])) {
+        if (! isset($sheet[1])) {
             return null;
         }
 
@@ -201,7 +204,7 @@ class PesananController extends Controller
         $path = $file->getRealPath() ?: $file->getPathname();
         $marketplace = $request->marketplace;
 
-        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+        $spreadsheet = IOFactory::load($path);
         $sheet = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
 
         $detectedMarketplace = $this->detectMarketplace($sheet);
@@ -232,21 +235,19 @@ class PesananController extends Controller
         }
 
         $nos = array_unique(array_filter(array_column($data, 'no_pesanan')));
-
         $dupes = [];
-
-        if (!empty($nos)) {
+        if (! empty($nos)) {
             $dupes = DB::table('pesanan')
                 ->whereIn('no_pesanan', $nos)
                 ->pluck('no_pesanan')
                 ->toArray();
         }
 
-        if (!empty($dupes)) {
+        if (! empty($dupes)) {
             $data = array_values(array_filter($data, function ($row) use ($dupes) {
                 $no = $row['no_pesanan'] ?? null;
 
-                return $no && !in_array($no, $dupes, true);
+                return $no && ! in_array($no, $dupes, true);
             }));
         }
 
@@ -282,12 +283,13 @@ class PesananController extends Controller
         $skuList = [];
 
         for ($i = 0; $i < count($data); $i++) {
-            if (!isset($data[$i]) || !is_array($data[$i])) {
+            if (! isset($data[$i]) || ! is_array($data[$i])) {
                 $data[$i] = [];
             }
 
-            if (!isset($data[$i]['produk_detail']) || !is_array($data[$i]['produk_detail'])) {
+            if (! isset($data[$i]['produk_detail']) || ! is_array($data[$i]['produk_detail'])) {
                 $data[$i]['produk_detail'] = [];
+
                 continue;
             }
 
@@ -323,7 +325,7 @@ class PesananController extends Controller
 
         $skuToHpp = [];
 
-        if (!empty($skuList)) {
+        if (! empty($skuList)) {
             $rows = DB::table('produk')
                 ->whereIn('sku', $skuList)
                 ->select('sku', 'hpp')
@@ -342,7 +344,6 @@ class PesananController extends Controller
                 $p = $data[$i]['produk_detail'][$j];
 
                 $key = Str::upper(trim((string) ($p['sku'] ?? '')));
-
                 $hpp = $key !== '' && isset($skuToHpp[$key])
                     ? (float) $skuToHpp[$key]
                     : 0.0;
@@ -389,87 +390,33 @@ class PesananController extends Controller
         return '';
     }
 
-    public function simpanImport(
-        Request $request,
-        EditorPartService $partService
-    ) {
+    public function simpanImport(Request $request, EditorPartService $partService)
+    {
         $request->validate([
-            'pesanan' => [
-                'required',
-                'array',
-                'min:1',
-            ],
-
-            'tanggal_import' => [
-                'required',
-                'date',
-            ],
-
-            'id_toko' => [
-                'required',
-                'integer',
-                'exists:toko,id_toko',
-            ],
-
-            'nama_user' => [
-                'nullable',
-                'string',
-            ],
+            'pesanan' => ['required', 'array', 'min:1'],
+            'tanggal_import' => ['required', 'date'],
+            'id_toko' => ['required', 'integer', 'exists:toko,id_toko'],
+            'nama_user' => ['nullable', 'string'],
         ]);
 
-        $payload =
-            $request->input(
-                'pesanan',
-                []
-            );
+        $payload = $request->input('pesanan', []);
+        $tanggal = Carbon::parse($request->input('tanggal_import'))->startOfDay();
+        $idUser = auth()->id();
+        $idToko = (int) $request->input('id_toko');
+        $toko = Toko::select('id_toko', 'marketplace', 'biaya_admin', 'biaya_tambahan')->find($idToko);
 
-        $tanggal =
-            Carbon::parse(
-                $request->input(
-                    'tanggal_import'
-                )
-            )->startOfDay();
-
-        $idUser =
-            auth()->id();
-
-        $idToko =
-            (int) $request->input(
-                'id_toko'
-            );
-
-        $toko =
-            Toko::select(
-                'id_toko',
-                'marketplace',
-                'biaya_admin',
-                'biaya_tambahan'
-            )->find(
-                $idToko
-            );
-
-        if (!$toko) {
+        if (! $toko) {
             return response()->json([
                 'status' => 'error',
-                'message' =>
-                    'Data toko tidak ditemukan.',
+                'message' => 'Data toko tidak ditemukan.',
             ], 422);
         }
 
-        $previewRaw =
-            Session::get(
-                'preview_pesanan',
-                []
-            );
+        $previewRaw = Session::get('preview_pesanan', []);
 
         if (is_string($previewRaw)) {
-            $previewRaw =
-                json_decode(
-                    $previewRaw,
-                    true
-                );
-
-            if (!is_array($previewRaw)) {
+            $previewRaw = json_decode($previewRaw, true);
+            if (! is_array($previewRaw)) {
                 $previewRaw = [];
             }
         }
@@ -477,32 +424,20 @@ class PesananController extends Controller
         $previewByOrder =
             collect($previewRaw)
                 ->filter(
-                    fn ($row) =>
-                        is_array($row) &&
-                        !empty(
+                    fn ($row) => is_array($row) &&
+                        ! empty(
                             $row['no_pesanan']
                         )
                 )
                 ->keyBy(
-                    fn ($row) =>
-                        trim(
-                            (string)
-                            $row['no_pesanan']
-                        )
+                    fn ($row) => trim(
+                        (string)
+                        $row['no_pesanan']
+                    )
                 );
 
-        $biayaAdmin =
-            (float) (
-                $toko->biaya_admin
-                ?? 0
-            );
-
-        $biayaTambahan =
-            (float) (
-                $toko->biaya_tambahan
-                ?? 0
-            );
-
+        $biayaAdmin = (float) ($toko->biaya_admin ?? 0);
+        $biayaTambahan = (float) ($toko->biaya_tambahan ?? 0);
         $imported = 0;
         $skipped = [];
         $platItemIds = [];
@@ -510,357 +445,167 @@ class PesananController extends Controller
         DB::beginTransaction();
 
         try {
-            foreach ($payload as $item) {
-                $noPesanan =
-                    trim(
-                        (string) (
-                            $item[
-                                'no_pesanan'
-                            ]
-                            ?? ''
-                        )
-                    );
+            // 1. Ambil semua SKU dari payload
+            $skuList = collect($payload)
+                ->flatMap(function ($item) {
 
+                    return collect($item['produk'] ?? [])
+                        ->map(function ($prd) {
+
+                            $sku = ! empty($prd['sku'])
+                                ? strtoupper(trim((string) $prd['sku']))
+                                : null;
+
+                            if ($sku && substr($sku, -3, 2) === 'CX') {
+                                $sku = substr($sku, 0, -2);
+                            }
+
+                            return $sku;
+                        });
+                })
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+
+            // 2. Cari SKU yang terdaftar
+            $skuTersedia = DB::table('produk')
+                ->whereIn('sku', $skuList)
+                ->pluck('sku')
+                ->map(fn ($sku) => strtoupper(trim($sku)))
+                ->toArray();
+
+            // 3. Cari yang tidak terdaftar
+            $skuTidakAda = array_values(
+                array_diff($skuList, $skuTersedia)
+            );
+
+            // 4. Kalau ada yang salah, berhenti sebelum insert
+            if (! empty($skuTidakAda)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Terdapat PRODUK dengan SKU yang tidak terdaftar: '.
+                        implode(', ', $skuTidakAda),
+                ], 422);
+            }
+
+            // Mulai Proses Transaksi
+            foreach ($payload as $item) {
+                $noPesanan = trim((string) ($item['no_pesanan'] ?? ''));
                 if ($noPesanan === '') {
                     throw new \Exception(
                         'Nomor pesanan tidak boleh kosong.'
                     );
                 }
 
-                $sudahAda =
-                    DB::table(
-                        'pesanan'
-                    )
-                        ->where(
-                            'no_pesanan',
-                            $noPesanan
-                        )
-                        ->exists();
-
+                $sudahAda = DB::table('pesanan')->where('no_pesanan', $noPesanan)->exists();
                 if ($sudahAda) {
-                    $skipped[] =
-                        $noPesanan;
+                    $skipped[] = $noPesanan;
 
                     continue;
                 }
 
-                $previewItem =
-                    $previewByOrder->get(
-                        $noPesanan,
-                        []
-                    );
+                $previewItem = $previewByOrder->get($noPesanan, []);
+                $batasKirimAt = $previewItem['batas_kirim_at'] ?? $item['batas_kirim_at'] ?? null;
+                $batasKirimRaw = $previewItem['batas_kirim_raw'] ?? $item['batas_kirim_raw'] ?? null;
+                $batasKirimSource = $previewItem['batas_kirim_source'] ?? $item['batas_kirim_source'] ?? null;
 
-                $batasKirimAt =
-                    $previewItem[
-                        'batas_kirim_at'
-                    ]
-                    ?? $item[
-                        'batas_kirim_at'
-                    ]
-                    ?? null;
-
-                $batasKirimRaw =
-                    $previewItem[
-                        'batas_kirim_raw'
-                    ]
-                    ?? $item[
-                        'batas_kirim_raw'
-                    ]
-                    ?? null;
-
-                $batasKirimSource =
-                    $previewItem[
-                        'batas_kirim_source'
-                    ]
-                    ?? $item[
-                        'batas_kirim_source'
-                    ]
-                    ?? null;
-
-                DB::table(
-                    'pesanan'
-                )->insert([
-                    'no_pesanan' =>
-                        $noPesanan,
-
-                    'tanggal' =>
-                        $tanggal,
-
-                    'no_resi' =>
-                        !empty(
-                            $item['no_resi']
-                        )
-                        ? trim(
-                            (string)
-                            $item['no_resi']
-                        )
-                        : null,
-
-                    'id_toko' =>
-                        $idToko,
-
-                    'id_user' =>
-                        $idUser,
-
-                    'nama_pembeli' =>
-                        trim(
-                            (string) (
-                                $item[
-                                    'nama_pembeli'
-                                ]
-                                ?? ''
-                            )
-                        ),
-
-                    'username' =>
-                        trim(
-                            (string) (
-                                $item['username']
-                                ?? ''
-                            )
-                        ),
-
-                    'kurir' =>
-                        trim(
-                            (string) (
-                                $item['kurir']
-                                ?? ''
-                            )
-                        ),
-
-                    'status' =>
-                        'proses',
-
-                    'total_hpp' =>
-                        0,
-
-                    'total_harga' =>
-                        0,
-
-                    'total_admin' =>
-                        0,
-
-                    'pencairan' =>
-                        null,
-
-                    'notes' =>
-                        null,
-
-                    'batas_kirim_at' =>
-                        $batasKirimAt,
-
-                    'batas_kirim_raw' =>
-                        $batasKirimRaw,
-
-                    'batas_kirim_source' =>
-                        $batasKirimSource,
+                DB::table('pesanan')->insert([
+                    'no_pesanan' => $noPesanan,
+                    'tanggal' => $tanggal,
+                    'no_resi' => ! empty($item['no_resi']) ? trim((string) $item['no_resi']) : null,
+                    'id_toko' => $idToko,
+                    'id_user' => $idUser,
+                    'nama_pembeli' => trim((string) ($item['nama_pembeli'] ?? '')),
+                    'username' => trim((string) ($item['username'] ?? '')),
+                    'kurir' => trim((string) ($item['kurir'] ?? '')),
+                    'status' => 'proses',
+                    'total_hpp' => 0,
+                    'total_harga' => 0,
+                    'total_admin' => 0,
+                    'pencairan' => null,
+                    'notes' => null,
+                    'batas_kirim_at' => $batasKirimAt,
+                    'batas_kirim_raw' => $batasKirimRaw,
+                    'batas_kirim_source' => $batasKirimSource,
                 ]);
 
                 $totalHpp = 0;
                 $totalHarga = 0;
 
-                foreach (
-                    $item['produk'] ?? []
-                    as $prd
-                ) {
-                    $namaProduk =
-                        trim(
-                            (string) (
-                                $prd[
-                                    'nama_produk'
-                                ]
-                                ?? ''
-                            )
-                        );
+                foreach ($item['produk'] ?? [] as $prd) {
+                    $namaProduk = trim((string) ($prd['nama_produk'] ?? ''));
+                    $variasi = trim((string) ($prd['variasi'] ?? ''));
+                    $jumlah = max(1, (int) ($prd['jumlah'] ?? 1));
+                    $harga = (float) ($prd['harga'] ?? 0);
+                    $hpp = (float) ($prd['hpp'] ?? 0);
+                    $sku = ! empty($prd['sku']) ? strtoupper(trim((string) $prd['sku'])) : null;
+                    if ($sku && substr($sku, -3, 2) === 'CX') {
+                        $sku = substr($sku, 0, -2);
+                    }
+                    $custom = $prd['custom'];
 
-                    $variasi =
-                        trim(
-                            (string) (
-                                $prd['variasi']
-                                ?? ''
-                            )
-                        );
-
-                    $jumlah =
-                        max(
-                            1,
-                            (int) (
-                                $prd['jumlah']
-                                ?? 1
-                            )
-                        );
-
-                    $harga =
-                        (float) (
-                            $prd['harga']
-                            ?? 0
-                        );
-
-                    $hpp =
-                        (float) (
-                            $prd['hpp']
-                            ?? 0
-                        );
-
-                    $sku =
-                        !empty(
-                            $prd['sku']
-                        )
-                        ? strtoupper(
-                            trim(
-                                (string)
-                                $prd['sku']
-                            )
-                        )
-                        : null;
-
-                    $idPerProduk =
-                        DB::table(
-                            'pesanan_per_produk'
-                        )->insertGetId(
-                            [
-                                'no_pesanan' =>
-                                    $noPesanan,
-
-                                'nama_produk' =>
-                                    $namaProduk,
-
-                                'variasi' =>
-                                    $variasi,
-
-                                'jumlah' =>
-                                    $jumlah,
-
-                                'hpp' =>
-                                    $hpp,
-
-                                'harga' =>
-                                    $harga,
-
-                                'sku' =>
-                                    $sku,
-                            ],
+                    $idPerProduk = DB::table('pesanan_per_produk')
+                        ->insertGetId([
+                            'no_pesanan' => $noPesanan,
+                            'nama_produk' => $namaProduk,
+                            'variasi' => $variasi,
+                            'jumlah' => $jumlah,
+                            'hpp' => $hpp,
+                            'harga' => $harga,
+                            'sku' => $sku,
+                            'custom' => $custom,
+                        ],
                             'id_per_produk'
                         );
 
-                    if (
-                        $sku &&
-                        str_starts_with(
-                            $sku,
-                            'PLT'
-                        )
-                    ) {
-                        $platItemIds[] =
-                            (int)
-                            $idPerProduk;
+                    if ($sku && str_starts_with($sku, 'PLT')) {
+                        $platItemIds[] = (int) $idPerProduk;
                     }
 
-                    $totalHpp +=
-                        $hpp * $jumlah;
-
-                    $totalHarga +=
-                        $harga * $jumlah;
+                    $totalHpp += $hpp * $jumlah;
+                    $totalHarga += $harga * $jumlah;
                 }
 
-                if (
-                    $biayaAdmin > 1 &&
-                    $biayaAdmin <= 100
-                ) {
-                    $totalAdmin =
-                        (
-                            $totalHarga *
-                            (
-                                $biayaAdmin
-                                / 100
-                            )
-                        )
-                        + $biayaTambahan;
-                } elseif (
-                    $biayaAdmin > 0 &&
-                    $biayaAdmin <= 1
-                ) {
-                    $totalAdmin =
-                        (
-                            $totalHarga *
-                            $biayaAdmin
-                        )
-                        + $biayaTambahan;
+                if ($biayaAdmin > 1 && $biayaAdmin <= 100) {
+                    $totalAdmin = ($totalHarga * ($biayaAdmin / 100)) + $biayaTambahan;
+                } elseif ($biayaAdmin > 0 && $biayaAdmin <= 1) {
+                    $totalAdmin = ($totalHarga * $biayaAdmin) + $biayaTambahan;
                 } else {
-                    $totalAdmin =
-                        $biayaTambahan;
+                    $totalAdmin = $biayaTambahan;
                 }
 
-                DB::table(
-                    'pesanan'
-                )
-                    ->where(
-                        'no_pesanan',
-                        $noPesanan
-                    )
-                    ->update([
-                        'total_hpp' =>
-                            $totalHpp,
-
-                        'total_harga' =>
-                            $totalHarga,
-
-                        'total_admin' =>
-                            $totalAdmin,
-                    ]);
+                DB::table('pesanan')->where('no_pesanan', $noPesanan)->update([
+                    'total_hpp' => $totalHpp,
+                    'total_harga' => $totalHarga,
+                    'total_admin' => $totalAdmin,
+                ]);
 
                 $imported++;
             }
 
-            $hasilPart =
-                $partService
-                    ->alokasikanItemBaru(
-                        $platItemIds,
-                        $idUser
-                    );
-
+            $hasilPart = $partService->alokasikanItemBaru($platItemIds, $idUser);
             DB::commit();
-
-            Session::forget(
-                'preview_pesanan'
-            );
+            Session::forget('preview_pesanan');
 
             return response()->json([
-                'status' =>
-                    'success',
-
-                'message' =>
-                    'Import selesai.',
-
-                'imported' =>
-                    $imported,
-
-                'skipped_count' =>
-                    count($skipped),
-
-                'skipped' =>
-                    $skipped,
-
-                'part_items' =>
-                    $hasilPart['items'],
-
-                'parts_baru' =>
-                    $hasilPart['parts_baru'],
-
-                'part_oversize' =>
-                    $hasilPart['oversize'],
+                'status' => 'success',
+                'message' => 'Import selesai.',
+                'imported' => $imported,
+                'skipped_count' => count($skipped),
+                'skipped' => $skipped,
+                'part_items' => $hasilPart['items'],
+                'parts_baru' => $hasilPart['parts_baru'],
+                'part_oversize' => $hasilPart['oversize'],
             ]);
 
         } catch (\Throwable $e) {
             DB::rollBack();
-
             report($e);
 
             return response()->json([
-                'status' =>
-                    'error',
-
-                'message' =>
-                    $e->getMessage(),
+                'status' => 'error',
+                'message' => $e->getMessage(),
             ], 500);
         }
     }

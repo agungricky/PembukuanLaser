@@ -225,8 +225,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/retur', [GudangController::class, 'barangretur'])->name('gudang.retur');
         Route::get('/retur/perpesanan/{no_pesanan}', [GudangController::class, 'detailRetur'])->name('gudang.retur.json');
         Route::post('/gudang/retur/create', [GudangController::class, 'returCreate'])->name('gudang.retur.create');
-
-        Route::resource('/produk-custom', produkcustomController::class);
+        Route::get('/produk-custom', [GudangController::class, 'produkcustom'])->name('produk-custom.index');
     });
 });
 

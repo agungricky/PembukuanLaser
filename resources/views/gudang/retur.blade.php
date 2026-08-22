@@ -46,7 +46,7 @@
                         </div>
 
                         <select id="per_page" class="form-select form-select-sm" style="width: auto;">
-                            <option value="1" {{ request('per_page', 1) == 1 ? 'selected' : '' }}>1</option>
+                            <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
                             <option value="20" {{ request('per_page') == 20 ? 'selected' : '' }}>20</option>
                             <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
                             <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100</option>
@@ -207,8 +207,8 @@
                         @endforeach
                     </tbody>
                 </table>
+                
                 <div class="d-flex justify-content-between align-items-center w-100 py-2">
-
                     <div class="text-muted small ms-3">
                         Menampilkan
                         {{ $pesanan->firstItem() ?? 0 }}

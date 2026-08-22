@@ -195,8 +195,12 @@ class GudangController extends Controller
     public function showdata($filter)
     {
         if ($filter === 'siapkan') {
-            $pesanan = Pesanan::with('pesanan_per_produk.produk')
-                ->where('status', 'proses')
+            $pesanan = Pesanan::with([
+                'pesanan_per_produk' => function ($query) {
+                    $query->where('custom', 0)
+                        ->with('produk');
+                },
+            ])->where('status', 'proses')
                 ->get();
 
             $kebutuhan = [];
@@ -227,7 +231,7 @@ class GudangController extends Controller
             return response()->json($kebutuhanProduk);
 
         } elseif ($filter === 'siap') {
-            $kebutuhanProduk = mutasi_stok::with('stok_produk.produk', 'user', 'ambilBarang')
+            $kebutuhanProduk = mutasi_stok::with('stok_produk.produk', 'user', 'ambil_barang')
                 ->where('jenis_mutasi', 'siap')
                 ->orderBy('updated_at', 'DESC')
                 ->get();
@@ -238,7 +242,7 @@ class GudangController extends Controller
             $kebutuhanProduk = mutasi_stok::with(
                 'stok_produk.produk',
                 'user',
-                'ambilBarang'
+                'ambil_barang'
             )
                 ->where('jenis_mutasi', 'keluar')
                 ->where('updated_at', '>=', now()->subMonths(3))
@@ -881,5 +885,17 @@ class GudangController extends Controller
             ], 500);
         }
 
+    }
+
+    public function produkcustom(){
+        $pesanan = Pesanan::with([
+                'pesanan_per_produk' => function ($query) {
+                    $query->where('custom', 1)
+                        ->with('produk');
+                },
+            ])->where('status', 'proses')
+            ->get();
+
+        return view('gudang.produk_custom', compact('pesanan'));
     }
 }
