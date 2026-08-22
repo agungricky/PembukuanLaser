@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\EditorRequest;
 use App\Models\Pesanan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -349,225 +348,67 @@ class PackingPesananController extends Controller
             'packing.cetak-resi'
         );
     }
-
     public function cariRequest(Request $request)
     {
         $request->validate([
-            'request_search' => [
+            'no_pesanan' => [
                 'required',
                 'string',
-                'max:255',
-            ],
-
-            'no_pesanan' => [
-                'nullable',
-                'string',
-                'max:50',
+                'max:100',
             ],
         ]);
 
-        $keyword =
-            $this->normalizeRequestSearch(
-                $request->request_search
-            );
+        $noPesanan = preg_replace(
+            '/\s+/',
+            '',
+            trim((string) $request->no_pesanan)
+        );
 
-        if (!$keyword) {
-            return response()->json([
-                'success' => false,
-                'message' =>
-                    'Masukkan request customer.',
-            ], 422);
-        }
+        $pesanan = $this->findPesananUntukCetak(
+            $noPesanan
+        );
 
-        if (mb_strlen($keyword) < 4) {
-            return response()->json([
-                'success' => false,
-                'message' =>
-                    'Pencarian terlalu pendek. Masukkan minimal 4 karakter.',
-            ], 422);
-        }
+        if (!$pesanan) {
+            $pesananLama = Pesanan::select([
+                'no_pesanan',
+                'status',
+            ])
+                ->where(
+                    'no_pesanan',
+                    $noPesanan
+                )
+                ->first();
 
-        $requests = EditorRequest::with([
-            'item.pesanan.produk.editorRequests',
-            'item.pesanan.toko',
-        ])
-            ->whereHas(
-                'item.pesanan',
-                function ($q) {
-                    $q->where(
-                        'status',
-                        'proses'
-                    )
-                        ->whereHas(
-                            'toko',
-                            function ($toko) {
-                                $toko->whereIn(
-                                    'marketplace',
-                                    self::PACKING_MARKETPLACES
-                                );
-                            }
-                        );
-                }
-            )
-            ->where(
-                'request_search',
-                'like',
-                '%' . $keyword . '%'
-            )
-            ->orderByRaw(
-                'CASE WHEN request_search = ? THEN 0 ELSE 1 END',
-                [$keyword]
-            )
-            ->orderBy('id')
-            ->get()
-            ->filter(
-                fn ($item) =>
-                    $item->item &&
-                    $item->item->pesanan
-            )
-            ->values();
-
-        if ($requests->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' =>
-                    'Request customer tidak ditemukan.',
-            ], 404);
-        }
-
-        if ($request->filled('no_pesanan')) {
-            $noPesanan =
-                (string) $request->no_pesanan;
-
-            $editorRequest =
-                $requests->first(
-                    function ($item) use ($noPesanan) {
-                        return (
-                            (string) $item
-                                ->item
-                                ->no_pesanan ===
-                            $noPesanan
-                        );
-                    }
-                );
-
-            if (!$editorRequest) {
+            if ($pesananLama) {
                 return response()->json([
                     'success' => false,
                     'message' =>
-                        'Pesanan yang dipilih tidak ditemukan.',
-                ], 404);
+                        "Pesanan {$pesananLama->no_pesanan} sudah berstatus {$pesananLama->status}.",
+                ], 409);
             }
 
-            return $this
-                ->responseDetailRequest(
-                    $editorRequest
-                );
-        }
-
-        $orders = $requests->groupBy(
-            fn ($item) =>
-                (string) $item
-                    ->item
-                    ->no_pesanan
-        );
-
-        if ($orders->count() > 1) {
-            $candidates =
-                $orders
-                    ->map(
-                        function (
-                            $matchedRequests,
-                            $noPesanan
-                        ) {
-                            $matchedRequest =
-                                $matchedRequests
-                                    ->first();
-
-                            $pesanan =
-                                $matchedRequest
-                                    ->item
-                                    ->pesanan;
-
-                            return [
-                                'no_pesanan' =>
-                                    (string) $noPesanan,
-
-                                'marketplace' =>
-                                    $pesanan
-                                        ->toko
-                                        ?->marketplace,
-
-                                'nama_pembeli' =>
-                                    $pesanan
-                                        ->nama_pembeli,
-
-                                'no_resi' =>
-                                    $pesanan
-                                        ->no_resi,
-
-                                'produk' =>
-                                    $this
-                                        ->buildProdukPayload(
-                                            $pesanan
-                                        ),
-
-                                'requests' =>
-                                    $this
-                                        ->buildRequestPayload(
-                                            $pesanan
-                                        ),
-                            ];
-                        }
-                    )
-                    ->values();
-
-            return response()->json([
-                'success' => true,
-
-                'multiple' => true,
-
-                'message' =>
-                    'Ditemukan beberapa pesanan. Pilih pesanan yang benar.',
-
-                'candidates' =>
-                    $candidates,
-            ]);
-        }
-
-        return $this
-            ->responseDetailRequest(
-                $requests->first()
-            );
-    }
-
-    private function responseDetailRequest(
-        EditorRequest $editorRequest
-    ) {
-        if (
-            !$editorRequest->item ||
-            !$editorRequest
-                ->item
-                ->pesanan
-        ) {
             return response()->json([
                 'success' => false,
                 'message' =>
-                    'Data pesanan tidak ditemukan.',
+                    "Hasil scan QR {$noPesanan} tidak ditemukan.",
             ], 404);
         }
 
-        $pesanan = Pesanan::with([
-            'produk.editorRequests',
+        return $this->responseDetailPesanan(
+            $pesanan
+        );
+    }
+    private function findPesananUntukCetak(
+        string $noPesanan
+    ): ?Pesanan {
+        return Pesanan::with([
+            'toko',
             'resiPages.import',
             'resiPrinter',
-            'toko',
         ])
             ->where(
                 'no_pesanan',
-                $editorRequest
-                    ->item
-                    ->no_pesanan
+                $noPesanan
             )
             ->where(
                 'status',
@@ -583,82 +424,66 @@ class PackingPesananController extends Controller
                 }
             )
             ->first();
+    }
 
-        if (!$pesanan) {
-            return response()->json([
-                'success' => false,
-                'message' =>
-                    'Pesanan tidak ditemukan atau sudah tidak berstatus proses.',
-            ], 409);
-        }
+    private function responseDetailPesanan(
+        Pesanan $pesanan
+    ) {
+        $pesanan->loadMissing([
+            'toko',
+            'resiPages.import',
+            'resiPrinter',
+        ]);
 
-        $marketplace =
-            (string) (
-                $pesanan
-                    ->toko
-                    ?->marketplace ?? ''
-            );
+        $marketplace = (string) (
+            $pesanan
+                ->toko
+                ?->marketplace ?? ''
+        );
 
-        $resiPages =
-            $this->getResiPages(
-                $pesanan
-            );
+        $resiPages = $this->getResiPages(
+            $pesanan
+        );
 
         return response()->json([
-            'success' =>
-                true,
-
-            'multiple' =>
-                false,
-
+            'success' => true,
+            'multiple' => false,
             'requests' =>
                 $this->buildRequestPayload(
                     $pesanan
                 ),
-
             'pesanan' => [
                 'no_pesanan' =>
                     $pesanan
                         ->no_pesanan,
-
                 'no_resi' =>
                     $pesanan
                         ->no_resi,
-
                 'nama_pembeli' =>
                     $pesanan
                         ->nama_pembeli,
-
                 'marketplace' =>
                     $marketplace,
-
                 'produk' =>
-                    $this
-                        ->buildProdukPayload(
-                            $pesanan
-                        ),
-
+                    $this->buildProdukPayload(
+                        $pesanan
+                    ),
                 'pdf_tersedia' =>
                     $resiPages
                         ->isNotEmpty(),
-
                 'jumlah_halaman_resi' =>
                     $resiPages
                         ->count(),
-
                 'sudah_print' =>
                     !is_null(
                         $pesanan
                             ->resi_printed_at
                     ),
-
                 'print_count' =>
                     (int) (
                         $pesanan
-                            ->resi_print_count ??
-                        0
+                            ->resi_print_count ?? 0
                     ),
-
                 'first_printed_at' =>
                     $pesanan
                         ->resi_printed_at
@@ -669,7 +494,6 @@ class PackingPesananController extends Controller
                             'd/m/Y H:i:s'
                         )
                         : null,
-
                 'first_printed_by' =>
                     $pesanan
                         ->resiPrinter
@@ -680,85 +504,108 @@ class PackingPesananController extends Controller
             ],
         ]);
     }
-
     private function buildProdukPayload(
         Pesanan $pesanan
     ) {
-        return $pesanan
-            ->produk
+        return DB::table('pesanan_per_produk as pp')
+            ->leftJoin(
+                'produk as p',
+                'p.sku',
+                '=',
+                'pp.sku'
+            )
+            ->where(
+                'pp.no_pesanan',
+                $pesanan->no_pesanan
+            )
+            ->select([
+                'pp.id_per_produk',
+                'pp.sku',
+                'pp.jumlah',
+                'p.nama_produk',
+                'p.variasi',
+            ])
+            ->orderBy(
+                'pp.id_per_produk'
+            )
+            ->get()
             ->map(function ($item) {
                 return [
                     'id_per_produk' =>
-                        $item
-                            ->id_per_produk,
-
+                        $item->id_per_produk,
                     'nama_produk' =>
-                        $item
-                            ->nama_produk,
-
+                        $item->nama_produk ?? '-',
                     'variasi' =>
-                        $item
-                            ->variasi,
-
+                        $item->variasi ?? '-',
                     'sku' =>
-                        $item
-                            ->sku,
-
+                        $item->sku,
                     'jumlah' =>
-                        (int) $item
-                            ->jumlah,
+                        (int) $item->jumlah,
                 ];
             })
             ->values();
     }
-
     private function buildRequestPayload(
         Pesanan $pesanan
     ) {
-        return $pesanan
-            ->produk
-            ->flatMap(
-                function ($item) {
-                    return $item
-                        ->editorRequests
-                        ->map(
-                            function ($editor) use ($item) {
-                                return [
-                                    'id' =>
-                                        $editor->id,
-
-                                    'id_per_produk' =>
-                                        $item
-                                            ->id_per_produk,
-
-                                    'sku' =>
-                                        $item
-                                            ->sku,
-
-                                    'plat_lengkap' =>
-                                        $editor
-                                            ->plat_lengkap,
-
-                                    'nama' =>
-                                        $editor
-                                            ->nama,
-
-                                    'tanggal_bulan_tahun' =>
-                                        $editor
-                                            ->tanggal_bulan_tahun,
-
-                                    'jumlah' =>
-                                        (int) $editor
-                                            ->jumlah_editor,
-
-                                    'request_search' =>
-                                        $editor
-                                            ->request_search,
-                                ];
-                            }
-                        );
-                }
+        return DB::table('editor_requests as er')
+            ->join(
+                'pesanan_per_produk as pp',
+                'pp.id_per_produk',
+                '=',
+                'er.id_per_produk'
             )
+            ->where(
+                'pp.no_pesanan',
+                $pesanan->no_pesanan
+            )
+            ->whereNotNull(
+                'er.locked_at'
+            )
+            ->whereIn(
+                'er.status_request',
+                [
+                    'normal',
+                    'random',
+                ]
+            )
+            ->select([
+                'er.id',
+                'er.id_per_produk',
+                'pp.sku',
+                'er.plat_lengkap',
+                'er.nama',
+                'er.tanggal_bulan_tahun',
+                'er.jumlah_editor',
+                'er.status_request',
+                'er.request_search',
+            ])
+            ->orderBy(
+                'er.id'
+            )
+            ->get()
+            ->map(function ($editor) {
+                return [
+                    'id' =>
+                        $editor->id,
+                    'id_per_produk' =>
+                        $editor->id_per_produk,
+                    'sku' =>
+                        $editor->sku,
+                    'plat_lengkap' =>
+                        $editor->plat_lengkap,
+                    'nama' =>
+                        $editor->nama,
+                    'tanggal_bulan_tahun' =>
+                        $editor->tanggal_bulan_tahun,
+                    'jumlah' =>
+                        (int) $editor->jumlah_editor,
+                    'status_request' =>
+                        $editor->status_request,
+                    'request_search' =>
+                        $editor->request_search,
+                ];
+            })
             ->values();
     }
 
@@ -804,7 +651,6 @@ class PackingPesananController extends Controller
         $pesanan = Pesanan::with([
             'resiPages.import',
             'resiPrinter',
-            'produk.editorRequests',
             'toko',
         ])
             ->where(
@@ -1111,65 +957,78 @@ class PackingPesananController extends Controller
             );
         }
     }
-
     private function getRequestPdfLines(
         Pesanan $pesanan
     ): array {
-        return $pesanan
-            ->produk
-            ->flatMap(
-                function ($item) {
-                    return $item
-                        ->editorRequests
-                        ->map(
-                            function ($editor) {
-                                $parts = [];
-
-                                if (
-                                    $editor
-                                        ->plat_lengkap
-                                ) {
-                                    $parts[] =
-                                        trim(
-                                            $editor
-                                                ->plat_lengkap
-                                        );
-                                }
-
-                                if (
-                                    $editor
-                                        ->nama
-                                ) {
-                                    $parts[] =
-                                        trim(
-                                            $editor
-                                                ->nama
-                                        );
-                                }
-
-                                if (
-                                    $editor
-                                        ->tanggal_bulan_tahun
-                                ) {
-                                    $parts[] =
-                                        trim(
-                                            $editor
-                                                ->tanggal_bulan_tahun
-                                        );
-                                }
-
-                                if (empty($parts)) {
-                                    return null;
-                                }
-
-                                return implode(
-                                    ' | ',
-                                    $parts
-                                );
-                            }
-                        );
-                }
+        return DB::table('editor_requests as er')
+            ->join(
+                'pesanan_per_produk as pp',
+                'pp.id_per_produk',
+                '=',
+                'er.id_per_produk'
             )
+            ->where(
+                'pp.no_pesanan',
+                $pesanan->no_pesanan
+            )
+            ->whereNotNull(
+                'er.locked_at'
+            )
+            ->whereIn(
+                'er.status_request',
+                [
+                    'normal',
+                    'random',
+                ]
+            )
+            ->select([
+                'er.plat_lengkap',
+                'er.nama',
+                'er.tanggal_bulan_tahun',
+                'er.status_request',
+            ])
+            ->orderBy(
+                'er.id'
+            )
+            ->get()
+            ->map(function ($editor) {
+                if (
+                    $editor->status_request ===
+                    'random'
+                ) {
+                    return 'RANDOM';
+                }
+
+                $parts = [];
+
+                if ($editor->plat_lengkap) {
+                    $parts[] = trim(
+                        $editor->plat_lengkap
+                    );
+                }
+
+                if ($editor->nama) {
+                    $parts[] = trim(
+                        $editor->nama
+                    );
+                }
+
+                if ($editor->tanggal_bulan_tahun) {
+                    $parts[] = trim(
+                        $editor
+                            ->tanggal_bulan_tahun
+                    );
+                }
+
+                if (empty($parts)) {
+                    return null;
+                }
+
+                return implode(
+                    ' | ',
+                    $parts
+                );
+            })
             ->filter()
             ->values()
             ->all();

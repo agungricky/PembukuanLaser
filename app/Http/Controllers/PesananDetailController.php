@@ -18,214 +18,420 @@ class PesananDetailController extends Controller
             'user',
             'toko',
             'userKirim',
+            'resiPrinter',
         ])->findOrFail($no_pesanan);
-    
-        $tokos = Toko::orderBy('nama_toko')->get();
-    
-        $items = DB::table('pesanan_per_produk')
-            ->select([
-                'nama_produk',
-                'variasi',
-                'jumlah',
-                'harga',
-                DB::raw('(harga * jumlah) as subtotal'),
-            ])
-            ->where('no_pesanan', $no_pesanan)
-            ->orderBy('nama_produk')
+
+        $tokos = Toko::orderBy('marketplace')
+            ->orderBy('nama_toko')
             ->get();
 
-        $totalHarga     = (float) ($pesanan->total_harga ?? 0);
-        $biayaAdmin     = (float) ($pesanan->total_admin ?? 0);
-        $totalPencairan = (float) ($pesanan->pencairan ?? 0);
-    
-        $subtotalItems = (float) $items->sum('subtotal');
-    
+        $items = DB::table('pesanan_per_produk as pp')
+            ->leftJoin(
+                'produk as p',
+                'p.sku',
+                '=',
+                'pp.sku'
+            )
+            ->select([
+                'pp.id_per_produk',
+                'pp.sku',
+                DB::raw('COALESCE(p.nama_produk, pp.nama_produk) as nama_produk'),
+                DB::raw('COALESCE(p.variasi, pp.variasi) as variasi'),
+                'pp.jumlah',
+                'pp.hpp',
+                'pp.harga',
+                DB::raw('(COALESCE(pp.harga, 0) * COALESCE(pp.jumlah, 0)) as subtotal'),
+            ])
+            ->where(
+                'pp.no_pesanan',
+                $no_pesanan
+            )
+            ->orderBy(
+                'pp.id_per_produk'
+            )
+            ->get();
+
+        $totalHarga = (float) (
+            $pesanan->total_harga ?? 0
+        );
+
+        $biayaAdmin = (float) (
+            $pesanan->total_admin ?? 0
+        );
+
+        $totalPencairan = (float) (
+            $pesanan->pencairan ?? 0
+        );
+
+        $subtotalItems = (float) $items->sum(
+            'subtotal'
+        );
+
         $subtotal = $subtotalItems > 0
             ? $subtotalItems
             : $totalHarga;
-    
+
         $totalHPP = $pesanan->total_hpp !== null
             ? (float) $pesanan->total_hpp
-            : (float) DB::table('pesanan_per_produk')
-                ->where('no_pesanan', $no_pesanan)
-                ->selectRaw('COALESCE(SUM(hpp * jumlah),0) as total_hpp')
-                ->value('total_hpp');
-    
-        $tarik = $totalHarga - $biayaAdmin;
-    
-        $totalPenghasilan = $totalPencairan - $totalHPP;
-    
+            : (float) DB::table(
+                'pesanan_per_produk'
+            )
+                ->where(
+                    'no_pesanan',
+                    $no_pesanan
+                )
+                ->selectRaw(
+                    'COALESCE(SUM(COALESCE(hpp, 0) * COALESCE(jumlah, 0)), 0) as total_hpp'
+                )
+                ->value(
+                    'total_hpp'
+                );
+
+        $tarik =
+            $totalHarga -
+            $biayaAdmin;
+
+        $totalPenghasilan =
+            $totalPencairan -
+            $totalHPP;
+
         $margin = $totalHarga > 0
-            ? round(($totalPenghasilan / $totalHarga) * 100, 2)
+            ? round(
+                ($totalPenghasilan / $totalHarga) * 100,
+                2
+            )
             : 0;
-    
-        $isProfit = $totalPenghasilan >= 0;
-    
-        $selisih = $totalPencairan - $tarik;
-    
+
+        $isProfit =
+            $totalPenghasilan >= 0;
+
+        $selisih =
+            $totalPencairan -
+            $tarik;
+
         $selisihClass = $selisih < 0
             ? 'text-danger'
-            : ($selisih > 0 ? 'text-success' : 'text-muted');
-    
-        $selisihText = ($selisih < 0 ? '-' : '')
-            . 'Rp'
-            . number_format(abs($selisih), 0, ',', '.');
+            : (
+                $selisih > 0
+                    ? 'text-success'
+                    : 'text-muted'
+            );
 
-        $totalItem = (int) $items->count();
-    
-        $totalQty = (int) $items->sum('jumlah');
+        $selisihText =
+            ($selisih < 0 ? '-' : '') .
+            'Rp' .
+            number_format(
+                abs($selisih),
+                0,
+                ',',
+                '.'
+            );
 
-        $status = strtolower((string) $pesanan->status);
-    
+        $totalItem =
+            (int) $items->count();
+
+        $totalQty =
+            (int) $items->sum('jumlah');
+
+        $status = strtolower(
+            (string) $pesanan->status
+        );
+
         $badgeMap = [
-            'proses'           => 'warning',
-            'kirim'            => 'info',
-            'selesai'          => 'success',
-            'affiliate'        => 'primary',
-            'pengiriman gagal' => 'warning',
-            'pengembalian'     => 'danger',
-            'batal'            => 'danger',
+            'proses' => 'warning',
+            'kirim' => 'info',
+            'selesai' => 'success',
+            'affiliate' => 'primary',
+            'pengiriman_gagal' => 'warning',
+            'pengembalian' => 'danger',
+            'batal' => 'danger',
         ];
-    
-        $statusBadge = $badgeMap[$status] ?? 'secondary';
-    
-        $statusLabel = ucfirst($status ?: '-');
+
+        $statusBadge =
+            $badgeMap[$status] ??
+            'secondary';
+
+        $statusLabel = match ($status) {
+            'pengiriman_gagal' =>
+                'Pengiriman Gagal',
+
+            'pengembalian' =>
+                'Pengembalian',
+
+            default =>
+                ucfirst(
+                    $status ?: '-'
+                ),
+        };
 
         $tanggalInput = $pesanan->tanggal
-            ? $pesanan->tanggal->format('d/m/Y')
+            ? Carbon::parse(
+                $pesanan->tanggal
+            )->format('d/m/Y')
             : '-';
-    
-        return view('pesanan.rincian', [
-    
-            'pesanan' => $pesanan,
-            'tokos'   => $tokos,
-            'items'   => $items,
-    
-            'subtotal'         => $subtotal,
-            'totalHarga'       => $totalHarga,
-            'totalHPP'         => $totalHPP,
-            'biayaAdmin'       => $biayaAdmin,
-            'tarik'            => $tarik,
-            'totalPencairan'   => $totalPencairan,
-            'totalPenghasilan' => $totalPenghasilan,
-    
-            'margin'           => $margin,
-            'isProfit'         => $isProfit,
-    
-            'selisih'          => $selisih,
-            'selisihClass'     => $selisihClass,
-            'selisihText'      => $selisihText,
-    
-            'totalItem'        => $totalItem,
-            'totalQty'         => $totalQty,
-    
-            'statusBadge'      => $statusBadge,
-            'statusLabel'      => $statusLabel,
-    
-            'tanggalInput'     => $tanggalInput,
-    
-        ]);
+
+        $batasKirim = null;
+
+        if ($pesanan->batas_kirim_at) {
+            try {
+                $batasKirim = Carbon::parse(
+                    $pesanan->batas_kirim_at
+                );
+            } catch (\Throwable $e) {
+                $batasKirim = null;
+            }
+        }
+
+        $sisaJam = $batasKirim
+            ? now()->diffInHours(
+                $batasKirim,
+                false
+            )
+            : null;
+
+        if ($sisaJam === null) {
+            $prioritasLabel =
+                'BELUM ADA';
+
+            $prioritasBadge =
+                'secondary';
+        } elseif ($sisaJam < 0) {
+            $prioritasLabel =
+                'TERLAMBAT';
+
+            $prioritasBadge =
+                'danger';
+        } elseif ($sisaJam <= 24) {
+            $prioritasLabel =
+                'URGENT';
+
+            $prioritasBadge =
+                'danger';
+        } elseif ($sisaJam <= 48) {
+            $prioritasLabel =
+                'MENDEKATI';
+
+            $prioritasBadge =
+                'warning';
+        } else {
+            $prioritasLabel =
+                'AMAN';
+
+            $prioritasBadge =
+                'success';
+        }
+
+        $batasKirimSource = match (
+            $pesanan->batas_kirim_source
+        ) {
+            'shopee_estimated_ship_out_date' =>
+                'Shopee Excel',
+
+            'tiktok_in_transit_by' =>
+                'TikTok PDF',
+
+            default =>
+                $pesanan->batas_kirim_source
+                    ?: '-',
+        };
+
+        $resiSudahDicetak =
+            !is_null(
+                $pesanan->resi_printed_at
+            );
+
+        $resiPrintCount =
+            (int) (
+                $pesanan->resi_print_count ?? 0
+            );
+
+        return view(
+            'pesanan.rincian',
+            [
+                'pesanan' => $pesanan,
+                'tokos' => $tokos,
+                'items' => $items,
+
+                'subtotal' => $subtotal,
+                'totalHarga' => $totalHarga,
+                'totalHPP' => $totalHPP,
+                'biayaAdmin' => $biayaAdmin,
+                'tarik' => $tarik,
+                'totalPencairan' => $totalPencairan,
+                'totalPenghasilan' => $totalPenghasilan,
+
+                'margin' => $margin,
+                'isProfit' => $isProfit,
+
+                'selisih' => $selisih,
+                'selisihClass' => $selisihClass,
+                'selisihText' => $selisihText,
+
+                'totalItem' => $totalItem,
+                'totalQty' => $totalQty,
+
+                'statusBadge' => $statusBadge,
+                'statusLabel' => $statusLabel,
+
+                'tanggalInput' => $tanggalInput,
+
+                'batasKirim' => $batasKirim,
+                'batasKirimSource' => $batasKirimSource,
+                'prioritasLabel' => $prioritasLabel,
+                'prioritasBadge' => $prioritasBadge,
+
+                'resiSudahDicetak' => $resiSudahDicetak,
+                'resiPrintCount' => $resiPrintCount,
+            ]
+        );
     }
-    
-    public function update(Request $request, string $no_pesanan)
-    {
+
+    public function update(
+        Request $request,
+        string $no_pesanan
+    ) {
         $validated = $request->validate([
-            'tanggal'      => ['nullable', 'date'],
-            'id_toko'      => ['required', 'exists:toko,id_toko'],
-        
-            'no_resi'      => ['nullable', 'string', 'max:100'],
-        
-            'status'       => [
+            'tanggal' => [
+                'nullable',
+                'date',
+            ],
+
+            'id_toko' => [
+                'required',
+                'exists:toko,id_toko',
+            ],
+
+            'no_resi' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+
+            'status' => [
                 'nullable',
                 Rule::in([
                     'proses',
                     'kirim',
                     'selesai',
                     'affiliate',
-                    'pengiriman gagal',
+                    'pengiriman_gagal',
                     'pengembalian',
                     'batal',
                 ]),
             ],
-        
-            'pencairan'    => ['nullable', 'numeric'],
-            'total_hpp'    => ['nullable', 'numeric', 'min:0'],
-            'total_harga'  => ['nullable', 'numeric', 'min:0'],
+
+            'pencairan' => [
+                'nullable',
+                'numeric',
+            ],
+
+            'total_hpp' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
+            'total_harga' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
         ]);
-    
-        foreach (['pencairan', 'total_hpp', 'total_harga'] as $field) {
-    
-            if (!isset($validated[$field]) || $validated[$field] === '') {
-                $validated[$field] = 0;
-            }
-    
-        }
-    
-        DB::transaction(function () use ($validated, $no_pesanan) {
-    
-            $pesanan = Pesanan::findOrFail($no_pesanan);
-    
-            $statusBaru = $validated['status'] ?? $pesanan->status;
-    
-            $pesanan->fill([
-    
-                'tanggal'     => $validated['tanggal'] ?? $pesanan->tanggal,
-                'id_toko'     => $validated['id_toko'],
-                'no_resi'     => $validated['no_resi'] ?? null,
-                'status'      => $statusBaru,
-                'pencairan'   => $validated['pencairan'],
-                'total_hpp'   => $validated['total_hpp'],
-                'total_harga' => $validated['total_harga'],
-            ]);
-    
-            if (!$pesanan->tanggal_kirim) {
-                $pesanan->tanggal_kirim = now();
-            }
-    
-            if (!$pesanan->id_user_kirim) {
-                $pesanan->id_user_kirim = Auth::id();
-            }
 
-            if (in_array($statusBaru, [
-                'pengiriman gagal',
-                'pengembalian',
-            ], true)) {
-    
-                $pesanan->total_admin = null;
-                $pesanan->total_harga = null;
-    
-                DB::table('pesanan_per_produk')
-                    ->where('no_pesanan', $no_pesanan)
-                    ->update([
-                        'jumlah' => 0,
-                        'hpp'    => null,
-                        'harga'  => null,
-                    ]);
-    
-            }
+        DB::transaction(
+            function () use (
+                $validated,
+                $no_pesanan
+            ) {
+                $pesanan =
+                    Pesanan::where(
+                        'no_pesanan',
+                        $no_pesanan
+                    )
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
-            if ($statusBaru === 'batal') {
-    
-                $pesanan->total_admin = 0;
-                $pesanan->total_harga = 0;
-                $pesanan->total_hpp   = 0;
-    
-                DB::table('pesanan_per_produk')
-                    ->where('no_pesanan', $no_pesanan)
-                    ->update([
-                        'jumlah' => 0,
-                        'hpp'    => 0,
-                        'harga'  => 0,
-                    ]);
-    
+                $statusLama =
+                    (string) $pesanan->status;
+
+                $statusBaru =
+                    $validated['status']
+                    ?? $statusLama;
+
+                $pesanan->tanggal =
+                    $validated['tanggal']
+                    ?? $pesanan->tanggal;
+
+                $pesanan->id_toko =
+                    $validated['id_toko'];
+
+                $pesanan->no_resi =
+                    !empty(
+                        $validated['no_resi']
+                    )
+                        ? trim(
+                            $validated['no_resi']
+                        )
+                        : null;
+
+                $pesanan->status =
+                    $statusBaru;
+
+                $pesanan->pencairan =
+                    isset(
+                        $validated['pencairan']
+                    )
+                        ? (float)
+                            $validated['pencairan']
+                        : 0;
+
+                $pesanan->total_hpp =
+                    isset(
+                        $validated['total_hpp']
+                    )
+                        ? (float)
+                            $validated['total_hpp']
+                        : 0;
+
+                $pesanan->total_harga =
+                    isset(
+                        $validated['total_harga']
+                    )
+                        ? (float)
+                            $validated['total_harga']
+                        : 0;
+
+                if (
+                    $statusBaru === 'kirim' &&
+                    $statusLama !== 'kirim'
+                ) {
+                    if (
+                        !$pesanan->tanggal_kirim
+                    ) {
+                        $pesanan->tanggal_kirim =
+                            now();
+                    }
+
+                    if (
+                        !$pesanan->id_user_kirim
+                    ) {
+                        $pesanan->id_user_kirim =
+                            Auth::id();
+                    }
+                }
+
+                $pesanan->save();
             }
-    
-            $pesanan->save();
-    
-        });
-    
+        );
+
         return redirect()
-            ->route('pesanan.show', $no_pesanan)
-            ->with('success', 'Pesanan berhasil diperbarui.');
+            ->route(
+                'pesanan.show',
+                $no_pesanan
+            )
+            ->with(
+                'success',
+                'Pesanan berhasil diperbarui.'
+            );
     }
 }

@@ -6,12 +6,12 @@
         <div class="d-flex align-items-center gap-3">
             <div class="rounded-4 bg-success bg-opacity-10 d-flex align-items-center justify-content-center"
                 style="width:64px;height:64px;">
-                <i class="bi bi-printer fs-2 text-success"></i>
+                <i class="bi bi-qr-code-scan fs-2 text-success"></i>
             </div>
             <div>
-                <h4 class="fw-bold mb-1">Cari & Cetak Resi</h4>
+                <h4 class="fw-bold mb-1">Scan & Cetak Resi</h4>
                 <div class="text-muted small">
-                    Cari request customer, pastikan semua barang tersedia, lalu cetak resi.
+                    Scan QR dari Part Editor untuk mencari pesanan berdasarkan No. Pesanan.
                 </div>
             </div>
         </div>
@@ -24,30 +24,30 @@
 
     <div class="card border-0 shadow-sm rounded-4">
         <div class="card-body p-4">
-            <label class="form-label fw-semibold">Cari Request Customer</label>
+            <label class="form-label fw-bold">Scan QR Pesanan</label>
 
             <div class="input-group input-group-lg">
                 <span class="input-group-text bg-white">
-                    <i class="bi bi-search"></i>
+                    <i class="bi bi-qr-code-scan"></i>
                 </span>
 
                 <input type="text"
-                    id="requestSearch"
-                    class="form-control fw-semibold"
-                    placeholder="Plat / Nama / Tanggal..."
+                    id="qrSearch"
+                    class="form-control fw-bold"
+                    placeholder="Scan QR di sini..."
                     autocomplete="off"
                     autofocus>
 
                 <button type="button"
-                    class="btn btn-primary px-4"
-                    id="btnCariRequest">
-                    <i class="bi bi-search me-1"></i>
+                    class="btn btn-success px-4"
+                    id="btnCariQr">
+                    <i class="bi bi-qr-code-scan me-1"></i>
                     Cari
                 </button>
             </div>
 
             <div class="text-muted small mt-2">
-                Spasi dan tanda baca boleh diabaikan. Bisa mencari plat, nama, atau tanggal.
+                Isi QR adalah No. Pesanan. Scanner biasanya otomatis mengirim Enter setelah QR terbaca.
             </div>
         </div>
     </div>
@@ -60,7 +60,6 @@
                         <i class="bi bi-card-checklist text-primary fs-5"></i>
                         <div class="fw-bold fs-5">Request Customer</div>
                     </div>
-
                     <div id="requestStatus"></div>
                 </div>
 
@@ -87,19 +86,24 @@
                 </div>
 
                 <div class="row g-4">
-                    <div class="col-md-4">
+                    <div class="col-xl-3 col-md-6">
                         <div class="text-muted small">Marketplace</div>
                         <div id="detailMarketplace">-</div>
                     </div>
 
-                    <div class="col-md-4">
-                        <div class="text-muted small">No. Resi</div>
-                        <div class="fw-bold fs-5" id="detailNoResi">-</div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="text-muted small">No. Pesanan</div>
+                        <div class="fw-bold" id="detailNoPesanan">-</div>
                     </div>
 
-                    <div class="col-md-4">
+                    <div class="col-xl-3 col-md-6">
+                        <div class="text-muted small">No. Resi</div>
+                        <div class="fw-bold" id="detailNoResi">-</div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6">
                         <div class="text-muted small">Nama Pembeli</div>
-                        <div class="fw-bold fs-5" id="detailPembeli">-</div>
+                        <div class="fw-bold" id="detailPembeli">-</div>
                     </div>
                 </div>
             </div>
@@ -116,9 +120,9 @@
                     <div class="d-flex gap-2">
                         <button type="button"
                             class="btn btn-outline-secondary px-4"
-                            id="btnSkipRequest">
+                            id="btnPesananBerikutnya">
                             <i class="bi bi-arrow-counterclockwise me-1"></i>
-                            Skip
+                            Pesanan Berikutnya
                         </button>
 
                         <form action="{{ route('packing.cetakResi') }}"
@@ -153,33 +157,6 @@
                     <i class="bi bi-info-circle me-1"></i>
                     Pastikan semua barang / plat sudah tersedia dan dicentang sebelum mencetak resi.
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade"
-    id="modalPilihPesanan"
-    tabindex="-1"
-    aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content border-0 rounded-4">
-            <div class="modal-header">
-                <div>
-                    <h5 class="modal-title fw-bold mb-1">Pilih Pesanan</h5>
-                    <div class="text-muted small">
-                        Ditemukan beberapa pesanan dengan request yang cocok.
-                    </div>
-                </div>
-
-                <button type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal">
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <div id="candidateList"></div>
             </div>
         </div>
     </div>
@@ -331,40 +308,37 @@
 
 @push('scripts')
 <script>
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 $(function () {
-    const input = $('#requestSearch');
+    const qrInput = $('#qrSearch');
     const result = $('#requestResult');
-    const btnCari = $('#btnCariRequest');
+    const btnCariQr = $('#btnCariQr');
     const btnCetak = $('#btnCetakResi');
 
     let currentPesanan = null;
     let currentRequests = [];
 
-    btnCari.on('click', function () {
-        cariRequest();
+    btnCariQr.on('click', function () {
+        cariQr();
     });
 
-    input.on('keydown', function (e) {
+    qrInput.on('keydown', function (e) {
         if (e.key === 'Enter') {
             e.preventDefault();
-            cariRequest();
+            cariQr();
         }
     });
 
-    $('#btnSkipRequest').on('click', function () {
-        resetRequest();
-    });
-
-    $(document).on('click', '.btnPilihPesanan', function () {
-        const noPesanan = String($(this).data('no-pesanan'));
-        const modalElement = document.getElementById('modalPilihPesanan');
-        const modal = bootstrap.Modal.getInstance(modalElement);
-
-        if (modal) {
-            modal.hide();
-        }
-
-        cariRequest(noPesanan);
+    $('#btnPesananBerikutnya').on('click', function () {
+        resetRequest(true);
     });
 
     $(document).on('change', '.checkRequestBarang', function () {
@@ -469,230 +443,85 @@ $(function () {
         document.getElementById('formCetakResi').submit();
 
         setTimeout(function () {
-            if (currentPesanan && currentPesanan.no_pesanan) {
-                cariRequest(currentPesanan.no_pesanan);
-            }
-        }, 1500);
+            resetRequest(true);
+        }, 800);
     }
 
-    function cariRequest(noPesanan = null) {
-        const keyword = $.trim(input.val());
+    function cariQr() {
+        const noPesanan = $.trim(qrInput.val());
 
-        if (!keyword) {
+        if (!noPesanan) {
             Swal.fire({
                 icon: 'warning',
-                title: 'Request Kosong',
-                text: 'Masukkan request customer terlebih dahulu.'
+                title: 'QR Kosong',
+                text: 'Scan QR pesanan terlebih dahulu.'
             });
 
-            input.focus();
+            qrInput.focus();
             return;
         }
 
-        const originalHtml = btnCari.html();
+        const originalHtml = btnCariQr.html();
 
-        btnCari
+        btnCariQr
             .prop('disabled', true)
             .html(`
                 <span class="spinner-border spinner-border-sm me-2"></span>
                 Mencari...
             `);
 
-        result.hide();
-        currentPesanan = null;
-        currentRequests = [];
-        btnCetak.prop('disabled', true);
-
-        const data = {
-            _token: "{{ csrf_token() }}",
-            request_search: keyword
-        };
-
-        if (noPesanan) {
-            data.no_pesanan = noPesanan;
-        }
+        prepareSearch();
 
         $.ajax({
             url: "{{ route('packing.cariRequest') }}",
             type: 'POST',
             dataType: 'json',
-            data: data,
+            timeout: 10000,
+            data: {
+                _token: "{{ csrf_token() }}",
+                no_pesanan: noPesanan
+            },
 
             success: function (response) {
                 if (!response.success) {
-                    showError(response.message || 'Data tidak ditemukan.');
-                    return;
-                }
-
-                if (
-                    response.multiple &&
-                    Array.isArray(response.candidates)
-                ) {
-                    tampilkanPilihanPesanan(response.candidates);
+                    showError(
+                        response.message ||
+                        'Hasil scan QR tidak ditemukan.'
+                    );
                     return;
                 }
 
                 tampilkanPesanan(response);
+                qrInput.val('');
             },
 
-            error: function (xhr) {
-                showError(
+            error: function (xhr, status) {
+                let message =
                     xhr.responseJSON?.message ||
-                    'Request customer tidak ditemukan.'
-                );
+                    'Hasil scan QR tidak ditemukan.';
+
+                if (status === 'timeout') {
+                    message =
+                        'Pencarian terlalu lama. Silakan scan ulang QR.';
+                }
+
+                showError(message);
             },
 
             complete: function () {
-                btnCari
+                btnCariQr
                     .prop('disabled', false)
                     .html(originalHtml);
             }
         });
     }
 
-    function tampilkanPilihanPesanan(candidates) {
-        let html = '';
-
-        candidates.forEach(function (item, index) {
-            const requests = Array.isArray(item.requests)
-                ? item.requests
-                : [];
-
-            let requestHtml = '';
-
-            if (requests.length) {
-                requests.forEach(function (request, requestIndex) {
-                    const parts = getRequestParts(request);
-
-                    requestHtml += `
-                        <div class="candidate-request">
-                            <div class="d-flex justify-content-between align-items-center gap-3">
-                                <div>
-                                    ${requests.length > 1 ? `
-                                        <span class="badge bg-primary me-2">
-                                            ${requestIndex + 1}
-                                        </span>
-                                    ` : ''}
-
-                                    <span class="fw-bold">
-                                        ${parts.join(' | ') || '-'}
-                                    </span>
-                                </div>
-
-                                <span class="badge bg-dark text-nowrap">
-                                    Qty ${parseInt(request.jumlah || 1)}
-                                </span>
-                            </div>
-                        </div>
-                    `;
-                });
-            } else {
-                requestHtml = `
-                    <div class="text-muted small">
-                        Request tidak tersedia.
-                    </div>
-                `;
-            }
-
-            let produkHtml = '';
-
-            (item.produk || []).forEach(function (produk) {
-                produkHtml += `
-                    <div class="candidate-product small">
-                        <span class="fw-semibold">
-                            ${escapeHtml(produk.nama_produk || '-')}
-                        </span>
-
-                        <span class="text-muted">
-                            • ${escapeHtml(produk.variasi || '-')}
-                        </span>
-
-                        <span class="text-muted">
-                            • ${escapeHtml(produk.sku || '-')}
-                        </span>
-
-                        <span class="fw-semibold">
-                            • x${parseInt(produk.jumlah || 0)}
-                        </span>
-                    </div>
-                `;
-            });
-
-            if (!produkHtml) {
-                produkHtml = `
-                    <div class="text-muted small">
-                        Tidak ada produk.
-                    </div>
-                `;
-            }
-
-            html += `
-                <div class="candidate-item border rounded-4 p-3 mb-3">
-                    <div class="d-flex justify-content-between align-items-start gap-3">
-                        <div class="flex-grow-1">
-                            <div class="d-flex align-items-center gap-2 mb-3">
-                                <div class="fw-bold fs-5">
-                                    Pilihan ${index + 1}
-                                </div>
-
-                                ${marketplaceBadge(item.marketplace)}
-
-                                <span class="badge bg-primary">
-                                    ${requests.length} Request
-                                </span>
-                            </div>
-
-                            <div class="mb-3">
-                                <div class="text-muted small fw-semibold mb-2">
-                                    Request Customer
-                                </div>
-                                ${requestHtml}
-                            </div>
-
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-6">
-                                    <div class="text-muted small">Nama Pembeli</div>
-                                    <div class="fw-semibold">
-                                        ${escapeHtml(item.nama_pembeli || '-')}
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <div class="text-muted small">No. Resi</div>
-                                    <div class="fw-semibold">
-                                        ${escapeHtml(item.no_resi || '-')}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div class="text-muted small mb-1">
-                                    Produk Pesanan
-                                </div>
-                                ${produkHtml}
-                            </div>
-                        </div>
-
-                        <div>
-                            <button type="button"
-                                class="btn btn-primary btnPilihPesanan"
-                                data-no-pesanan="${escapeHtml(item.no_pesanan)}">
-                                <i class="bi bi-check2 me-1"></i>
-                                Pilih
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        $('#candidateList').html(html);
-
-        const modal = bootstrap.Modal.getOrCreateInstance(
-            document.getElementById('modalPilihPesanan')
-        );
-
-        modal.show();
+    function prepareSearch() {
+        result.hide();
+        currentPesanan = null;
+        currentRequests = [];
+        btnCetak.prop('disabled', true);
+        $('#allowReprint').val('0');
     }
 
     function tampilkanPesanan(response) {
@@ -711,6 +540,10 @@ $(function () {
             marketplaceBadge(pesanan.marketplace)
         );
 
+        $('#detailNoPesanan').text(
+            pesanan.no_pesanan || '-'
+        );
+
         $('#detailNoResi').text(
             pesanan.no_resi || '-'
         );
@@ -727,6 +560,7 @@ $(function () {
 
         tampilkanPdf(pesanan);
         updateRequestStatus();
+
         result.slideDown();
     }
 
@@ -737,6 +571,13 @@ $(function () {
                     Request customer tidak tersedia.
                 </div>
             `);
+
+            $('#requestStatus').html(`
+                <span class="badge bg-danger fs-6">
+                    REQUEST TIDAK TERSEDIA
+                </span>
+            `);
+
             return;
         }
 
@@ -796,7 +637,7 @@ $(function () {
     }
 
     function tampilkanProduk(produk) {
-        if (!produk.length) {
+        if (!Array.isArray(produk) || !produk.length) {
             $('#produkPesanan').html(`
                 <div class="text-muted text-center py-4">
                     Tidak ada produk.
@@ -852,7 +693,6 @@ $(function () {
         const totalRequest = currentRequests.length;
 
         if (totalRequest === 0) {
-            $('#requestStatus').empty();
             $('#printHint').hide();
             btnCetak.prop('disabled', true);
             return;
@@ -960,6 +800,13 @@ $(function () {
     function getRequestParts(request) {
         const parts = [];
 
+        if (
+            String(request.status_request || '').toLowerCase() ===
+            'random'
+        ) {
+            return ['RANDOM'];
+        }
+
         if (request.plat_lengkap) {
             parts.push(
                 escapeHtml(request.plat_lengkap)
@@ -1012,12 +859,13 @@ $(function () {
 
         Swal.fire({
             icon: 'error',
-            title: 'Tidak Ditemukan',
+            title: 'QR Tidak Ditemukan',
             text: message
+        }).then(function () {
+            qrInput
+                .focus()
+                .select();
         });
-
-        input.focus();
-        input.select();
     }
 
     function resetRequest(clearInput = true) {
@@ -1029,6 +877,7 @@ $(function () {
         $('#requestStatus').empty();
         $('#produkPesanan').empty();
         $('#detailMarketplace').text('-');
+        $('#detailNoPesanan').text('-');
         $('#detailNoResi').text('-');
         $('#detailPembeli').text('-');
         $('#detailPdf').text('-');
@@ -1039,19 +888,10 @@ $(function () {
         btnCetak.prop('disabled', true);
 
         if (clearInput) {
-            input.val('');
+            qrInput.val('');
         }
 
-        input.focus();
-    }
-
-    function escapeHtml(value) {
-        return String(value ?? '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
+        qrInput.focus();
     }
 });
 </script>
