@@ -563,7 +563,7 @@ class EditorPartService
 
         $variasi =
             preg_replace(
-                '/\s*,?\s*\d+\s*PCS\s*$/iu',
+                '/\s*,?\s*(?:1|2)\s*PCS\s*$/iu',
                 '',
                 $variasi
             );

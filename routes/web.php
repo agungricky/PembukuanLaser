@@ -78,8 +78,8 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/riwayat', [EditorController::class, 'riwayatIndex'])
             ->name('riwayat.index');
 
-        Route::get('/part/{part}/barcode',[EditorController::class, 'barcodePart'])
-            ->name('part.barcode');
+        Route::get('/part/{part}/qr-pdf',[EditorController::class, 'downloadQrPart'])
+            ->name('part.qr.pdf');
     });
 
     // ===================== PACKING ===================== //

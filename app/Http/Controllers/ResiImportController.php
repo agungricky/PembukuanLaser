@@ -7,6 +7,7 @@ use App\Models\ResiImport;
 use App\Models\ResiPage;
 use App\Models\Toko;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -128,6 +129,9 @@ class ResiImportController extends Controller
                 'no_pesanan' => $hasil['no_pesanan'],
                 'no_resi' => $hasil['no_resi'],
                 'status' => $hasil['status'],
+                'batas_kirim_at' => $hasil['batas_kirim_at'] ?? null,
+                'batas_kirim_source' => $hasil['batas_kirim_source'] ?? null,
+                'batas_kirim_raw' => $hasil['batas_kirim_raw'] ?? null,
             ];
         }
 
@@ -141,6 +145,7 @@ class ResiImportController extends Controller
                 'marketplace' => $request->marketplace,
                 'id_toko' => (int) $request->id_toko,
                 'jumlah_halaman' => count($pages),
+                'detected_pages' => $preview,
             ],
         ]);
 
@@ -231,6 +236,12 @@ class ResiImportController extends Controller
             );
         }
 
+        $detectedPages = collect(
+            $dataPreview['detected_pages'] ?? []
+        )->keyBy(
+            fn ($item) => (int) ($item['halaman'] ?? 0)
+        );
+
         $orderNumbers = $mappings
             ->pluck('no_pesanan')
             ->unique()
@@ -297,6 +308,12 @@ class ResiImportController extends Controller
                 ($urutan[$noPesanan] ?? 0)
                 + 1;
 
+            $deadline = $dataPreview['marketplace'] === 'Shopee'
+                ? $this->getShopeeDeadlineFromOrder($order)
+                : $this->normalizeDeadlinePayload(
+                    (array) ($detectedPages->get($page['halaman']) ?? [])
+                );
+
             $validPages[] = [
                 'halaman' =>
                     $page['halaman'],
@@ -311,6 +328,15 @@ class ResiImportController extends Controller
 
                 'urutan' =>
                     $urutan[$noPesanan],
+
+                'batas_kirim_at' =>
+                    $deadline['batas_kirim_at'],
+
+                'batas_kirim_source' =>
+                    $deadline['batas_kirim_source'],
+
+                'batas_kirim_raw' =>
+                    $deadline['batas_kirim_raw'],
             ];
         }
 
@@ -401,6 +427,25 @@ class ResiImportController extends Controller
                     'urutan' =>
                         $page['urutan'],
                 ]);
+
+                if (!empty($page['batas_kirim_at'])) {
+                    Pesanan::where(
+                        'no_pesanan',
+                        $page['no_pesanan']
+                    )
+                        ->where(
+                            'id_toko',
+                            $dataPreview['id_toko']
+                        )
+                        ->update([
+                            'batas_kirim_at' =>
+                                $page['batas_kirim_at'],
+                            'batas_kirim_source' =>
+                                $page['batas_kirim_source'],
+                            'batas_kirim_raw' =>
+                                $page['batas_kirim_raw'],
+                        ]);
+                }
             }
 
             DB::commit();
@@ -446,23 +491,53 @@ class ResiImportController extends Controller
         $text = trim($text);
 
         if ($text === '') {
-            return [
-                'no_pesanan' => '',
-                'no_resi' => '',
-                'status' => 'unreadable',
-            ];
-        }
-
-        if ($marketplace === 'Tiktok') {
-            return $this->detectTikTokPage(
-                $text,
-                $idToko
+            return array_merge(
+                [
+                    'no_pesanan' => '',
+                    'no_resi' => '',
+                    'status' => 'unreadable',
+                ],
+                $this->emptyDeadlinePayload()
             );
         }
 
-        return $this->detectShopeePage(
+        if ($marketplace === 'Tiktok') {
+            return array_merge(
+                $this->detectTikTokPage(
+                    $text,
+                    $idToko
+                ),
+                $this->extractTikTokDeadline($text)
+            );
+        }
+
+        $hasil = $this->detectShopeePage(
             $text,
             $idToko
+        );
+
+        if (!empty($hasil['no_pesanan'])) {
+            $order = Pesanan::where(
+                'no_pesanan',
+                $hasil['no_pesanan']
+            )
+                ->where(
+                    'id_toko',
+                    $idToko
+                )
+                ->first();
+
+            if ($order) {
+                $hasil = array_merge(
+                    $hasil,
+                    $this->getShopeeDeadlineFromOrder($order)
+                );
+            }
+        }
+
+        return array_merge(
+            $this->emptyDeadlinePayload(),
+            $hasil
         );
     }
 
@@ -736,6 +811,144 @@ class ResiImportController extends Controller
                 $sudahAda
                     ? 'existing'
                     : 'matched',
+        ];
+    }
+
+    private function getShopeeDeadlineFromOrder(
+        Pesanan $pesanan
+    ): array {
+        $raw = trim(
+            (string) $pesanan->getAttribute(
+                'estimated_ship_out_date'
+            )
+        );
+
+        if ($raw === '') {
+            return $this->emptyDeadlinePayload();
+        }
+
+        $parsed = $this->parseDeadlineValue($raw);
+
+        if (!$parsed) {
+            return [
+                'batas_kirim_at' => null,
+                'batas_kirim_source' =>
+                    'shopee_estimated_ship_out_date',
+                'batas_kirim_raw' => $raw,
+            ];
+        }
+
+        return [
+            'batas_kirim_at' =>
+                $parsed->format('Y-m-d H:i:s'),
+            'batas_kirim_source' =>
+                'shopee_estimated_ship_out_date',
+            'batas_kirim_raw' => $raw,
+        ];
+    }
+
+    private function extractTikTokDeadline(
+        string $text
+    ): array {
+        $normalized = str_replace(
+            ["\r\n", "\r"],
+            "\n",
+            $text
+        );
+
+        $patterns = [
+            '/In\s*transit\s*by\s*[:\-]?\s*([^\n]{3,80})/i',
+            '/Ship\s*by\s*[:\-]?\s*([^\n]{3,80})/i',
+        ];
+
+        $raw = '';
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $normalized, $match)) {
+                $raw = trim(
+                    preg_replace(
+                        '/\s+/',
+                        ' ',
+                        $match[1]
+                    )
+                );
+
+                break;
+            }
+        }
+
+        if ($raw === '') {
+            return $this->emptyDeadlinePayload();
+        }
+
+        $raw = preg_split(
+            '/\s{2,}|\s+Order\s*Id\b|\s+Tracking\b|\s+Seller\b/i',
+            $raw,
+            2
+        )[0] ?? $raw;
+
+        $raw = trim($raw, " \t\n\r\0\x0B|,;");
+        $parsed = $this->parseDeadlineValue($raw);
+
+        return [
+            'batas_kirim_at' => $parsed
+                ? $parsed->format('Y-m-d H:i:s')
+                : null,
+            'batas_kirim_source' =>
+                'tiktok_in_transit_by',
+            'batas_kirim_raw' => $raw,
+        ];
+    }
+
+    private function parseDeadlineValue(
+        ?string $value
+    ): ?Carbon {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $timezone = config(
+            'app.timezone',
+            'Asia/Jakarta'
+        );
+
+        try {
+            $date = Carbon::parse(
+                $value,
+                $timezone
+            );
+
+            if (!preg_match('/\d{1,2}:\d{2}/', $value)) {
+                $date->endOfDay();
+            }
+
+            return $date;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function normalizeDeadlinePayload(
+        array $data
+    ): array {
+        return [
+            'batas_kirim_at' =>
+                $data['batas_kirim_at'] ?? null,
+            'batas_kirim_source' =>
+                $data['batas_kirim_source'] ?? null,
+            'batas_kirim_raw' =>
+                $data['batas_kirim_raw'] ?? null,
+        ];
+    }
+
+    private function emptyDeadlinePayload(): array
+    {
+        return [
+            'batas_kirim_at' => null,
+            'batas_kirim_source' => null,
+            'batas_kirim_raw' => null,
         ];
     }
 

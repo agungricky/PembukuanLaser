@@ -421,6 +421,10 @@
                                 No. Resi
                             </th>
 
+                            <th style="min-width:220px;">
+                                Batas Kirim
+                            </th>
+
                             <th style="width:180px;">
                                 Status
                             </th>
@@ -475,6 +479,42 @@
                                         value="{{ $item['no_resi'] }}"
                                         placeholder="No. Resi"
                                         autocomplete="off">
+
+                                </td>
+
+
+                                <td>
+
+                                    @if(!empty($item['batas_kirim_at']))
+
+                                        <div class="fw-semibold">
+                                            {{ \Illuminate\Support\Carbon::parse($item['batas_kirim_at'])->format('d/m/Y H:i') }}
+                                        </div>
+
+                                        <div class="text-muted small">
+                                            {{ $item['batas_kirim_raw'] ?? '-' }}
+                                        </div>
+
+                                        <div class="small">
+                                            @if(($item['batas_kirim_source'] ?? '') === 'tiktok_in_transit_by')
+                                                <span class="badge bg-dark">In transit by</span>
+                                            @elseif(($item['batas_kirim_source'] ?? '') === 'shopee_estimated_ship_out_date')
+                                                <span class="badge bg-warning text-dark">estimated_ship_out_date</span>
+                                            @endif
+                                        </div>
+
+                                    @elseif(!empty($item['batas_kirim_raw']))
+
+                                        <div class="text-danger small">
+                                            Tidak dapat membaca tanggal:
+                                            {{ $item['batas_kirim_raw'] }}
+                                        </div>
+
+                                    @else
+
+                                        <span class="text-muted small">-</span>
+
+                                    @endif
 
                                 </td>
 
@@ -616,7 +656,9 @@ $(function () {
                         TikTok:
                         sistem membaca
                         <strong>Order Id</strong>
-                        sebagai No. Pesanan dan nomor tracking sebagai No. Resi.
+                        sebagai No. Pesanan, nomor tracking sebagai No. Resi, dan
+                        <strong>In transit by</strong>
+                        sebagai batas kirim.
 
                     </div>
                 `)
@@ -634,6 +676,9 @@ $(function () {
 
                     Shopee:
                     sistem membaca No. Pesanan dan No. Resi dari setiap halaman PDF.
+                    Batas kirim menggunakan
+                    <strong>estimated_ship_out_date</strong>
+                    dari data pesanan.
 
                 </div>
             `)

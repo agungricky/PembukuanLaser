@@ -15,6 +15,11 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class EditorController extends Controller
 {
@@ -217,26 +222,6 @@ class EditorController extends Controller
                 );
             }
 
-            $part->load([
-                'items' => function ($q) {
-                    $q->where(
-                        'status',
-                        'pending'
-                    )
-                        ->orderBy(
-                            'urutan'
-                        );
-                },
-                'items.item.pesanan',
-            ]);
-
-            if ($part->items->isEmpty()) {
-                return back()->with(
-                    'error',
-                    'Tidak ada item pending pada Part ini.'
-                );
-            }
-
             $spreadsheet = IOFactory::load(
                 $templatePath
             );
@@ -312,6 +297,28 @@ class EditorController extends Controller
             );
 
             $part->refresh();
+
+            $part->load([
+                'items' => function ($q) {
+                    $q->where(
+                        'status',
+                        'pending'
+                    )
+                        ->orderBy(
+                            'urutan'
+                        );
+                },
+                'items.item.pesanan',
+            ]);
+
+            if ($part->items->isEmpty()) {
+                $spreadsheet->disconnectWorksheets();
+
+                return back()->with(
+                    'error',
+                    'Tidak ada item pending pada Part ini.'
+                );
+            }
 
             $sheet->setCellValue(
                 'A1',
@@ -1245,17 +1252,29 @@ class EditorController extends Controller
                 "{$jumlahRequest} request disimpan, " .
                 "{$jumlahMenunggu} item masuk Menunggu Request.";
 
+            session()->flash(
+                'success',
+                $message
+            );
+
+            if (!empty($errors)) {
+                session()->flash(
+                    'import_errors',
+                    $errors
+                );
+            }
+
+            if ($jumlahLocked > 0) {
+                $part->refresh();
+
+                return $this->downloadQrPart(
+                    $part
+                );
+            }
+
             return redirect()
                 ->route(
                     'editor.riwayat.index'
-                )
-                ->with(
-                    'success',
-                    $message
-                )
-                ->with(
-                    'import_errors',
-                    $errors
                 );
 
         } catch (\Throwable $e) {
@@ -1279,44 +1298,46 @@ class EditorController extends Controller
 
     public function menungguIndex()
     {
-        $items =
-            $this
-                ->queryMenunggu()
-                ->with([
-                    'part',
-                    'item.pesanan',
-                ])
-                ->get()
-                ->sortBy(
-                    function (
-                        $partItem
-                    ) {
-                        $value =
-                            $partItem
-                                ->item
-                                ?->pesanan
-                                ?->batas_kirim_at;
+        $items = $this
+            ->queryMenunggu()
+            ->with([
+                'part',
+                'item.pesanan',
+            ])
+            ->get()
+            ->sortBy(function ($partItem) {
+                $pesanan = $partItem
+                    ->item
+                    ?->pesanan;
 
-                        if (!$value) {
-                            return
-                                '9999-12-31 23:59:59';
-                        }
+                try {
+                    $deadline = $pesanan?->batas_kirim_at
+                        ? Carbon::parse(
+                            $pesanan->batas_kirim_at
+                        )->format('Y-m-d H:i:s')
+                        : '9999-12-31 23:59:59';
+                } catch (\Throwable $e) {
+                    $deadline = '9999-12-31 23:59:59';
+                }
 
-                        try {
-                            return Carbon::parse(
-                                $value
-                            )->format(
-                                'Y-m-d H:i:s'
-                            );
-                        } catch (
-                            \Throwable $e
-                        ) {
-                            return
-                                '9999-12-31 23:59:59';
-                        }
-                    }
-                )
-                ->values();
+                try {
+                    $tanggal = $pesanan?->tanggal
+                        ? Carbon::parse(
+                            $pesanan->tanggal
+                        )->format('Y-m-d H:i:s')
+                        : '9999-12-31 23:59:59';
+                } catch (\Throwable $e) {
+                    $tanggal = '9999-12-31 23:59:59';
+                }
+
+                return sprintf(
+                    '%s|%s|%020d',
+                    $deadline,
+                    $tanggal,
+                    (int) $partItem->id
+                );
+            })
+            ->values();
 
         return view(
             'editor.menunggu.index',
@@ -1461,29 +1482,23 @@ class EditorController extends Controller
     private function queryMenunggu()
     {
         return EditorPartItem::query()
-            ->where(
-                'editor_part_items.status',
-                'skipped'
-            )
-            ->whereNotExists(
-                function ($q) {
-                    $q->select(
-                        DB::raw(1)
+            ->where('editor_part_items.status', 'skipped')
+            ->whereHas('item.pesanan', function ($q) {
+                $q->where('status', 'proses');
+            })
+            ->whereNotExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('editor_part_items as newer')
+                    ->whereColumn(
+                        'newer.id_per_produk',
+                        'editor_part_items.id_per_produk'
                     )
-                        ->from(
-                            'editor_part_items as newer'
-                        )
-                        ->whereColumn(
-                            'newer.id_per_produk',
-                            'editor_part_items.id_per_produk'
-                        )
-                        ->whereColumn(
-                            'newer.id',
-                            '>',
-                            'editor_part_items.id'
-                        );
-                }
-            );
+                    ->whereColumn(
+                        'newer.id',
+                        '>',
+                        'editor_part_items.id'
+                    );
+            });
     }
 
     private function validasiHeader(
@@ -1846,12 +1861,12 @@ class EditorController extends Controller
         }
     }
 
-    public function barcodePart(EditorPart $part)
+    public function downloadQrPart(EditorPart $part)
     {
         if ($part->status !== 'processed') {
             return back()->with(
                 'error',
-                'Barcode hanya dapat dicetak setelah Part selesai diproses.'
+                'QR Code hanya dapat dibuat setelah Part selesai diproses.'
             );
         }
 
@@ -1861,6 +1876,27 @@ class EditorController extends Controller
                 'pp.id_per_produk',
                 '=',
                 'er.id_per_produk'
+            )
+            ->join(
+                'produk as pr',
+                'pr.sku',
+                '=',
+                'pp.sku'
+            )
+            ->join(
+                'editor_part_items as epi',
+                function ($join) use ($part) {
+                    $join->on(
+                        'epi.id_per_produk',
+                        '=',
+                        'er.id_per_produk'
+                    )
+                        ->where(
+                            'epi.editor_part_id',
+                            '=',
+                            $part->id
+                        );
+                }
             )
             ->where(
                 'er.editor_part_id',
@@ -1884,21 +1920,37 @@ class EditorController extends Controller
                 'er.tanggal_bulan_tahun',
                 'er.jumlah_editor',
                 'er.status_request',
-                'er.request_search',
                 'pp.no_pesanan',
-                'pp.sku',
+                'pr.nama_produk',
+                'pr.variasi',
+                'epi.urutan',
             ])
-            ->orderBy('er.id')
+            ->orderBy(
+                'epi.urutan'
+            )
+            ->orderBy(
+                'er.id'
+            )
             ->get();
 
         if ($requests->isEmpty()) {
             return back()->with(
                 'error',
-                'Tidak ada request yang dapat dicetak pada Part ini.'
+                'Tidak ada hasil Editor yang dapat dibuat QR Code.'
             );
         }
 
-        $generator = new \Picqer\Barcode\BarcodeGeneratorSVG();
+        $renderer = new ImageRenderer(
+            new RendererStyle(
+                180,
+                1
+            ),
+            new SvgImageBackEnd()
+        );
+
+        $writer = new Writer(
+            $renderer
+        );
 
         $rows = collect();
 
@@ -1908,30 +1960,27 @@ class EditorController extends Controller
                 (int) $request->jumlah_editor
             );
 
-            $barcode = $generator->getBarcode(
-                (string) $request->no_pesanan,
-                $generator::TYPE_CODE_128,
-                2,
-                55
+            $svg = $writer->writeString(
+                (string) $request->no_pesanan
             );
 
-            for (
-                $i = 1;
-                $i <= $jumlah;
-                $i++
-            ) {
-                $rows->push([
-                    'editor_request_id' =>
-                        $request->id,
+            $qrCode =
+                'data:image/svg+xml;base64,' .
+                base64_encode($svg);
 
+            for ($i = 1; $i <= $jumlah; $i++) {
+                $rows->push([
                     'id_per_produk' =>
                         $request->id_per_produk,
 
                     'no_pesanan' =>
                         $request->no_pesanan,
 
-                    'sku' =>
-                        $request->sku,
+                    'nama_produk' =>
+                        $request->nama_produk,
+
+                    'variasi' =>
+                        $request->variasi,
 
                     'plat_lengkap' =>
                         $request->plat_lengkap,
@@ -1951,20 +2000,36 @@ class EditorController extends Controller
                     'jumlah' =>
                         $jumlah,
 
-                    'barcode' =>
-                        $barcode,
+                    'qr_code' =>
+                        $qrCode,
                 ]);
             }
         }
 
-        $pages = $rows->chunk(5);
+        $pages = $rows->chunk(7);
 
-        return view(
-            'editor.part.barcode',
+        $pdf = Pdf::loadView(
+            'editor.part.qr-pdf',
             compact(
                 'part',
                 'pages'
             )
+        );
+
+        $pdf->setPaper(
+            [
+                0,
+                0,
+                283.46,
+                425.20,
+            ],
+            'portrait'
+        );
+
+        return $pdf->download(
+            'QR_' .
+            $part->kode_part .
+            '.pdf'
         );
     }
 }
