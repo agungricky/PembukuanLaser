@@ -64,154 +64,118 @@
                 <thead>
                     <tr>
                         <th width="50">No</th>
+                        <th>Pesanan</th>
                         <th>Produk Custom</th>
                         <th>Detail Produk</th>
                         <th class="text-center">Qty</th>
-                        <th>Harga Jual</th>
-                        <th class="text-center">Status</th>
-                        <th>Keterangan</th>
-                        <th class="text-center">Aksi</th>
+                        <th>Harga</th>
+                        <th class="text-center">Status Pesanan</th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    @foreach ($produk as $item)
-                        <tr>
-                            <td class="text-center text-muted">
-                                {{ $loop->iteration }}
-                            </td>
-                            <td>
-                                <div class="fw-semibold text-dark">
-                                    {{ $item->nama_produk ?? '-' }}
-                                </div>
+                    @php
+                        $no = 1;
+                    @endphp
 
-                                <div class="text-muted mt-1" style="font-size: 11px;">
-                                    <i class="fa-solid fa-barcode me-1"></i>
-                                    Sku : {{ $item->produk->sku ?? '-' }}
-                                </div>
-                            </td>
+                    @foreach ($pesanan as $item)
+                        @foreach ($item->pesanan_per_produk as $produk)
+                            @if ($produk->custom == 1)
+                                <tr>
 
-                            <!-- DETAIL PRODUK ASLI -->
-                            <td>
-                                <div class="fw-semibold text-dark" style="font-size: 12px;">
-                                    {{ $item->produk->nama_produk ?? '-' }}
-                                </div>
+                                    {{-- NO --}}
+                                    <td class="text-center text-muted">
+                                        {{ $no++ }}
+                                    </td>
 
-                                <div class="d-flex align-items-center gap-2 mt-1 text-muted" style="font-size: 11px;">
-                                    <span>
-                                        {{ $item->produk->variasi ?? '-' }}
-                                    </span>
 
-                                    <span>•</span>
-
-                                    <span class="text-nowrap">
-                                        HPP Rp {{ number_format($item->produk->hpp ?? 0, 0, ',', '.') }}
-                                    </span>
-                                </div>
-
-                                <div class="text-muted mt-1" style="font-size: 10px;">
-                                    <i class="fa-solid fa-layer-group me-1"></i>
-                                    {{ $item->produk->kategori->nama_kategori ?? '-' }}
-                                </div>
-                            </td>
-
-                            <!-- JUMLAH -->
-                            <td class="text-center">
-                                <span class="fw-semibold">
-                                    {{ $item->jumlah ?? 0 }}
-                                </span>
-                            </td>
-
-                            <!-- HARGA -->
-                            <td>
-                                <div class="fw-semibold text-dark text-nowrap">
-                                    Rp {{ number_format($item->harga_jual ?? 0, 0, ',', '.') }}
-                                </div>
-
-                                <div class="text-muted mt-1" style="font-size: 10px;">
-                                    {{ $item->created_at ? \Carbon\Carbon::parse($item->created_at)->format('d/m/Y') : '-' }}
-                                </div>
-                            </td>
-
-                            <!-- STATUS -->
-                            <td class="text-center">
-                                @php
-                                    $tanggalMasuk = $item->created_at
-                                        ? \Carbon\Carbon::parse($item->created_at)
-                                            ->locale('id')
-                                            ->translatedFormat('d M Y')
-                                        : '-';
-
-                                    $tanggalKeluar = $item->updated_at
-                                        ? \Carbon\Carbon::parse($item->updated_at)
-                                            ->locale('id')
-                                            ->translatedFormat('d M Y')
-                                        : '-';
-
-                                    $tanggalSama =
-                                        $item->created_at && $item->updated_at
-                                            ? \Carbon\Carbon::parse($item->created_at)->equalTo(
-                                                \Carbon\Carbon::parse($item->updated_at),
-                                            )
-                                            : true;
-                                @endphp
-
-                                @if ($tanggalSama)
-                                    <span class="badge bg-success-subtle text-success">
-                                        <i class="fa-solid fa-arrow-down me-1"></i>
-                                        Masuk
-                                    </span>
-
-                                    <div class="text-muted mt-1" style="font-size: 10px;">
-                                        <i class="fa-regular fa-calendar me-1"></i>
-                                        {{ $tanggalMasuk }}
-                                    </div>
-                                @elseif ($item->status == 'keluar')
-                                    <span class="badge bg-danger-subtle text-danger">
-                                        <i class="fa-solid fa-arrow-up me-1"></i>
-                                        Keluar
-                                    </span>
-
-                                    <div class="mt-1" style="font-size: 10px;">
-                                        <div class="text-success">
-                                            Masuk : {{ $tanggalMasuk }}
+                                    {{-- PESANAN --}}
+                                    <td>
+                                        <div class="fw-semibold text-dark">
+                                            {{ $item->no_pesanan ?? '-' }}
                                         </div>
 
-                                        <div class="text-danger">
-                                            Keluar : {{ $tanggalKeluar }}
+                                        <div class="text-muted mt-1" style="font-size: 11px;">
+                                            <i class="fa-solid fa-user me-1"></i>
+                                            {{ $item->nama_pembeli ?? '-' }}
                                         </div>
-                                    </div>
-                                @else
-                                    <span class="badge bg-success-subtle text-success">
-                                        <i class="fa-solid fa-arrow-down me-1"></i>
-                                        Masuk
-                                    </span>
 
-                                    <div class="text-muted mt-1" style="font-size: 10px;">
-                                        <i class="fa-regular fa-calendar me-1"></i>
-                                        {{ $tanggalMasuk }}
-                                    </div>
-                                @endif
-                            </td>
+                                        <div class="text-muted" style="font-size: 10px;">
+                                            {{ $item->tanggal ? \Carbon\Carbon::parse($item->tanggal)->locale('id')->translatedFormat('d M Y') : '-' }}
+                                        </div>
+                                    </td>
 
-                            <td>{{ $item->keterangan }}</td>
 
-                            <td class="text-center">
-                                <div class="d-flex justify-content-center align-items-center gap-1">
+                                    {{-- PRODUK CUSTOM --}}
+                                    <td>
+                                        <div class="fw-semibold text-dark">
+                                            {{ \Illuminate\Support\Str::limit($produk->nama_produk ?? '-', 40, '...') }}
+                                        </div>
 
-                                    <button type="button" class="btn btn-sm btn-success btnSelesai"
-                                        data-id="{{ $item->id }}" title="Tandai Barang Keluar">
-                                        <i class="fa-solid fa-check"></i>
-                                    </button>
+                                        <div class="text-muted mt-1" style="font-size: 11px;">
+                                            <i class="fa-solid fa-barcode me-1"></i>
+                                            SKU : {{ $produk->sku ?? '-' }}
+                                        </div>
+                                    </td>
 
-                                    <button type="button" class="btn btn-sm btn-warning btnEdit"
-                                        data-id="{{ $item->id }}" title="Edit">
-                                        <i class="fa-solid fa-pen"></i>
-                                    </button>
 
-                                </div>
-                            </td>
-                        </tr>
+                                    {{-- DETAIL PRODUK --}}
+                                    <td>
+                                        <div class="fw-semibold text-dark" style="font-size: 12px;">
+                                            {{ $produk->variasi ?? '-' }}
+                                        </div>
+
+                                        <div class="mt-1">
+                                            <span class="badge bg-primary-subtle text-primary">
+                                                Custom
+                                            </span>
+                                        </div>
+                                    </td>
+
+
+                                    {{-- JUMLAH --}}
+                                    <td class="text-center">
+                                        <span class="fw-semibold">
+                                            {{ $produk->jumlah ?? 0 }}
+                                        </span>
+                                    </td>
+
+
+                                    {{-- HARGA --}}
+                                    <td>
+                                        <div class="fw-semibold text-dark">
+                                            Rp {{ number_format($produk->harga ?? 0, 0, ',', '.') }}
+                                        </div>
+
+                                        <div class="text-muted mt-1" style="font-size: 10px;">
+                                            HPP Rp {{ number_format($produk->hpp ?? 0, 0, ',', '.') }}
+                                        </div>
+                                    </td>
+
+
+                                    {{-- STATUS PESANAN --}}
+                                    <td class="text-center">
+
+                                        @if ($produk->status_pesanan == 0)
+                                            <span class="badge bg-warning-subtle text-warning">
+                                                <i class="fa-solid fa-clock me-1"></i>
+                                                Belum Diproses
+                                            </span>
+                                        @elseif ($produk->status_pesanan == 1)
+                                            <span class="badge bg-success-subtle text-success">
+                                                <i class="fa-solid fa-check me-1"></i>
+                                                Selesai
+                                            </span>
+                                        @else
+                                            <span class="badge bg-secondary-subtle text-secondary">
+                                                {{ $produk->status_pesanan }}
+                                            </span>
+                                        @endif
+
+                                    </td>
+                                </tr>
+                            @endif
+                        @endforeach
                     @endforeach
                 </tbody>
             </table>
@@ -340,7 +304,5 @@
         $('#searchTable').on('input', function() {
             table.search(this.value).draw();
         });
-
-
     </script>
 @endpush

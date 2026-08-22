@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\kategori;
 use App\Models\Produk;
+use App\Models\retur;
 use Illuminate\Http\Request;
 
 class SkuController extends Controller
@@ -32,11 +33,13 @@ class SkuController extends Controller
             'custom' => ['required'],
         ]);
 
-        $data = Produk::where('sku', 'like', $request->sku.'%')
+        $prefix = strtoupper(trim($request->sku ?? ''));
+        $data = Produk::whereRaw('sku REGEXP ?', ['^'.preg_quote($prefix).'[0-9]+$'])
             ->orderByRaw(
-                'CAST(REPLACE(sku, ?, "") AS UNSIGNED) DESC',
-                [$request->sku]
-            )->first();
+                'CAST(SUBSTRING(sku, ?) AS UNSIGNED) DESC',
+                [strlen($prefix) + 1]
+            )
+            ->first();
 
         if ($data === null) {
             if ($request->custom === 'Y') {
@@ -76,7 +79,8 @@ class SkuController extends Controller
         $sku = $data->sku;
         $angka = (int) preg_replace('/\D/', '', $sku);
         $angka++;
-        $skuBaru = 'BNR'.$angka;
+        $kode = substr($sku, 0, 3);
+        $skuBaru = $kode.$angka;
         if ($request->custom === 'Y') {
             $view = [
                 'sku' => $skuBaru.'C',
@@ -160,7 +164,8 @@ class SkuController extends Controller
     /**
      * Memperbarui produk.
      */
-    public function update(Request $request, $sku) {
+    public function update(Request $request, $sku)
+    {
         $request->validate([
             'nama_produk' => ['nullable', 'string', 'max:255'],
             'variasi' => ['nullable', 'string', 'max:255'],
