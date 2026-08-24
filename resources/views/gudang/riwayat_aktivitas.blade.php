@@ -104,7 +104,7 @@
                         className: 'text-center'
                     },
                     {
-                        data: null,
+                        data: 'sku',
                         orderable: false,
                         render: function(data, type, row) {
                             return `
@@ -123,7 +123,7 @@
                     // VARIASI + KATEGORI
                     // =========================
                     {
-                        data: null,
+                        data: 'kategori',
                         orderable: false,
                         render: function(data, type, row) {
 
@@ -143,7 +143,7 @@
                     // HPP + JUMLAH
                     // =========================
                     {
-                        data: null,
+                        data: 'hpp',
                         orderable: false,
                         render: function(data, type, row) {
 
@@ -164,7 +164,7 @@
                     },
 
                     {
-                        data: null,
+                        data: 'admin_gudang',
                         orderable: false,
                         render: function(data, type, row) {
 
@@ -209,7 +209,7 @@
                     },
 
                     {
-                        data: null,
+                        data: 'tanggal',
                         orderable: false,
                         render: function(data, type, row) {
                             console.log(row)
@@ -257,7 +257,7 @@
                     // JENIS MUTASI + KETERANGAN
                     // =========================
                     {
-                        data: null,
+                        data: 'mutasi',
                         orderable: false,
                         className: 'text-center',
                         render: function(data, type, row) {

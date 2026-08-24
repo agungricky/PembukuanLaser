@@ -568,13 +568,11 @@ class GudangController extends Controller
         | Riwayat terbaru ditampilkan paling atas
         |
         */
-
-        $orderColumn = (int) $request->input('order.0.column', 0);
+        $orderColumn = (int) $request->input('order.0.column', 5);
         $orderDirection = $request->input('order.0.dir', 'desc');
         $orderDirection = $orderDirection === 'asc' ? 'asc' : 'desc';
-
-        if ($orderColumn === 0) {
-            $query->orderBy('id', $orderDirection);
+        if ($orderColumn === 5) {
+            $query->orderBy('created_at', $orderDirection);
         } else {
             $query->orderBy('created_at', 'desc');
         }
@@ -887,15 +885,50 @@ class GudangController extends Controller
 
     }
 
-    public function produkcustom(){
-        $pesanan = Pesanan::with([
-                'pesanan_per_produk' => function ($query) {
-                    $query->where('custom', 1)
-                        ->with('produk');
-                },
-            ])->where('status', 'proses')
+    public function produkcustom()
+    {
+        $pesanan_perproduk = PesananPerProduk::with('pesanan')
+            ->where('custom', 1)
+            ->whereHas('pesanan')
             ->get();
 
-        return view('gudang.produk_custom', compact('pesanan'));
+        $data = $pesanan_perproduk
+            ->groupBy(function ($item) {
+                $tanggal = Carbon::parse($item->pesanan->tanggal);
+
+                return $item->sku.'-'.$tanggal->format('Y-m');
+            })
+            ->map(function ($items) {
+                $firstItem = $items->first();
+                $produk = Produk::where('sku', $firstItem->sku)->first();
+                $tanggal = Carbon::parse($firstItem->pesanan->tanggal);
+
+                return [
+                    'sku' => $firstItem->sku,
+                    'nama_produk' => $produk?->nama_produk ?? $firstItem->nama_produk,
+                    'variasi' => $produk?->variasi ?? $firstItem->variasi,
+                    'qty' => $items->sum('jumlah'),
+                    'diproses' => $items
+                        ->filter(fn ($item) => $item->pesanan->status === 'proses')
+                        ->sum('jumlah'),
+                    'kirim' => $items
+                        ->filter(fn ($item) => $item->pesanan->status === 'kirim')
+                        ->sum('jumlah'),
+                    'retur' => $items
+                        ->filter(fn ($item) => $item->pesanan->status === 'pengiriman gagal' && $item->pesanan->status === 'pengembalian')
+                        ->sum('jumlah'),
+                    'selesai' => $items
+                        ->filter(fn ($item) => $item->pesanan->status === 'selesai')
+                        ->sum('jumlah'),
+                    'bulan' => $tanggal->month,
+                    'tahun' => $tanggal->year,
+                    'tanggal_awal' => $tanggal->copy()->startOfMonth(),
+                    'tanggal_akhir' => $tanggal->copy()->endOfMonth(),
+                    'data' => $items->values(),
+                ];
+            })
+            ->values();
+
+        return view('gudang.produk_custom', compact('data'));
     }
 }
