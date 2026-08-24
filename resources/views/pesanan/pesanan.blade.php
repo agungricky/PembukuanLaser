@@ -28,74 +28,70 @@
                 $options = $allowed ?? [10, 20, 25, 50, 100];
                 $currentPer = (int) request('per_page', $perPage ?? 20);
             @endphp
-            <div class="row g-2">
-                {{-- Pencarian --}}
-                <div class="col-md-3">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white">
-                            <i class="bi bi-search"></i>
-                        </span>
-                        <input type="text" name="no_pesanan" class="form-control" value="{{ request('no_pesanan') }}"
-                            placeholder="Cari No. Pesanan / No. Resi">
-                    </div>
+
+            <div class="d-flex align-items-center gap-2 flex-nowrap">
+
+                {{-- Search --}}
+                <div class="input-group input-group-sm" style="width: 260px;">
+                    <span class="input-group-text bg-white">
+                        <i class="bi bi-search"></i>
+                    </span>
+
+                    <input type="text" name="no_pesanan" class="form-control" value="{{ request('no_pesanan') }}"
+                        placeholder="No. Pesanan / Resi">
                 </div>
 
                 {{-- Tanggal --}}
-                <div class="col-md-2">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white">
-                            <i class="bi bi-calendar-event"></i>
-                        </span>
-                        <input type="text" id="daterange" name="tanggal" class="form-control" value="{{ $tanggal }}"
-                            placeholder="Pilih tanggal" readonly>
-                    </div>
+                <div class="input-group input-group-sm" style="width: 220px;">
+                    <span class="input-group-text bg-white">
+                        <i class="bi bi-calendar-event"></i>
+                    </span>
+
+                    <input type="text" id="daterange" name="tanggal" class="form-control" value="{{ $tanggal }}"
+                        placeholder="Pilih tanggal" readonly>
                 </div>
 
-                {{-- Jumlah Data --}}
-                <div class="col-md-2">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white">
-                            <i class="bi bi-list-ol"></i>
-                        </span>
+                {{-- Per Page --}}
+                <div class="input-group input-group-sm" style="width: 125px;">
+                    <span class="input-group-text bg-white">
+                        <i class="bi bi-list-ol"></i>
+                    </span>
 
-                        <select class="form-select" name="per_page" id="perPageSelect">
-                            @foreach ($options as $opt)
-                                <option value="{{ $opt }}" @selected($currentPer === (int) $opt)>
-                                    {{ $opt }}/halaman
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                    <select class="form-select" name="per_page" id="perPageSelect">
+                        @foreach ($options as $opt)
+                            <option value="{{ $opt }}" @selected($currentPer === (int) $opt)>
+                                {{ $opt }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
 
-                {{-- Tombol --}}
-                <div class="col-md-5 text-md-end">
-                    <div class="d-inline-flex gap-2 flex-wrap justify-content-md-end">
+                {{-- Filter --}}
+                <button type="submit" class="btn btn-primary btn-sm text-nowrap">
+                    <i class="bi bi-funnel me-1"></i>
+                    Terapkan
+                </button>
 
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-funnel me-1"></i>
-                            Terapkan
-                        </button>
+                {{-- Reset --}}
+                <a href="{{ route('pesanan.index') }}" class="btn btn-outline-secondary btn-sm" title="Reset">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
 
-                        <a href="{{ route('pesanan.index') }}"
-                            class="btn btn-outline-secondary">
-                            Reset
-                        </a>
+                {{-- Spacer --}}
+                <div class="ms-auto"></div>
 
-                        <a href="{{ route('pesanan.import') }}"
-                            class="btn btn-success d-flex align-items-center gap-1 shadow-sm">
-                            <i class="bi bi-file-earmark-spreadsheet"></i>
-                            Import Pesanan
-                        </a>
+                {{-- Import Pesanan --}}
+                <a href="{{ route('pesanan.import') }}" class="btn btn-success btn-sm text-nowrap">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i>
+                    Import Pesanan
+                </a>
 
-                        <a href="{{ route('resi.import') }}"
-                            class="btn btn-danger d-flex align-items-center gap-1 shadow-sm">
-                            <i class="bi bi-file-earmark-pdf"></i>
-                            Import PDF Resi
-                        </a>
+                {{-- Import Resi --}}
+                <a href="{{ route('resi.import') }}" class="btn btn-danger btn-sm text-nowrap">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>
+                    Import Resi
+                </a>
 
-                    </div>
-                </div>
             </div>
         </form>
 
