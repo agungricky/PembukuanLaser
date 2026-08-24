@@ -11,7 +11,7 @@ class Produk extends Model
 
     public $incrementing = false;
     protected $keyType = 'string';
-    public $timestamps = false;
+    // public $timestamps = false;
 
     protected $fillable = [
         'sku',

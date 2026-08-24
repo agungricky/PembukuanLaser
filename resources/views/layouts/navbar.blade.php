@@ -32,7 +32,7 @@
 <nav class="navbar bg-white border-bottom shadow-sm sticky-top navbar-compact">
   <div class="container-fluid px-2 px-sm-3">
     {{-- Brand --}}
-    @if (auth()->check() && auth()->user()->role === 'packing')
+    @if (auth()->check() && auth()->user()->role === 'packing' || $dataLogin->role == 'gudang')
       <span class="navbar-brand mb-0 text-primary" title="Packing fokus scan pesanan">
         LASER CUSTOM KEDIRI
       </span>

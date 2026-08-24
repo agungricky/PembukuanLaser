@@ -1,22 +1,26 @@
 <?php
 
 namespace App\Http\Controllers;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
+
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-
     public function me()
     {
         $user = Auth::user();
+
         return view('user.listUser', compact('user'));
     }
+
     public function index()
     {
         $users = User::all();
+
         return view('user.user', compact('users'));
     }
 
@@ -25,18 +29,26 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'role' => 'required|in:pegawai,manager,packing',
+            'role' => 'required|in:pegawai,manager,packing,gudang',
             'password' => 'required|min:6',
         ]);
 
-        User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'role' => $request->role,
-            'password' => Hash::make($request->password),
-        ]);
+        DB::beginTransaction();
+        try {
+            User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'role' => $request->role,
+                'password' => Hash::make($request->password),
+            ]);
 
-        return redirect()->route('users.index')->with('success', 'User berhasil ditambahkan.');
+            DB::commit();
+            return redirect()->route('users.index')->with('success', 'User berhasil ditambahkan.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return redirect()->route('users.index')->with('success', 'User gagal ditambahkan');
+        }
+
     }
 
     public function update(Request $request, $id)
@@ -45,7 +57,7 @@ class UserController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'email' => 'required|email|unique:users,email,'.$user->id,
             'role' => 'required|in:pegawai,manager,packing',
             'password' => 'nullable|min:6',
         ]);
@@ -73,8 +85,10 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', 'User berhasil dinonaktifkan.');
     }
 
-    public function datauser($role){
+    public function datauser($role)
+    {
         $user = User::where('role', $role)->get();
+
         return response()->json($user);
     }
 }

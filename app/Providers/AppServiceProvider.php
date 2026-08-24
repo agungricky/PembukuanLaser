@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\kategori;
 use App\Models\Produk;
+use Carbon\Carbon;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
@@ -24,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Carbon::setLocale('id');
         Paginator::useBootstrapFive();
         View::composer('*', function ($view) {
             $dataLogin = Auth::user();

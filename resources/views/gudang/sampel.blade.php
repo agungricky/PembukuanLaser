@@ -120,7 +120,7 @@
                             </td>
 
                             <td class="py-0 px-4 text-center">
-                               <div class="d-flex align-items-start justify-content-start gap-2 pb-1">
+                                <div class="d-flex align-items-start justify-content-start gap-2 pb-1">
                                     <div class="d-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary"
                                         style="width: 28px; height: 28px; font-size: 12px;">
                                         <i class="fa-solid fa-user"></i>
@@ -155,7 +155,7 @@
                                     </div>
 
                                     <span class="fw-semibold text-dark" style="font-size: 14px;">
-                                         {{ $item->ambilBarang->name ?? '-' }}
+                                        {{ $item->ambilBarang->name ?? '-' }}
                                     </span>
                                 </div>
 
@@ -288,34 +288,35 @@
 
 @push('scripts')
     <script>
-        const table = new DataTable('#orderlist', {
-            pageLength: 10,
-            searching: true,
-            lengthChange: false,
-            autoWidth: false
-        });
+        $(document).ready(function() {
+            const table = new DataTable('#orderlist', {
+                pageLength: 10,
+                searching: true,
+                lengthChange: false,
+                autoWidth: false
+            });
 
-        $('#per_page').val(10);
-        $('#per_page').on('change', function() {
-            table.page.len(parseInt(this.value)).draw();
-        });
+            $('#per_page').val(10);
+            $('#per_page').on('change', function() {
+                table.page.len(parseInt(this.value)).draw();
+            });
 
-        $('#searchTable').on('input', function() {
-            table.search(this.value).draw();
-        });
+            $('#searchTable').on('input', function() {
+                table.search(this.value).draw();
+            });
 
-        function formatProduk(data) {
-            if (!data.id) {
-                return data.text;
-            }
+            function formatProduk(data) {
+                if (!data.id) {
+                    return data.text;
+                }
 
-            const $option = $(data.element);
-            const sku = $option.data('sku');
-            const kategori = $option.data('kategori');
-            const nama = data.text.split('|')[0].trim();
-            const variasi = $option.data('variasi');
+                const $option = $(data.element);
+                const sku = $option.data('sku');
+                const kategori = $option.data('kategori');
+                const nama = data.text.split('|')[0].trim();
+                const variasi = $option.data('variasi');
 
-            return $(`
+                return $(`
                     <div style="padding: 3px 0;">
                        <div class="fw-semibold text-dark">
                             ${nama}
@@ -335,108 +336,110 @@
                         </div>
                     </div>
                 `);
-        }
-
-        $('#produk_id').select2({
-            dropdownParent: $('#modalPermintaanSampel'),
-            placeholder: 'Cari nama produk atau SKU...',
-            allowClear: true,
-            width: '100%',
-            templateResult: formatProduk
-        });
-
-        $('#nama_peminta').select2({
-            dropdownParent: $('#modalPermintaanSampel'),
-            placeholder: 'Cari nama peminta...',
-            allowClear: true,
-            width: '100%'
-        });
-
-        $('#jumlah').on('keydown', function(e) {
-            const allowedKeys = [
-                'Backspace',
-                'Delete',
-                'Tab',
-                'ArrowLeft',
-                'ArrowRight',
-                'Home',
-                'End'
-            ];
-
-            if (allowedKeys.includes(e.key)) {
-                return;
             }
 
-            if (!/^[0-9]$/.test(e.key)) {
-                e.preventDefault();
-            }
-        });
+            $('#produk_id').select2({
+                dropdownParent: $('#modalPermintaanSampel'),
+                placeholder: 'Cari nama produk atau SKU...',
+                allowClear: true,
+                width: '100%',
+                templateResult: formatProduk
+            });
 
-        $('#jumlah').on('input', function() {
-            this.value = this.value.replace(/[^0-9]/g, '');
-        });
+            $('#nama_peminta').select2({
+                dropdownParent: $('#modalPermintaanSampel'),
+                placeholder: 'Cari nama peminta...',
+                allowClear: true,
+                width: '100%'
+            });
 
-        $('#btnsubmit').on('click', function(e) {
-            e.preventDefault();
+            $('#jumlah').on('keydown', function(e) {
+                const allowedKeys = [
+                    'Backspace',
+                    'Delete',
+                    'Tab',
+                    'ArrowLeft',
+                    'ArrowRight',
+                    'Home',
+                    'End'
+                ];
 
-            const data = $('#Form').serialize();
+                if (allowedKeys.includes(e.key)) {
+                    return;
+                }
 
-            $.ajax({
-                type: "POST",
-                url: "{{ route('gudang.sampel.create') }}",
-                data: data,
-                dataType: "JSON",
-                beforeSend: function() {
-                    $('#btnsubmit').prop('disabled', true);
-                },
-
-                success: function(response) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berhasil',
-                        text: response.message ?? 'Permintaan sampel berhasil dibuat.',
-                        timer: 1800,
-                        showConfirmButton: false
-                    });
-
-                    $('#Form')[0].reset();
-                    $('#produk_id').val(null).trigger('change');
-                    $('#nama_peminta').val(null).trigger('change');
-                    $('#jumlah').val(null).trigger('change');
-                    $('#modalPermintaanSampel').modal('hide');
-
-                    location.reload();
-                },
-
-                error: function(xhr) {
-                    let message = xhr.responseJSON?.message ??
-                        'Terjadi kesalahan. Silakan coba kembali.';
-
-                    if (xhr.status === 422 && xhr.responseJSON?.errors) {
-                        message = Object.values(xhr.responseJSON.errors)
-                            .flat()
-                            .join('<br>');
-                    }
-
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Gagal',
-                        html: message,
-                        confirmButtonText: 'OK'
-                    });
-                },
-
-                complete: function() {
-                    $('#btnsubmit').prop('disabled', false);
+                if (!/^[0-9]$/.test(e.key)) {
+                    e.preventDefault();
                 }
             });
-        });
 
-        $('#btnmodal').on('click', function() {
-            $('#Form')[0].reset();
-            $('#produk_id').val(null).trigger('change');
-            $('#nama_peminta').val(null).trigger('change');
-            $('#jumlah').val('1');
+            $('#jumlah').on('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+
+            $('#btnsubmit').on('click', function(e) {
+                e.preventDefault();
+
+                const data = $('#Form').serialize();
+
+                $.ajax({
+                    type: "POST",
+                    url: "{{ route('gudang.sampel.create') }}",
+                    data: data,
+                    dataType: "JSON",
+                    beforeSend: function() {
+                        $('#btnsubmit').prop('disabled', true);
+                    },
+
+                    success: function(response) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: response.message ??
+                                'Permintaan sampel berhasil dibuat.',
+                            timer: 1800,
+                            showConfirmButton: false
+                        });
+
+                        $('#Form')[0].reset();
+                        $('#produk_id').val(null).trigger('change');
+                        $('#nama_peminta').val(null).trigger('change');
+                        $('#jumlah').val(null).trigger('change');
+                        $('#modalPermintaanSampel').modal('hide');
+
+                        location.reload();
+                    },
+
+                    error: function(xhr) {
+                        let message = xhr.responseJSON?.message ??
+                            'Terjadi kesalahan. Silakan coba kembali.';
+
+                        if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                            message = Object.values(xhr.responseJSON.errors)
+                                .flat()
+                                .join('<br>');
+                        }
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            html: message,
+                            confirmButtonText: 'OK'
+                        });
+                    },
+
+                    complete: function() {
+                        $('#btnsubmit').prop('disabled', false);
+                    }
+                });
+            });
+
+            $('#btnmodal').on('click', function() {
+                $('#Form')[0].reset();
+                $('#produk_id').val(null).trigger('change');
+                $('#nama_peminta').val(null).trigger('change');
+                $('#jumlah').val('1');
+            });
         });
     </script>
 @endpush
