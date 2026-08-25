@@ -86,62 +86,13 @@
                             <th scope="col" class="py-3 px-4 text-center">No</th>
                             <th scope="col" class="py-3 px-4 text-center">Nama Produk</th>
                             <th scope="col" class="py-3 px-4 text-center">Variasi</th>
-                            <th scope="col" class="py-3 px-4 text-center">Kategori</th>
                             <th scope="col" class="py-3 px-4 text-center">Hpp</th>
                             <th scope="col" class="py-3 px-4 text-center">Tersedia</th>
                             <th scope="col" class="py-3 px-4 text-center">Aksi</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @php
-                            $no = 1;
-                        @endphp
-                        @foreach ($produk as $item)
-                            <tr class="{{ $item->status == 'nonaktif' ? 'row-nonactive' : '' }}">
-                                <td class="py-3 px-4 text-center">{{ $no++ }}</td>
+                    <tbody id="produkBody">
 
-                                <td class="py-3 px-4 text-start">
-                                    <div class="fw-bold text-success fs-6">
-                                        {{ $item->nama_produk }}
-                                    </div>
-
-                                    <small class="text-muted">Sku : {{ $item?->sku }}</small>
-                                </td>
-
-                                <td class="py-3 px-4 text-center">
-                                    {{ $item->variasi }}
-                                </td>
-
-                                <td class="py-3 px-4 text-center">{{ $item->kategori->nama_kategori ?? '' }}</td>
-
-                                <td class="py-3 px-4 text-center">
-                                    <div class="fw-bold text-success fs-6">
-                                        Rp {{ number_format($item->hpp, 0, ',', '.') }}
-                                    </div>
-
-                                    <small class="text-muted">/ Item</small>
-                                </td>
-
-                                @php
-                                    $stok = $item->stok_produk->jumlah_tersedia ?? 0;
-                                @endphp
-
-                                <td class="py-3 px-4 text-center">
-                                    <span
-                                        class="badge 
-                                         {{ $stok < 5 ? 'bg-danger' : ($stok == 5 ? 'bg-warning text-dark' : 'bg-success') }}">
-                                        {{ $stok }}
-                                    </span>
-                                </td>
-
-                                <td class="py-3 px-4 text-center action-column">
-                                    <button type="button" class="btn btn-warning btn-sm btnedit"
-                                        data-sku="{{ $item->sku }}" data-btn="edit">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -532,14 +483,163 @@
                 autoWidth: false
             });
 
-            $('#per_page').val(10);
-            $('#per_page').on('change', function() {
-                table.page.len(parseInt(this.value)).draw();
-            });
+            function loadSkuTable() {
 
-            $('#searchTable').on('input', function() {
-                table.search(this.value).draw();
-            });
+                if ($.fn.DataTable.isDataTable('#orderlist')) {
+                    $('#orderlist').DataTable().destroy();
+                }
+
+                let table = $('#orderlist').DataTable({
+                    ajax: {
+                        url: "{{ route('sku.json') }}",
+                        dataSrc: ''
+                    },
+
+                    pageLength: 10,
+                    lengthChange: false,
+                    lengthMenu: [10, 20, 25, 50, 100],
+                    searching: true,
+                    autoWidth: false,
+
+                    columns: [
+                        {
+                            data: null,
+                            className: 'text-center',
+                            render: function(data, type, row, meta) {
+                                return meta.row + 1;
+                            }
+                        },
+                        {
+                            data: null,
+                            render: function(data, type, row) {
+
+                                let words = (row.nama_produk ?? '')
+                                    .trim()
+                                    .split(/\s+/);
+
+                                let nama = '';
+
+                                for (let i = 0; i < words.length; i += 3) {
+                                    nama += words.slice(i, i + 3).join(' ') + '<br>';
+                                }
+
+                                return `
+                                    <div class="fw-bold text-success fs-6">
+                                        ${nama}
+                                    </div>
+
+                                    <small class="text-muted">
+                                        Sku : ${row.sku ?? ''}
+                                    </small>
+                                `;
+                            }
+                        },
+                        {
+                            data: null,
+                            render: function(data, type, row) {
+
+                                let kategori = row.kategori ?
+                                    row.kategori.nama_kategori :
+                                    '';
+
+                                return `
+                                    <div class="fw-semibold">
+                                        ${row.variasi ?? ''}
+                                    </div>
+
+                                    <small class="text-muted">
+                                        Kategori : ${kategori}
+                                    </small>
+                                `;
+                            }
+                        },
+                        {
+                            data: 'hpp',
+                            className: 'text-center',
+                            render: function(data) {
+                                let hpp = new Intl.NumberFormat('id-ID')
+                                    .format(data ?? 0);
+
+                                return `
+                                    <div class="fw-bold text-success fs-6">
+                                        Rp ${hpp}
+                                    </div>
+
+                                    <small class="text-muted">
+                                        / Item
+                                    </small>
+                                `;
+                            }
+                        },
+                        {
+                            data: null,
+                            className: 'text-center',
+                            render: function(data, type, row) {
+
+                                let stok = row.stok_produk ?
+                                    row.stok_produk.jumlah_tersedia :
+                                    0;
+
+                                let badge = '';
+
+                                if (stok < 5) {
+                                    badge = 'bg-danger';
+                                } else if (stok == 5) {
+                                    badge = 'bg-warning text-dark';
+                                } else {
+                                    badge = 'bg-success';
+                                }
+
+                                return `
+                                    <span class="badge ${badge}">
+                                        ${stok}
+                                    </span>
+                                `;
+                            }
+                        },
+                        {
+                            data: null,
+                            orderable: false,
+                            searchable: false,
+                            className: 'text-center action-column',
+                            render: function(data, type, row) {
+                                return `
+                                    <button
+                                        type="button"
+                                        class="btn btn-warning btn-sm btnedit"
+                                        data-sku="${row.sku}"
+                                        data-btn="edit"
+                                    >
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                `;
+                            }
+                        }
+                    ],
+
+                    createdRow: function(row, data) {
+                        if (data.status === 'nonaktif') {
+                            $(row).addClass('row-nonactive');
+                        }
+                    }
+                });
+
+
+                $('#per_page').val(10);
+                $('#per_page')
+                    .off('change')
+                    .on('change', function() {
+                        table.page.len(parseInt(this.value, 10)).draw();
+                    });
+
+                $('#searchTable')
+                    .off('input')
+                    .on('input', function() {
+                        table.search(this.value).draw();
+                    });
+            }
+
+            loadSkuTable();
 
             // ============= ================== //
             $(document).on('input', '#jumlah_add, #jumlah_edit', function() {
@@ -907,7 +1007,7 @@
                 }
             });
 
-            $('.btnedit').on('click', function() {
+            $(document).on('click', '.btnedit', function() {
                 let sku = $(this).data('sku');
 
                 $.ajax({

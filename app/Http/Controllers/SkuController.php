@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\kategori;
 use App\Models\Produk;
-use App\Models\retur;
 use Illuminate\Http\Request;
 
 class SkuController extends Controller
@@ -14,10 +13,21 @@ class SkuController extends Controller
      */
     public function index()
     {
-        $produk = Produk::orderBy('updated_at', 'DESC')->get();
         $kategori = kategori::all();
 
-        return view('master.sku', compact('produk', 'kategori'));
+        return view('master.sku', compact('kategori'));
+    }
+
+    public function skudata()
+    {
+        $produk = Produk::with([
+            'kategori',
+            'stok_produk',
+        ])
+            ->orderBy('updated_at', 'DESC')
+            ->get();
+
+        return response()->json($produk);
     }
 
     /**
