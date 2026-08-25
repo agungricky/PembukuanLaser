@@ -278,13 +278,14 @@
                                                     ${item.produk?.nama_produk ?? '-'}
                                                 </span>
 
-                                                <span class="text-muted" style="font-size: 11px;">
-                                                   SKU : <span class="sku">${item.produk?.sku ?? '-'}</span>
+                                                <span class="badge bg-light text-secondary border fw-normal"
+                                                    style="font-size: 10px; letter-spacing: .3px;">
+                                                    SKU: <span class="sku">${item.produk?.sku ?? '-'}</span>
                                                 </span>
                                             </div>
                                         </td>
-                                        <td class="py-3 px-4 text-center">
-                                            ${item.produk?.variasi ?? '-'}
+                                        <td class="py-3 px-4 text-start">
+                                            ${(item.produk?.variasi ?? '-').replace(/,\s*/g, '<br>')}
                                         </td>
 
                                         <td class="py-3 px-4 text-center">
@@ -327,14 +328,14 @@
                                                 (item.produk?.stok_produk?.jumlah_tersedia ?? 0) >= (item.kebutuhan ?? 0)
                                                 ? 
                                                 `
-                                                                                                <span class="badge bg-success">Tersedia</span>
-                                                                                            `
+                                                                                                    <span class="badge bg-success">Tersedia</span>
+                                                                                                `
                                                 : 
                                                 
                                                 `
-                                                                                                <span class="badge bg-danger">Kurang</span>
-                                                                                                <input type="hidden" class="status-stok" value="kurang">
-                                                                                            `
+                                                                                                    <span class="badge bg-danger">Kurang</span>
+                                                                                                    <input type="hidden" class="status-stok" value="kurang">
+                                                                                                `
                                             }
                                         </td>
                                         <td class="py-3 px-4 text-center">
@@ -377,16 +378,17 @@
                                             ${item.stok_produk?.produk?.nama_produk ?? '-'}
                                         </span>
 
-                                        <span class="text-muted" style="font-size: 11px;">
-                                           SKU : ${item.stok_produk?.sku_id ?? '-'}
+                                        <span class="badge bg-light text-secondary border fw-normal"
+                                            style="font-size: 10px; letter-spacing: .3px;">
+                                            SKU: ${item.stok_produk?.sku_id ?? '-'}
                                         </span>
                                     </div>
                                 </td>
 
                                 <td class="py-3 px-4 text-center">
                                     <div class="d-flex flex-column align-items-center">
-                                        <span class="fw-semibold text-dark">
-                                            ${item.stok_produk?.produk?.variasi ?? '-'}
+                                        <span class="text-center small">
+                                            ${(item.stok_produk?.produk?.variasi ?? '-').replace(/,\s*/g, '<br>')}
                                         </span>
 
                                         <div class="d-flex align-items-center justify-content-center gap-1 mt-1">
@@ -471,40 +473,40 @@
 
                                 ${filter === 'diambil' ? 
                                     `
-                                        <td class="py-0 px-4 text-center">
-                                            <div class="text-muted text-uppercase fw-semibold"
-                                                style="font-size: 9px; line-height: 1.1;">
-                                                Diambil Oleh
-                                            </div>
+                                            <td class="py-0 px-4 text-center">
+                                                <div class="text-muted text-uppercase fw-semibold"
+                                                    style="font-size: 9px; line-height: 1.1;">
+                                                    Diambil Oleh
+                                                </div>
 
-                                            <div class="fw-bold text-dark py-1"
-                                                style="font-size: 16px; line-height: 1.1;">
-                                                ${item.ambil_barang?.name ?? '-'}
-                                            </div>
+                                                <div class="fw-bold text-dark py-1"
+                                                    style="font-size: 16px; line-height: 1.1;">
+                                                    ${item.ambil_barang?.name ?? '-'}
+                                                </div>
 
-                                            <div class="text-muted d-flex align-items-center justify-content-center gap-2"
-                                                style="font-size: 10px; line-height: 1.1;">
-                                                <span>
-                                                    <i class="fa-regular fa-calendar"></i>
-                                                    ${ item.updated_at
-                                                            ? new Date(item.updated_at).toLocaleDateString('id-ID')
-                                                            : '-'
-                                                    }
-                                                </span>
-                                                <span>
-                                                    <i class="fa-regular fa-clock"></i>
-                                                    ${
-                                                        item.updated_at
-                                                            ? new Date(item.updated_at).toLocaleTimeString('id-ID', {
-                                                                hour: '2-digit',
-                                                                minute: '2-digit'
-                                                            })
-                                                            : '-'
-                                                    }
-                                                </span>
-                                            </div>
-                                        </td>
-                                    `
+                                                <div class="text-muted d-flex align-items-center justify-content-center gap-2"
+                                                    style="font-size: 10px; line-height: 1.1;">
+                                                    <span>
+                                                        <i class="fa-regular fa-calendar"></i>
+                                                        ${ item.updated_at
+                                                                ? new Date(item.updated_at).toLocaleDateString('id-ID')
+                                                                : '-'
+                                                        }
+                                                    </span>
+                                                    <span>
+                                                        <i class="fa-regular fa-clock"></i>
+                                                        ${
+                                                            item.updated_at
+                                                                ? new Date(item.updated_at).toLocaleTimeString('id-ID', {
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit'
+                                                                })
+                                                                : '-'
+                                                        }
+                                                    </span>
+                                                </div>
+                                            </td>
+                                        `
                                     : '-'
                                 }
 

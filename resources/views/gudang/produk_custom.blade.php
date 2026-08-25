@@ -90,7 +90,6 @@
                                     {{ $loop->iteration }}
                                 </span>
                             </td>
-
                             <td>
                                 <div class="fw-semibold text-dark mb-1">
                                     {{ \Illuminate\Support\Str::words($item['nama_produk'], 3, '...') }}
@@ -122,62 +121,49 @@
 
                             <td>
                                 <div class="d-flex flex-column gap-1">
-
                                     <div class="d-flex align-items-center justify-content-between gap-3">
                                         <span class="text-muted">
                                             <i class="fa-solid fa-clock text-warning me-1"></i>
                                             Diproses
                                         </span>
-
                                         <span class="badge bg-warning text-dark">
                                             {{ $item['diproses'] }}
                                         </span>
                                     </div>
-
                                     <div class="d-flex align-items-center justify-content-between gap-3">
                                         <span class="text-muted">
                                             <i class="fa-solid fa-truck text-primary me-1"></i>
                                             Dikirim
                                         </span>
-
                                         <span class="badge bg-primary">
                                             {{ $item['kirim'] }}
                                         </span>
                                     </div>
-
                                     <div class="d-flex align-items-center justify-content-between gap-3">
                                         <span class="text-muted">
                                             <i class="fa-solid fa-circle-check text-success me-1"></i>
                                             Selesai
                                         </span>
-
                                         <span class="badge bg-success">
                                             {{ $item['selesai'] }}
                                         </span>
                                     </div>
-
                                     <div class="d-flex align-items-center justify-content-between gap-3">
                                         <span class="text-muted">
                                             <i class="fa-solid fa-rotate-left text-danger me-1"></i>
                                             Retur
                                         </span>
-
                                         <span class="badge bg-danger">
                                             {{ $item['retur'] }}
                                         </span>
                                     </div>
-
-
                                 </div>
                             </td>
-
                             <td>
                                 <div class="d-flex align-items-center gap-2">
-
                                     <div class="bg-light border rounded p-2 text-center">
                                         <i class="fa-regular fa-calendar text-primary"></i>
                                     </div>
-
                                     <div>
                                         <div class="fw-semibold">
                                             {{ $item['tanggal_awal']->translatedFormat('j') }}
@@ -192,7 +178,6 @@
 
                                 </div>
                             </td>
-
                             <td>
                                 <button type="button" class="btn btn-sm btn-outline-primary btn-view"
                                     data-bs-toggle="modal" data-bs-target="#modalDetailProduk"
@@ -204,23 +189,10 @@
                                 </button>
                             </td>
                         </tr>
-
                     @empty
-                        <tr>
-                            <td colspan="7" class="text-center py-5">
-                                <div class="text-muted">
-                                    <i class="fa-solid fa-box-open fa-2x mb-3 opacity-50"></i>
-
-                                    <div class="fw-semibold">
-                                        Tidak ada data
-                                    </div>
-
-                                    <small>
-                                        Data produk custom belum tersedia.
-                                    </small>
-                                </div>
-                            </td>
-                        </tr>
+                        <script>
+                            nodata();
+                        </script>
                     @endforelse
                 </tbody>
             </table>
@@ -695,6 +667,25 @@
                 table.draw();
             });
 
+            function nodata() {
+                $('#orderlist').DataTable({
+                    language: {
+                        emptyTable: `
+                                        <div class="text-muted py-4">
+                                            <i class="fa-solid fa-box-open fa-2x mb-3 opacity-50"></i>
+
+                                            <div class="fw-semibold">
+                                                Tidak ada data
+                                            </div>
+
+                                            <small>
+                                                Data produk custom belum tersedia.
+                                            </small>
+                                        </div>
+                                    `
+                    }
+                });
+            }
         });
     </script>
 @endpush

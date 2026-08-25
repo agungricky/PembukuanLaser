@@ -476,12 +476,12 @@
             });
 
             // ============= Data Tables ================== //
-            const table = new DataTable('#orderlist', {
-                pageLength: 10,
-                searching: true,
-                lengthChange: false,
-                autoWidth: false
-            });
+            // const table = new DataTable('#orderlist', {
+            //     pageLength: 10,
+            //     searching: true,
+            //     lengthChange: false,
+            //     autoWidth: false
+            // });
 
             function loadSkuTable() {
 

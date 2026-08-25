@@ -343,11 +343,16 @@ class GudangController extends Controller
 
             foreach ($request->sku as $id) {
                 $data = mutasi_stok::find($id);
+                $stok = stok_produk::find($data->stok_produk_id);
 
                 if ($data) {
                     $data->jenis_mutasi = 'keluar';
                     $data->pengambil_id = $request->pengambil_barang;
                     $data->save();
+
+                    stok_produk::where('id', $data->stok_produk_id)->update([
+                        'jumlah_tersedia' => $stok->jumlah_tersedia - $data->jumlah
+                    ]);
                 }
             }
 
