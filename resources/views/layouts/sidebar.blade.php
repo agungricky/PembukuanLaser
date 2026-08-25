@@ -91,7 +91,7 @@
                         <a href="{{ route('sku.index') }}"
                             class="d-flex align-items-center justify-content-between {{ Request::is('sku') ? 'active' : '' }}">
 
-                            <span>
+                            <span class="small text-nowrap">
                                 <i class="bi bi-box-seam me-2"></i>
                                 SKU Produk
                             </span>
@@ -280,7 +280,7 @@
         </aside>
     @endif
 
-    @if(auth()->check() && auth()->user()->role === 'packing')
+    @if (auth()->check() && auth()->user()->role === 'packing')
         <aside class="d-none d-lg-flex">
             <nav class="sidebar">
 
@@ -524,7 +524,8 @@
         background: #f8fafc;
         color: #334155;
     }
-        .packing-info {
+
+    .packing-info {
         cursor: default;
     }
 
