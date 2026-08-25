@@ -35,8 +35,9 @@ jobs:
           curl -s -X POST \
           "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -d text="✅ Bang Ricky Deploy Pembukuan Laser ke cPanel BERHASIL
-          Branch: master"
+          -d text="✅ Bang Ricky Deploy ke server BERHASIL
+          Branch: master
+          Project: PembukuanLaser"
 
       - name: ❌ Notifikasi Gagal
         if: failure()
@@ -45,6 +46,5 @@ jobs:
           curl -s -X POST \
           "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-          -d text="❌ Deploy Pembukuan Laser ke cPanel GAGAL!
-          Branch: master
-          Cek GitHub Actions untuk melihat error."
+          -d text="❌ Bang Ricky Deploy GAGAL!
+          Cek GitHub Actions untuk melihat error-nya ya."
