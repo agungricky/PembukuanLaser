@@ -1060,7 +1060,7 @@
                             <input type="text"
                                 name="pencairan"
                                 id="pencairan"
-                                class="form-control text-end nominal @error('pencairan') is-invalid @enderror"
+                                class="form-control text-end @error('pencairan') is-invalid @enderror"
                                 value="{{ old(
                                     'pencairan',
                                     (int) ($pesanan->pencairan ?? 0)
