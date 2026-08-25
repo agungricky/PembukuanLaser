@@ -29,7 +29,7 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'role' => 'required|in:pegawai,manager,packing,gudang',
+            'role' => 'required|in:pegawai,manager,packing,gudang,editor',
             'password' => 'required|min:6',
         ]);
 
