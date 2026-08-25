@@ -317,7 +317,6 @@
                     <thead class="table-light">
                         <tr>
                             <th scope="col" class="py-3 px-4 text-end">No</th>
-                            <th scope="col" class="py-3 px-4">Sku</th>
                             <th scope="col" class="py-3 px-4">Nama Produk</th>
                             <th scope="col" class="py-3 px-4 text-center">Variasi</th>
                             <th scope="col" class="py-3 px-4 text-center">Hpp</th>
@@ -591,16 +590,21 @@
                                     ${no++}
                                 </td>
 
-                                <td class="py-3 px-4">
-                                    ${item.produk?.sku ?? '-'}
-                                </td>
-
                                 <td class="py-3 px-4 text-start">
-                                    ${item.produk?.nama_produk ?? '-'}
-                                </td>
+                                    <div class="fw-semibold text-dark">
+                                        ${item.produk?.nama_produk ?? '-'}
+                                    </div>
 
-                                <td class="py-3 px-4 text-center">
-                                    ${item.produk?.variasi ?? '-'}
+                                    <div class="mt-1">
+                                        <span class="badge bg-light text-secondary border fw-normal"
+                                            style="font-size: 10px; letter-spacing: .3px;">
+                                            SKU: ${item.produk?.sku ?? '-'}
+                                        </span>
+                                    </div>
+                                </td>
+                                
+                                <td class="py-3 px-4 text-start">
+                                    ${(item.produk?.variasi ?? '-').replace(/,\s*/g, '<br>')}
                                 </td>
 
                                 <td class="py-3 px-4 text-center">
