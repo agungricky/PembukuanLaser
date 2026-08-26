@@ -482,6 +482,46 @@
                     </a>
                 </div>
 
+                <div>
+                    <div class="sidebar-heading border-bottom mt-3">
+                        # MASTER DATA
+                    </div>
+
+                    <a href="
+                    {{-- {{ route('gudang.produk') }} --}}
+                     "
+                        class="sidebar-link mt-1 
+                        {{-- {{ Route::is('gudang.produk') ? 'active' : '' }} --}}
+                         ">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-box"></i>
+                            <span>Pesanan</span>
+                        </div>
+
+                        <span class="badge rounded-pill bg-primary">
+                            {{-- {{ $countProduk ?? 0 }} --}} 15
+                        </span>
+                    </a>
+
+                    <a href="
+                    {{-- {{ route('gudang.kategori') }} --}}
+                     "
+                        class="sidebar-link 
+                        {{-- {{ Request::is('kategori-produk') ? 'active' : '' }} --}}
+                         ">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-tags"></i>
+                            <span>Stok Menipis</span>
+                        </div>
+
+                        <span class="badge rounded-pill bg-success">
+                            {{-- {{ $countKategori ?? 0 }} --}} 18
+                        </span>
+                    </a>
+                </div>
+
             </nav>
         </aside>
     @endif
