@@ -267,87 +267,36 @@ class PesananController extends Controller
         ]);
     }
 
-    public function getPreviewData(
-        PesananExcelService $excelService
-    ) {
-        $raw = Session::get(
-            'preview_pesanan',
-            []
-        );
-    
+    public function getPreviewData(PesananExcelService $excelService) {
+        $raw = Session::get('preview_pesanan', []);
+
         if (is_string($raw)) {
-            $decoded =
-                json_decode(
-                    $raw,
-                    true
-                );
-    
-            $data =
-                is_array($decoded)
-                    ? $decoded
-                    : [];
-    
+            $decoded = json_decode($raw, true);
+            $data = is_array($decoded) ? $decoded : [];
         } elseif (is_array($raw)) {
             $data = $raw;
-    
         } else {
             $data = [];
         }
-    
+
         $skuList = [];
-    
-        for (
-            $i = 0;
-            $i < count($data);
-            $i++
-        ) {
-            if (
-                !isset($data[$i]) ||
-                !is_array($data[$i])
-            ) {
+
+        for ($i = 0; $i < count($data); $i++) {
+            if (! isset($data[$i]) || ! is_array($data[$i])) {
                 $data[$i] = [];
             }
-    
-            if (
-                !isset(
-                    $data[$i][
-                        'produk_detail'
-                    ]
-                ) ||
-                !is_array(
-                    $data[$i][
-                        'produk_detail'
-                    ]
-                )
-            ) {
+
+            if (! isset($data[$i]['produk_detail']) || ! is_array($data[$i]['produk_detail'])) {
                 $data[$i][
                     'produk_detail'
                 ] = [];
-    
+
                 continue;
             }
-    
-            for (
-                $j = 0;
-                $j <
-                    count(
-                        $data[$i][
-                            'produk_detail'
-                        ]
-                    );
-                $j++
-            ) {
-                $p =
-                    is_array(
-                        $data[$i][
-                            'produk_detail'
-                        ][$j]
-                    )
-                        ? $data[$i][
-                            'produk_detail'
-                        ][$j]
-                        : [];
-    
+
+            for ($j = 0; $j < count($data[$i]['produk_detail']); $j++) {
+                $p = is_array($data[$i]['produk_detail'][$j]) ? $data[$i]['produk_detail'][$j] : [];
+
                 $skuOriginal =
                     $this->firstNonEmpty(
                         $p,
@@ -359,178 +308,91 @@ class PesananController extends Controller
                             'SKU',
                         ]
                     );
-    
-                $skuOriginal =
-                    trim(
-                        (string)
-                        $skuOriginal
-                    );
-    
-                $sku =
-                    $excelService
-                        ->normalizeSku(
-                            $skuOriginal
-                        )
-                    ?? '';
-    
-                $custom =
-                    $excelService
-                        ->isCustomSku(
-                            $skuOriginal
-                        );
-    
-                if (
-                    $custom === 0 &&
-                    isset($p['custom']) &&
-                    (int) $p['custom'] === 1
-                ) {
+
+                $skuOriginal = trim((string) $skuOriginal);
+                $sku = $excelService->normalizeSku($skuOriginal) ?? '';
+                $custom = $excelService->isCustomSku($skuOriginal);
+                if ($custom === 0 && isset($p['custom']) && (int) $p['custom'] === 1) {
                     $custom = 1;
                 }
-    
-                if (
-                    !isset(
-                        $p['sku_original']
-                    ) ||
-                    trim(
-                        (string)
-                        $p['sku_original']
-                    ) === ''
-                ) {
+
+                if (! isset($p['sku_original']) || trim((string) $p['sku_original']) === '') {
                     $p['sku_original'] =
                         $skuOriginal;
                 }
-    
+
                 $p['sku'] = $sku;
                 $p['__sku'] = $sku;
                 $p['custom'] = $custom;
-    
+
                 if ($sku !== '') {
                     $skuList[] = $sku;
                 }
-    
-                $data[$i][
-                    'produk_detail'
-                ][$j] = $p;
+
+                $data[$i]['produk_detail'][$j] = $p;
             }
         }
-    
+
         $skuList =
             array_values(
                 array_unique(
                     array_filter(
                         array_map(
-                            fn ($s) =>
-                                strtoupper(
-                                    trim(
-                                        (string) $s
-                                    )
-                                ),
+                            fn ($s) => strtoupper(
+                                trim(
+                                    (string) $s
+                                )
+                            ),
                             $skuList
                         )
                     )
                 )
             );
-    
+
         $skuToHpp = [];
-    
-        if (!empty($skuList)) {
-            $rows = DB::table(
-                'produk'
-            )
-                ->whereIn(
-                    'sku',
-                    $skuList
-                )
-                ->select(
-                    'sku',
-                    'hpp'
-                )
+
+        if (! empty($skuList)) {
+            $rows = DB::table('produk')->whereIn('sku', $skuList)
+                ->select('sku', 'hpp')
                 ->get();
-    
+
             foreach ($rows as $r) {
                 $key =
-                    Str::upper(
-                        trim(
-                            (string)
+                    Str::upper(trim((string)
                             $r->sku
                         )
                     );
-    
-                $skuToHpp[$key] =
-                    (float) $r->hpp;
+
+                $skuToHpp[$key] = (float) $r->hpp;
             }
         }
-    
+
         $changed = false;
-    
-        for (
-            $i = 0;
-            $i < count($data);
-            $i++
-        ) {
-            for (
-                $j = 0;
-                $j <
-                    count(
-                        $data[$i][
-                            'produk_detail'
-                        ] ?? []
-                    );
-                $j++
-            ) {
-                $p =
-                    $data[$i][
-                        'produk_detail'
-                    ][$j];
-    
-                $key =
-                    Str::upper(
-                        trim(
-                            (string) (
-                                $p['sku']
-                                ?? ''
-                            )
-                        )
-                    );
-    
-                $hpp =
-                    $key !== '' &&
-                    isset(
-                        $skuToHpp[$key]
-                    )
-                        ? (float)
-                            $skuToHpp[$key]
-                        : 0.0;
-    
-                $currentHpp =
-                    isset($p['HPP'])
-                        ? (float)
-                            $p['HPP']
-                        : null;
-    
-                if (
-                    $currentHpp !==
-                    $hpp
-                ) {
-                    $p['HPP'] =
-                        $hpp;
-    
+
+        for ($i = 0; $i < count($data); $i++) {
+            for ($j = 0; $j < count($data[$i]['produk_detail'] ?? []); $j++) {
+                $p = $data[$i]['produk_detail'][$j];
+
+                $key = Str::upper(trim((string) ($p['sku'] ?? '')));
+
+                $hpp = $key !== '' && isset($skuToHpp[$key]) ? (float)$skuToHpp[$key] : 0.0;
+                $currentHpp = isset($p['HPP']) ? (float)$p['HPP'] : null;
+
+                if ($currentHpp !== $hpp) {
+                    $p['HPP'] = $hpp;
                     $changed = true;
                 }
-    
-                $data[$i][
-                    'produk_detail'
-                ][$j] = $p;
+
+                $data[$i]['produk_detail'][$j] = $p;
             }
         }
-    
+
         if ($changed) {
-            Session::put(
-                'preview_pesanan',
+            Session::put('preview_pesanan',
                 $data
             );
         }
-    
+
         return response()->json([
             'status' => 'success',
             'data' => $data,
@@ -567,121 +429,118 @@ class PesananController extends Controller
                 'array',
                 'min:1',
             ],
-    
+
             'tanggal_import' => [
                 'required',
                 'date',
             ],
-    
+
             'id_toko' => [
                 'required',
                 'integer',
                 'exists:toko,id_toko',
             ],
-    
+
             'nama_user' => [
                 'nullable',
                 'string',
             ],
         ]);
-    
+
         $payload =
             $request->input(
                 'pesanan',
                 []
             );
-    
+
         $tanggal =
             Carbon::parse(
                 $request->input(
                     'tanggal_import'
                 )
             )->startOfDay();
-    
+
         $idUser =
             auth()->id();
-    
+
         $idToko =
             (int) $request->input(
                 'id_toko'
             );
-    
+
         $toko = Toko::select(
             'id_toko',
             'marketplace',
             'biaya_admin',
             'biaya_tambahan'
         )->find($idToko);
-    
-        if (!$toko) {
+
+        if (! $toko) {
             return response()->json([
                 'status' => 'error',
-                'message' =>
-                    'Data toko tidak ditemukan.',
+                'message' => 'Data toko tidak ditemukan.',
             ], 422);
         }
-    
+
         $previewRaw =
             Session::get(
                 'preview_pesanan',
                 []
             );
-    
+
         if (is_string($previewRaw)) {
             $previewRaw =
                 json_decode(
                     $previewRaw,
                     true
                 );
-    
-            if (!is_array($previewRaw)) {
+
+            if (! is_array($previewRaw)) {
                 $previewRaw = [];
             }
         }
-    
+
         $previewByOrder =
             collect($previewRaw)
                 ->filter(
-                    fn ($row) =>
-                        is_array($row) &&
-                        !empty(
+                    fn ($row) => is_array($row) &&
+                        ! empty(
                             $row[
                                 'no_pesanan'
                             ]
                         )
                 )
                 ->keyBy(
-                    fn ($row) =>
-                        trim(
-                            (string)
-                            $row[
-                                'no_pesanan'
-                            ]
-                        )
+                    fn ($row) => trim(
+                        (string)
+                        $row[
+                            'no_pesanan'
+                        ]
+                    )
                 );
-    
+
         $biayaAdmin =
             (float) (
                 $toko->biaya_admin
                 ?? 0
             );
-    
+
         $biayaTambahan =
             (float) (
                 $toko->biaya_tambahan
                 ?? 0
             );
-    
+
         $imported = 0;
         $skipped = [];
         $platItemIds = [];
-    
+
         /*
         |--------------------------------------------------------------------------
         | Validasi SKU sebelum transaksi
         |--------------------------------------------------------------------------
         */
-    
+
         $skuList =
             collect($payload)
                 ->flatMap(
@@ -710,7 +569,7 @@ class PesananController extends Controller
                                                     'SKU',
                                                 ]
                                             );
-    
+
                                     return $excelService
                                         ->normalizeSku(
                                             $skuRaw
@@ -723,7 +582,7 @@ class PesananController extends Controller
                 ->unique()
                 ->values()
                 ->all();
-    
+
         $skuTersedia =
             DB::table(
                 'produk'
@@ -736,52 +595,48 @@ class PesananController extends Controller
                     'sku'
                 )
                 ->map(
-                    fn ($sku) =>
-                        strtoupper(
-                            trim(
-                                (string)
-                                $sku
-                            )
+                    fn ($sku) => strtoupper(
+                        trim(
+                            (string)
+                            $sku
                         )
+                    )
                 )
                 ->all();
-    
+
         $skuTidakAda =
             array_values(
                 array_diff(
                     array_map(
-                        fn ($sku) =>
-                            strtoupper(
-                                trim(
-                                    (string)
-                                    $sku
-                                )
-                            ),
+                        fn ($sku) => strtoupper(
+                            trim(
+                                (string)
+                                $sku
+                            )
+                        ),
                         $skuList
                     ),
                     $skuTersedia
                 )
             );
-    
-        if (!empty($skuTidakAda)) {
+
+        if (! empty($skuTidakAda)) {
             return response()->json([
                 'status' => 'error',
-    
-                'message' =>
-                    'Terdapat PRODUK dengan SKU yang tidak terdaftar: ' .
+
+                'message' => 'Terdapat PRODUK dengan SKU yang tidak terdaftar: '.
                     implode(
                         ', ',
                         $skuTidakAda
                     ),
             ], 422);
         }
-    
+
         DB::beginTransaction();
-    
+
         try {
             foreach (
-                $payload
-                as $item
+                $payload as $item
             ) {
                 $noPesanan =
                     trim(
@@ -792,13 +647,13 @@ class PesananController extends Controller
                             ?? ''
                         )
                     );
-    
+
                 if ($noPesanan === '') {
                     throw new \Exception(
                         'Nomor pesanan tidak boleh kosong.'
                     );
                 }
-    
+
                 $sudahAda =
                     DB::table(
                         'pesanan'
@@ -808,20 +663,20 @@ class PesananController extends Controller
                             $noPesanan
                         )
                         ->exists();
-    
+
                 if ($sudahAda) {
                     $skipped[] =
                         $noPesanan;
-    
+
                     continue;
                 }
-    
+
                 $previewItem =
                     $previewByOrder->get(
                         $noPesanan,
                         []
                     );
-    
+
                 $batasKirimAt =
                     $previewItem[
                         'batas_kirim_at'
@@ -832,7 +687,7 @@ class PesananController extends Controller
                     ]
                     ??
                     null;
-    
+
                 $batasKirimRaw =
                     $previewItem[
                         'batas_kirim_raw'
@@ -843,7 +698,7 @@ class PesananController extends Controller
                     ]
                     ??
                     null;
-    
+
                 $batasKirimSource =
                     $previewItem[
                         'batas_kirim_source'
@@ -854,97 +709,79 @@ class PesananController extends Controller
                     ]
                     ??
                     null;
-    
+
                 DB::table(
                     'pesanan'
                 )->insert([
-                    'no_pesanan' =>
-                        $noPesanan,
-    
-                    'tanggal' =>
-                        $tanggal,
-    
-                    'no_resi' =>
-                        !empty(
-                            $item['no_resi']
-                        )
+                    'no_pesanan' => $noPesanan,
+
+                    'tanggal' => $tanggal,
+
+                    'no_resi' => ! empty(
+                        $item['no_resi']
+                    )
                             ? trim(
                                 (string)
                                 $item['no_resi']
                             )
                             : null,
-    
-                    'id_toko' =>
-                        $idToko,
-    
-                    'id_user' =>
-                        $idUser,
-    
-                    'nama_pembeli' =>
-                        trim(
-                            (string) (
-                                $item[
-                                    'nama_pembeli'
-                                ]
-                                ?? ''
-                            )
-                        ),
-    
-                    'username' =>
-                        trim(
-                            (string) (
-                                $item[
-                                    'username'
-                                ]
-                                ?? ''
-                            )
-                        ),
-    
-                    'kurir' =>
-                        trim(
-                            (string) (
-                                $item[
-                                    'kurir'
-                                ]
-                                ?? ''
-                            )
-                        ),
-    
-                    'status' =>
-                        'proses',
-    
-                    'total_hpp' =>
-                        0,
-    
-                    'total_harga' =>
-                        0,
-    
-                    'total_admin' =>
-                        0,
-    
-                    'pencairan' =>
-                        null,
-    
-                    'notes' =>
-                        null,
-    
-                    'batas_kirim_at' =>
-                        $batasKirimAt,
-    
-                    'batas_kirim_raw' =>
-                        $batasKirimRaw,
-    
-                    'batas_kirim_source' =>
-                        $batasKirimSource,
+
+                    'id_toko' => $idToko,
+
+                    'id_user' => $idUser,
+
+                    'nama_pembeli' => trim(
+                        (string) (
+                            $item[
+                                'nama_pembeli'
+                            ]
+                            ?? ''
+                        )
+                    ),
+
+                    'username' => trim(
+                        (string) (
+                            $item[
+                                'username'
+                            ]
+                            ?? ''
+                        )
+                    ),
+
+                    'kurir' => trim(
+                        (string) (
+                            $item[
+                                'kurir'
+                            ]
+                            ?? ''
+                        )
+                    ),
+
+                    'status' => 'proses',
+
+                    'total_hpp' => 0,
+
+                    'total_harga' => 0,
+
+                    'total_admin' => 0,
+
+                    'pencairan' => null,
+
+                    'notes' => null,
+
+                    'batas_kirim_at' => $batasKirimAt,
+
+                    'batas_kirim_raw' => $batasKirimRaw,
+
+                    'batas_kirim_source' => $batasKirimSource,
                 ]);
-    
+
                 $totalHpp = 0;
                 $totalHarga = 0;
-    
+
                 foreach (
                     $item['produk']
-                    ?? []
-                    as $prd
+                    ?? [] as $prd
                 ) {
                     $namaProduk =
                         trim(
@@ -955,7 +792,7 @@ class PesananController extends Controller
                                 ?? ''
                             )
                         );
-    
+
                     $variasi =
                         trim(
                             (string) (
@@ -965,7 +802,7 @@ class PesananController extends Controller
                                 ?? ''
                             )
                         );
-    
+
                     $jumlah =
                         max(
                             1,
@@ -974,13 +811,13 @@ class PesananController extends Controller
                                 ?? 1
                             )
                         );
-    
+
                     $harga =
                         (float) (
                             $prd['harga']
                             ?? 0
                         );
-    
+
                     $hpp =
                         (float) (
                             $prd['hpp']
@@ -989,7 +826,7 @@ class PesananController extends Controller
                             ??
                             0
                         );
-    
+
                     $skuRaw =
                         $this->firstNonEmpty(
                             $prd,
@@ -1001,19 +838,19 @@ class PesananController extends Controller
                                 'SKU',
                             ]
                         );
-    
+
                     $sku =
                         $excelService
                             ->normalizeSku(
                                 $skuRaw
                             );
-    
+
                     $custom =
                         $excelService
                             ->isCustomSku(
                                 $skuRaw
                             );
-    
+
                     if (
                         $custom === 0 &&
                         isset(
@@ -1025,39 +862,31 @@ class PesananController extends Controller
                     ) {
                         $custom = 1;
                     }
-    
+
                     $idPerProduk =
                         DB::table(
                             'pesanan_per_produk'
                         )
                             ->insertGetId([
-                                'no_pesanan' =>
-                                    $noPesanan,
-    
-                                'nama_produk' =>
-                                    $namaProduk,
-    
-                                'variasi' =>
-                                    $variasi,
-    
-                                'jumlah' =>
-                                    $jumlah,
-    
-                                'hpp' =>
-                                    $hpp,
-    
-                                'harga' =>
-                                    $harga,
-    
-                                'sku' =>
-                                    $sku,
-    
-                                'custom' =>
-                                    $custom,
+                                'no_pesanan' => $noPesanan,
+
+                                'nama_produk' => $namaProduk,
+
+                                'variasi' => $variasi,
+
+                                'jumlah' => $jumlah,
+
+                                'hpp' => $hpp,
+
+                                'harga' => $harga,
+
+                                'sku' => $sku,
+
+                                'custom' => $custom,
                             ],
                                 'id_per_produk'
                             );
-    
+
                     if (
                         $sku &&
                         str_starts_with(
@@ -1069,16 +898,16 @@ class PesananController extends Controller
                             (int)
                             $idPerProduk;
                     }
-    
+
                     $totalHpp +=
                         $hpp *
                         $jumlah;
-    
+
                     $totalHarga +=
                         $harga *
                         $jumlah;
                 }
-    
+
                 if (
                     $biayaAdmin > 1 &&
                     $biayaAdmin <= 100
@@ -1093,7 +922,7 @@ class PesananController extends Controller
                         )
                         +
                         $biayaTambahan;
-    
+
                 } elseif (
                     $biayaAdmin > 0 &&
                     $biayaAdmin <= 1
@@ -1105,12 +934,12 @@ class PesananController extends Controller
                         )
                         +
                         $biayaTambahan;
-    
+
                 } else {
                     $totalAdmin =
                         $biayaTambahan;
                 }
-    
+
                 DB::table(
                     'pesanan'
                 )
@@ -1119,73 +948,60 @@ class PesananController extends Controller
                         $noPesanan
                     )
                     ->update([
-                        'total_hpp' =>
-                            $totalHpp,
-    
-                        'total_harga' =>
-                            $totalHarga,
-    
-                        'total_admin' =>
-                            $totalAdmin,
+                        'total_hpp' => $totalHpp,
+
+                        'total_harga' => $totalHarga,
+
+                        'total_admin' => $totalAdmin,
                     ]);
-    
+
                 $imported++;
             }
-    
+
             $hasilPart =
                 $partService
                     ->alokasikanItemBaru(
                         $platItemIds,
                         $idUser
                     );
-    
+
             DB::commit();
-    
+
             Session::forget(
                 'preview_pesanan'
             );
-    
+
             return response()->json([
-                'status' =>
-                    'success',
-    
-                'message' =>
-                    'Import selesai.',
-    
-                'imported' =>
-                    $imported,
-    
-                'skipped_count' =>
-                    count($skipped),
-    
-                'skipped' =>
-                    $skipped,
-    
-                'part_items' =>
-                    $hasilPart['items'],
-    
-                'parts_baru' =>
-                    $hasilPart[
+                'status' => 'success',
+
+                'message' => 'Import selesai.',
+
+                'imported' => $imported,
+
+                'skipped_count' => count($skipped),
+
+                'skipped' => $skipped,
+
+                'part_items' => $hasilPart['items'],
+
+                'parts_baru' => $hasilPart[
                         'parts_baru'
                     ],
-    
-                'part_oversize' =>
-                    $hasilPart[
+
+                'part_oversize' => $hasilPart[
                         'oversize'
                     ],
             ]);
-    
+
         } catch (\Throwable $e) {
             DB::rollBack();
-    
+
             report($e);
-    
+
             return response()->json([
-                'status' =>
-                    'error',
-    
-                'message' =>
-                    $e->getMessage(),
+                'status' => 'error',
+
+                'message' => $e->getMessage(),
             ], 500);
         }
     }

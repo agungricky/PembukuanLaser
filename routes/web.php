@@ -21,6 +21,7 @@ use App\Http\Controllers\PesananKirimController;
 use App\Http\Controllers\PesananProsesController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\produkcustomController;
+use App\Http\Controllers\ProduksiController;
 use App\Http\Controllers\ResiImportController;
 use App\Http\Controllers\SkuController;
 use App\Http\Controllers\stokProdukController;
@@ -228,6 +229,11 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::post('/gudang/retur/create', [GudangController::class, 'returCreate'])->name('gudang.retur.create');
         Route::get('/produk-custom', [GudangController::class, 'produkcustom'])->name('produk-custom.index');
     });
+
+    Route::middleware(['role:produksi'])->group(function () {
+        Route::resource('/produksi', ProduksiController::class);
+    });
+
 });
 
 Route::get('/kategori-produk/{id}', [GudangController::class, 'kategorishow'])->name('gudang.kategori.json');

@@ -21,7 +21,7 @@ class AuthController extends Controller
 
         $credentials = $request->only('name', 'password');
 
-        if (!Auth::attempt($credentials)) {
+        if (! Auth::attempt($credentials)) {
 
             return back()->withErrors([
                 'name' => 'Nama atau password salah.',
@@ -48,6 +48,10 @@ class AuthController extends Controller
 
             return redirect()->route('editor.index');
 
+        } elseif ($user->role === 'produksi') {
+
+            return redirect()->route('produksi.index');
+            
         }
 
         Auth::logout();
@@ -71,5 +75,4 @@ class AuthController extends Controller
 
         return redirect('/login');
     }
-
 }

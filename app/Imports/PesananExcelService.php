@@ -3,6 +3,7 @@
 namespace App\Imports;
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
@@ -15,9 +16,8 @@ class PesananExcelService
         );
     }
 
-    private function parseBaseShopee(
-        string $uploadedPath
-    ): array {
+    private function parseBaseShopee(string $uploadedPath): array
+    {
         $reader = IOFactory::createReaderForFile(
             $uploadedPath
         );
@@ -95,7 +95,7 @@ class PesananExcelService
                     $values
                 );
 
-            if (!is_array($assoc)) {
+            if (! is_array($assoc)) {
                 continue;
             }
 
@@ -108,138 +108,41 @@ class PesananExcelService
 
             $item = $assoc;
 
-            $item['no_pesanan'] =
-                trim(
-                    (string) (
-                        $item['order_sn']
-                        ?? ''
-                    )
-                );
-
-            if (
-                $item['no_pesanan'] === ''
-            ) {
+            $item['no_pesanan'] = trim((string) ($item['order_sn'] ?? ''));
+            if ($item['no_pesanan'] === '') {
                 continue;
             }
 
-            $item['nama_pembeli'] =
-                trim(
-                    (string) (
-                        $item[
-                            'order_receiver_name'
-                        ]
-                        ?? ''
-                    )
-                );
-
-            $item['username'] =
-                trim(
-                    (string) (
-                        $item[
-                            'buyer_user_name'
-                        ]
-                        ?? ''
-                    )
-                );
-
-            $item['kurir'] =
-                trim(
-                    (string) (
-                        $item[
-                            'shipping_method'
-                        ]
-                        ?? ''
-                    )
-                );
-
-            $item['no_resi'] =
-                trim(
-                    (string) (
-                        $item[
-                            'tracking_number'
-                        ]
-                        ?? ''
-                    )
-                );
-
-            $batasKirimRaw =
-                $item[
-                    'estimated_ship_out_date'
-                ]
-                ?? null;
-
-            $batasKirimRawText =
-                $batasKirimRaw !== null
-                    ? trim(
-                        (string)
-                        $batasKirimRaw
-                    )
-                    : null;
-
-            $item['batas_kirim_raw'] =
-                $batasKirimRawText !== ''
-                    ? $batasKirimRawText
-                    : null;
-
-            $item['batas_kirim_at'] =
-                $this->normalizeDateTime(
-                    $batasKirimRaw
-                );
-
-            $item[
-                'batas_kirim_source'
-            ] =
-                $item[
-                    'batas_kirim_raw'
-                ]
-                    ? 'shopee_estimated_ship_out_date'
-                    : null;
-
-            $item['produk_detail'] =
-                !empty(
-                    $item[
-                        'product_info'
-                    ]
-                )
-                    ? $this->parseProductInfo(
-                        $item[
-                            'product_info'
-                        ]
-                    )
-                    : [];
-
-            foreach (
-                $item['produk_detail']
-                as &$produk
-            ) {
-                $skuRaw = trim(
-                    (string) (
-                        $produk['sku']
-                        ?? $produk['__sku']
-                        ?? ''
-                    )
-                );
-
-                $sku =
-                    $this->normalizeSku(
-                        $skuRaw
-                    );
-
-                $produk[
-                    'sku_original'
-                ] = $skuRaw;
-
-                $produk['custom'] =
-                    $this->isCustomSku(
-                        $skuRaw
-                    );
-
-                $produk['sku'] =
-                    $sku ?? '';
-
-                $produk['__sku'] =
-                    $sku ?? '';
+            $item['nama_pembeli'] = trim((string) ($item['order_receiver_name'] ?? ''));
+            $item['username'] = trim((string) ($item['buyer_user_name'] ?? ''));
+            $item['kurir'] = trim((string) ($item['shipping_method'] ?? ''));
+            $item['no_resi'] = trim((string) ($item['tracking_number'] ?? ''));
+            $batasKirimRaw = $item['estimated_ship_out_date'] ?? null;
+            $batasKirimRawText = $batasKirimRaw !== null ? trim((string) $batasKirimRaw) : null;
+            $item['batas_kirim_raw'] = $batasKirimRawText !== '' ? $batasKirimRawText : null;
+            $item['batas_kirim_at'] = $this->normalizeDateTime($batasKirimRaw);
+            $item['batas_kirim_source'] = $item['batas_kirim_raw'] ? 'shopee_estimated_ship_out_date' : null;
+            $item['produk_detail'] = ! empty($item['product_info']) ? $this->parseProductInfo($item['product_info']) : [];
+            Log::info('HASIL PARSE PRODUCT INFO', [
+                'produk_detail' => $item['produk_detail'],
+            ]);
+            foreach ($item['produk_detail'] as &$produk) {
+                $skuRaw = trim((string) ($produk['sku'] ?? $produk['__sku'] ?? ''));
+                $sku = $this->normalizeSku($skuRaw);
+                $produk['sku_original'] = $skuRaw;
+                $produk['custom'] = $this->isCustomSku($skuRaw);
+                $produk['sku'] = $sku ?? '';
+                $produk['__sku'] = $sku ?? '';
             }
+
+            // foreach ($item['produk_detail'] as &$produk) {
+            //     $sku = strtoupper(trim($produk['sku'] ?? ''));
+            //     $produk['custom'] = str_contains($sku, 'CX') ? 1 : 0;
+            //     if (str_contains($sku, 'CX')) {
+            //         $sku = preg_replace('/C.*$/', 'C', $sku);
+            //     }
+            //     $produk['sku'] = $sku;
+            // }
 
             unset($produk);
 
@@ -304,7 +207,7 @@ class PesananExcelService
             $i <= count($rows);
             $i++
         ) {
-            if (!isset($rows[$i])) {
+            if (! isset($rows[$i])) {
                 continue;
             }
 
@@ -357,94 +260,77 @@ class PesananExcelService
                 );
 
             $item = [
-                'no_pesanan' =>
-                    trim(
-                        (string) (
-                            $r['A']
-                            ?? ''
-                        )
-                    ),
+                'no_pesanan' => trim(
+                    (string) (
+                        $r['A']
+                        ?? ''
+                    )
+                ),
 
-                'username' =>
-                    trim(
-                        (string) (
-                            $r['AR']
-                            ?? ''
-                        )
-                    ),
+                'username' => trim(
+                    (string) (
+                        $r['AR']
+                        ?? ''
+                    )
+                ),
 
-                'nama_pembeli' =>
-                    trim(
-                        (string) (
-                            $r['AS']
-                            ?? ''
-                        )
-                    ),
+                'nama_pembeli' => trim(
+                    (string) (
+                        $r['AS']
+                        ?? ''
+                    )
+                ),
 
-                'no_resi' =>
-                    trim(
-                        (string) (
-                            $r['AN']
-                            ?? ''
-                        )
-                    ),
+                'no_resi' => trim(
+                    (string) (
+                        $r['AN']
+                        ?? ''
+                    )
+                ),
 
-                'kurir' =>
-                    trim(
-                        (string) (
-                            $r['AP']
-                            ?? ''
-                        )
-                    ),
+                'kurir' => trim(
+                    (string) (
+                        $r['AP']
+                        ?? ''
+                    )
+                ),
 
-                'batas_kirim_at' =>
-                    null,
+                'batas_kirim_at' => null,
 
-                'batas_kirim_raw' =>
-                    null,
+                'batas_kirim_raw' => null,
 
-                'batas_kirim_source' =>
-                    null,
+                'batas_kirim_source' => null,
             ];
 
             $item['produk_detail'] = [
                 [
-                    'sku_original' =>
-                        $skuRaw,
+                    'sku_original' => $skuRaw,
 
-                    'sku' =>
-                        $sku ?? '',
+                    'sku' => $sku ?? '',
 
-                    '__sku' =>
-                        $sku ?? '',
+                    '__sku' => $sku ?? '',
 
-                    'Nama Produk' =>
-                        trim(
-                            (string) (
-                                $r['H']
-                                ?? ''
-                            )
-                        ),
+                    'Nama Produk' => trim(
+                        (string) (
+                            $r['H']
+                            ?? ''
+                        )
+                    ),
 
-                    'Nama Variasi' =>
-                        trim(
-                            (string) (
-                                $r['I']
-                                ?? ''
-                            )
-                        ),
+                    'Nama Variasi' => trim(
+                        (string) (
+                            $r['I']
+                            ?? ''
+                        )
+                    ),
 
-                    'Jumlah' =>
-                        $qty,
+                    'Jumlah' => $qty,
 
-                    'Harga' =>
-                        $hargaSatuan,
+                    'Harga' => $hargaSatuan,
 
-                    'Subtotal' =>
-                        $subtotal,
+                    'Subtotal' => $subtotal,
 
-                    'custom' =>
-                        $custom,
+                    'custom' => $custom,
                 ],
             ];
 
@@ -645,8 +531,7 @@ class PesananExcelService
         ];
 
         foreach (
-            $formatsDenganJam
-            as $format
+            $formatsDenganJam as $format
         ) {
             try {
                 $date =
@@ -671,8 +556,7 @@ class PesananExcelService
         ];
 
         foreach (
-            $formatsTanggal
-            as $format
+            $formatsTanggal as $format
         ) {
             try {
                 $date =
@@ -699,7 +583,7 @@ class PesananExcelService
                 );
 
             if (
-                !preg_match(
+                ! preg_match(
                     '/\d{1,2}:\d{2}/',
                     $value
                 )
