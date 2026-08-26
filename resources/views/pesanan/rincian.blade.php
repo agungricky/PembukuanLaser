@@ -936,7 +936,7 @@
                                     'kirim' => 'Kirim',
                                     'selesai' => 'Selesai',
                                     'affiliate' => 'Affiliate',
-                                    'pengiriman_gagal' => 'Pengiriman Gagal',
+                                    'pengiriman gagal' => 'Pengiriman Gagal',
                                     'pengembalian' => 'Pengembalian',
                                     'batal' => 'Batal',
                                 ];
