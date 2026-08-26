@@ -70,7 +70,11 @@ class PesananExcelService
             $item['produk_detail'] = ! empty($item['product_info']) ? $this->parseProductInfo($item['product_info']) : [];
             foreach ($item['produk_detail'] as &$produk) {
                 $sku = strtoupper(trim($produk['sku'] ?? ''));
-                $produk['custom'] = substr($sku, -3, 2) === 'CX' ? 1 : 0;
+                $produk['custom'] = str_contains($sku, 'CX') ? 1 : 0;
+                if (str_contains($sku, 'CX')) {
+                    $sku = preg_replace('/C.*$/', 'C', $sku);
+                }
+                $produk['sku'] = $sku;
             }
 
             unset($produk);
