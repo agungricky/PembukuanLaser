@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 class EditorPartService
 {
     private const KAPASITAS = 52;
+    private const MULAI_EDITOR = '2026-08-26';
 
     public function sinkronkanPekerjaanTersedia(
         ?int $userId = null
@@ -23,6 +24,11 @@ class EditorPartService
             ->whereNotNull('pp.sku')
             ->whereRaw("UPPER(pp.sku) LIKE 'PLT%'")
             ->where('p.status', 'proses')
+            ->whereDate(
+                'p.tanggal',
+                '>=',
+                self::MULAI_EDITOR
+            )
             ->whereNotExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('editor_part_items as epi')
@@ -61,9 +67,7 @@ class EditorPartService
         array $idPerProduk,
         ?int $userId = null
     ): array {
-        $idPerProduk = collect(
-            $idPerProduk
-        )
+        $idPerProduk = collect($idPerProduk)
             ->map(
                 fn ($id) => (int) $id
             )
@@ -100,12 +104,9 @@ class EditorPartService
         array $idPerProduk,
         ?int $userId
     ): array {
-        $tanggalPart =
-            now()->toDateString();
+        $tanggalPart = now()->toDateString();
 
-        $items = DB::table(
-            'pesanan_per_produk as pp'
-        )
+        $items = DB::table('pesanan_per_produk as pp')
             ->join(
                 'pesanan as p',
                 'p.no_pesanan',
@@ -129,6 +130,11 @@ class EditorPartService
             ->where(
                 'p.status',
                 'proses'
+            )
+            ->whereDate(
+                'p.tanggal',
+                '>=',
+                self::MULAI_EDITOR
             )
             ->select([
                 'pp.id_per_produk',
@@ -165,16 +171,15 @@ class EditorPartService
             ];
         }
 
-        $partsHariIni =
-            EditorPart::where(
-                'tanggal_part',
-                $tanggalPart
+        $partsHariIni = EditorPart::where(
+            'tanggal_part',
+            $tanggalPart
+        )
+            ->orderBy(
+                'nomor_part'
             )
-                ->orderBy(
-                    'nomor_part'
-                )
-                ->lockForUpdate()
-                ->get();
+            ->lockForUpdate()
+            ->get();
 
         $parts = $partsHariIni
             ->where(
@@ -183,42 +188,35 @@ class EditorPartService
             )
             ->values();
 
-        $nomorTerakhir =
-            (int) (
-                $partsHariIni
-                    ->max(
-                        'nomor_part'
-                    )
-                ?? 0
-            );
+        $nomorTerakhir = (int) (
+            $partsHariIni
+                ->max(
+                    'nomor_part'
+                )
+            ?? 0
+        );
 
         $usage = [];
         $urutan = [];
 
         if ($parts->isNotEmpty()) {
-            $partItems =
-                EditorPartItem::whereIn(
-                    'editor_part_id',
-                    $parts->pluck('id')
-                )
-                    ->get();
+            $partItems = EditorPartItem::whereIn(
+                'editor_part_id',
+                $parts->pluck('id')
+            )
+                ->get();
 
             foreach (
                 $partItems
                 as $partItem
             ) {
-                $partId =
-                    (int)
-                    $partItem
-                        ->editor_part_id;
+                $partId = (int)
+                    $partItem->editor_part_id;
 
-                $urutan[$partId] =
-                    max(
-                        $urutan[$partId]
-                        ?? 0,
-                        (int)
-                        $partItem->urutan
-                    );
+                $urutan[$partId] = max(
+                    $urutan[$partId] ?? 0,
+                    (int) $partItem->urutan
+                );
 
                 if (
                     $partItem->status ===
@@ -227,28 +225,16 @@ class EditorPartService
                     continue;
                 }
 
-                $kelompok =
-                    (string)
-                    $partItem
-                        ->kelompok_produksi;
+                $kelompok = (string)
+                    $partItem->kelompok_produksi;
 
-                $usage[
-                    $partId
-                ][
-                    $kelompok
-                ] =
+                $usage[$partId][$kelompok] =
                     (
-                        $usage[
-                            $partId
-                        ][
-                            $kelompok
-                        ]
+                        $usage[$partId][$kelompok]
                         ?? 0
                     )
                     +
-                    (int)
-                    $partItem
-                        ->jumlah_awal;
+                    (int) $partItem->jumlah_awal;
             }
         }
 
@@ -261,18 +247,14 @@ class EditorPartService
             $items
             as $item
         ) {
-            $idItem =
-                (int)
-                $item
-                    ->id_per_produk;
+            $idItem = (int)
+                $item->id_per_produk;
 
-            $jumlah =
-                (int)
+            $jumlah = (int)
                 $item->jumlah;
 
             if ($jumlah < 1) {
-                $ignored[] =
-                    $idItem;
+                $ignored[] = $idItem;
 
                 continue;
             }
@@ -286,13 +268,10 @@ class EditorPartService
                         $idItem,
 
                     'no_pesanan' =>
-                        (string)
-                        $item
-                            ->no_pesanan,
+                        (string) $item->no_pesanan,
 
                     'sku' =>
-                        (string)
-                        $item->sku,
+                        (string) $item->sku,
 
                     'jumlah' =>
                         $jumlah,
@@ -316,87 +295,68 @@ class EditorPartService
                     ->exists();
 
             if ($sedangDialokasikan) {
-                $ignored[] =
-                    $idItem;
+                $ignored[] = $idItem;
 
                 continue;
             }
 
-            $sudahLocked =
-                DB::table(
-                    'editor_requests'
+            $sudahLocked = DB::table(
+                'editor_requests'
+            )
+                ->where(
+                    'id_per_produk',
+                    $idItem
                 )
-                    ->where(
-                        'id_per_produk',
-                        $idItem
-                    )
-                    ->whereNotNull(
-                        'locked_at'
-                    )
-                    ->exists();
+                ->whereNotNull(
+                    'locked_at'
+                )
+                ->exists();
 
             if ($sudahLocked) {
-                $ignored[] =
-                    $idItem;
+                $ignored[] = $idItem;
 
                 continue;
             }
 
             $namaProduk =
-                $item
-                    ->master_nama_produk
-                ?: $item
-                    ->item_nama_produk;
+                $item->master_nama_produk
+                ?: $item->item_nama_produk;
 
             $variasi =
-                $item
-                    ->master_variasi
-                ?: $item
-                    ->item_variasi;
+                $item->master_variasi
+                ?: $item->item_variasi;
 
             $kelompok =
-                $this
-                    ->buatKelompokProduksi(
-                        $namaProduk,
-                        $variasi
-                    );
+                $this->buatKelompokProduksi(
+                    $namaProduk,
+                    $variasi
+                );
 
-            $partTerpilih =
-                null;
+            $partTerpilih = null;
 
             foreach (
                 $parts
                 as $part
             ) {
                 $partId =
-                    (int)
-                    $part->id;
+                    (int) $part->id;
 
-                $kapasitas =
-                    (int) (
-                        $part
-                            ->kapasitas_per_kelompok
-                        ?: self::KAPASITAS
-                    );
+                $kapasitas = (int) (
+                    $part->kapasitas_per_kelompok
+                    ?: self::KAPASITAS
+                );
 
-                $terisi =
-                    (int) (
-                        $usage[
-                            $partId
-                        ][
-                            $kelompok
-                        ]
-                        ?? 0
-                    );
+                $terisi = (int) (
+                    $usage[$partId][$kelompok]
+                    ?? 0
+                );
 
                 if (
-                    $terisi +
-                    $jumlah
+                    $terisi + $jumlah
                     <=
                     $kapasitas
                 ) {
-                    $partTerpilih =
-                        $part;
+                    $partTerpilih = $part;
 
                     break;
                 }
@@ -414,11 +374,10 @@ class EditorPartService
                             $nomorTerakhir,
 
                         'kode_part' =>
-                            $this
-                                ->buatKodePart(
-                                    $tanggalPart,
-                                    $nomorTerakhir
-                                ),
+                            $this->buatKodePart(
+                                $tanggalPart,
+                                $nomorTerakhir
+                            ),
 
                         'kapasitas_per_kelompok' =>
                             self::KAPASITAS,
@@ -435,30 +394,22 @@ class EditorPartService
                 );
 
                 $usage[
-                    $partTerpilih
-                        ->id
+                    $partTerpilih->id
                 ] = [];
 
                 $urutan[
-                    $partTerpilih
-                        ->id
+                    $partTerpilih->id
                 ] = 0;
 
                 $partsBaru++;
             }
 
             $partId =
-                (int)
-                $partTerpilih
-                    ->id;
+                (int) $partTerpilih->id;
 
-            $urutan[
-                $partId
-            ] =
+            $urutan[$partId] =
                 (
-                    $urutan[
-                        $partId
-                    ]
+                    $urutan[$partId]
                     ?? 0
                 )
                 + 1;
@@ -473,8 +424,7 @@ class EditorPartService
                 'sku' =>
                     mb_strtoupper(
                         trim(
-                            (string)
-                            $item->sku
+                            (string) $item->sku
                         )
                     ),
 
@@ -488,9 +438,7 @@ class EditorPartService
                     null,
 
                 'urutan' =>
-                    $urutan[
-                        $partId
-                    ],
+                    $urutan[$partId],
 
                 'status' =>
                     'pending',
@@ -499,17 +447,9 @@ class EditorPartService
                     null,
             ]);
 
-            $usage[
-                $partId
-            ][
-                $kelompok
-            ] =
+            $usage[$partId][$kelompok] =
                 (
-                    $usage[
-                        $partId
-                    ][
-                        $kelompok
-                    ]
+                    $usage[$partId][$kelompok]
                     ?? 0
                 )
                 +
@@ -541,32 +481,27 @@ class EditorPartService
         ?string $namaProduk,
         ?string $variasi
     ): string {
-        $namaProduk =
-            preg_replace(
-                '/\s+/u',
-                ' ',
-                trim(
-                    (string)
-                    $namaProduk
-                )
-            );
+        $namaProduk = preg_replace(
+            '/\s+/u',
+            ' ',
+            trim(
+                (string) $namaProduk
+            )
+        );
 
-        $variasi =
-            preg_replace(
-                '/\s+/u',
-                ' ',
-                trim(
-                    (string)
-                    $variasi
-                )
-            );
+        $variasi = preg_replace(
+            '/\s+/u',
+            ' ',
+            trim(
+                (string) $variasi
+            )
+        );
 
-        $variasi =
-            preg_replace(
-                '/\s*,?\s*(?:1|2)\s*PCS\s*$/iu',
-                '',
-                $variasi
-            );
+        $variasi = preg_replace(
+            '/\s*,?\s*(?:1|2)\s*PCS\s*$/iu',
+            '',
+            $variasi
+        );
 
         $namaProduk =
             mb_strtoupper(
