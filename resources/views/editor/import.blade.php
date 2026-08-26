@@ -5,6 +5,7 @@
 <div class="container-fluid">
 
     <div class="mb-4">
+
         <h4 class="fw-bold mb-1">
             Import Hasil Editor
         </h4>
@@ -12,6 +13,7 @@
         <div class="text-muted small">
             Upload Excel Part setelah proses Editor dan VBA Corel selesai
         </div>
+
     </div>
 
     @include('editor.partials.alert')
@@ -23,9 +25,11 @@
             <div class="card border-0 shadow-sm">
 
                 <div class="card-header bg-white py-3">
+
                     <strong>
                         Upload Excel Editor
                     </strong>
+
                 </div>
 
                 <div class="card-body p-4">
@@ -37,23 +41,30 @@
                         </div>
 
                         <div class="small mb-1">
+
                             <strong>Kosong</strong>
                             = Normal, langsung dikunci
+
                         </div>
 
                         <div class="small mb-1">
+
                             <strong>RANDOM</strong>
                             = Random, langsung dikunci
+
                         </div>
 
                         <div class="small">
+
                             <strong>MENUNGGU</strong>
                             = Belum ada request customer
+
                         </div>
 
                     </div>
 
-                    <form action="{{ route('editor.import') }}"
+                    <form
+                        action="{{ route('editor.import') }}"
                         method="POST"
                         enctype="multipart/form-data"
                         id="formImportEditor">
@@ -62,11 +73,16 @@
 
                         <div class="mb-3">
 
-                            <label class="form-label fw-semibold">
+                            <label
+                                for="fileEditor"
+                                class="form-label fw-semibold">
+
                                 File Excel
+
                             </label>
 
-                            <input type="file"
+                            <input
+                                type="file"
                                 name="file_editor"
                                 id="fileEditor"
                                 class="form-control @error('file_editor') is-invalid @enderror"
@@ -74,9 +90,11 @@
                                 required>
 
                             @error('file_editor')
+
                                 <div class="invalid-feedback">
                                     {{ $message }}
                                 </div>
+
                             @enderror
 
                             <div class="form-text">
@@ -85,12 +103,34 @@
 
                         </div>
 
-                        <button type="submit"
+                        <div
+                            class="alert alert-info py-2 mb-3"
+                            id="importInfo"
+                            style="display:none;">
+
+                            <div class="d-flex align-items-center gap-2">
+
+                                <span
+                                    class="spinner-border spinner-border-sm"
+                                    role="status">
+                                </span>
+
+                                <div class="small">
+                                    Sedang memproses hasil Editor. Tunggu sampai halaman berpindah ke Riwayat Part.
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <button
+                            type="submit"
                             class="btn btn-primary"
                             id="btnImportEditor">
 
                             <i class="bi bi-upload me-1"></i>
                             Import Hasil Editor
+
                         </button>
 
                     </form>
@@ -111,18 +151,55 @@
 
 <script>
 $(function () {
-    $('#formImportEditor').on('submit', function () {
-        if (!$('#fileEditor')[0].files.length) {
-            return false;
-        }
 
-        $('#btnImportEditor')
-            .prop('disabled', true)
-            .html(`
-                <span class="spinner-border spinner-border-sm me-2"></span>
-                Mengimport...
-            `);
-    });
+    let isSubmitting = false;
+
+    $('#formImportEditor').on(
+        'submit',
+        function (event) {
+
+            if (isSubmitting) {
+                event.preventDefault();
+
+                return false;
+            }
+
+            const fileInput =
+                $('#fileEditor')[0];
+
+            if (
+                !fileInput ||
+                !fileInput.files ||
+                fileInput.files.length === 0
+            ) {
+                event.preventDefault();
+
+                $('#fileEditor').trigger(
+                    'focus'
+                );
+
+                return false;
+            }
+
+            isSubmitting = true;
+
+            $('#btnImportEditor')
+                .prop(
+                    'disabled',
+                    true
+                )
+                .html(`
+                    <span
+                        class="spinner-border spinner-border-sm me-2"
+                        role="status">
+                    </span>
+                    Mengimport...
+                `);
+
+            $('#importInfo').show();
+        }
+    );
+
 });
 </script>
 

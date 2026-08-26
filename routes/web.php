@@ -239,3 +239,15 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/', [HomeController::class, 'index']);
 Route::get('/emblem', [HomeController::class, 'emblem']);
 Route::get('/punyalcknihbossenggoldong', [HomeController::class, 'gancinama']);
+Route::get('/cek-template-editor', function () {
+    $path = storage_path('app/templates/editor_plat.xlsx');
+
+    return [
+        'path' => $path,
+        'exists' => file_exists($path),
+        'readable' => is_readable($path),
+        'size' => file_exists($path)
+            ? filesize($path)
+            : null,
+    ];
+});

@@ -314,7 +314,7 @@ class PesananDetailController extends Controller
                     'kirim',
                     'selesai',
                     'affiliate',
-                    'pengiriman_gagal',
+                    'pengiriman gagal',
                     'pengembalian',
                     'batal',
                 ]),

@@ -214,7 +214,7 @@ class EditorController extends Controller
             $templatePath = storage_path(
                 'app/templates/editor_plat.xlsx'
             );
-
+            
             if (!file_exists($templatePath)) {
                 return back()->with(
                     'error',
@@ -552,51 +552,60 @@ class EditorController extends Controller
                 'max:20480',
             ],
         ]);
-
+    
         $spreadsheet = null;
-
+    
         try {
             $spreadsheet = IOFactory::load(
                 $request->file('file_editor')->getRealPath()
             );
-
+    
             $sheet = $spreadsheet->getSheetByName('PLAT');
-
+    
             if (!$sheet) {
                 $spreadsheet->disconnectWorksheets();
-
+    
                 return back()->with(
                     'error',
                     'Sheet PLAT tidak ditemukan.'
                 );
             }
-
+    
             $part = $this->ambilPartDariExcel(
                 $spreadsheet
             );
-
+    
             if (!$part) {
                 $spreadsheet->disconnectWorksheets();
-
+    
                 return back()->with(
                     'error',
                     'Informasi Part tidak ditemukan pada file Excel.'
                 );
             }
-
+    
+            if ($part->status === 'processed') {
+                $spreadsheet->disconnectWorksheets();
+    
+                return redirect()
+                    ->route('editor.riwayat.index')
+                    ->with(
+                        'success',
+                        "Part {$part->kode_part} sudah berhasil diproses."
+                    );
+            }
+    
             if ($part->status !== 'downloaded') {
                 $spreadsheet->disconnectWorksheets();
-
+    
                 return back()->with(
                     'error',
-                    "Part {$part->kode_part} sudah diproses atau belum didownload."
+                    "Part {$part->kode_part} belum didownload atau sudah tidak dapat diproses."
                 );
             }
-
-            $this->validasiHeader(
-                $sheet
-            );
-
+    
+            $this->validasiHeader($sheet);
+    
             $partItems = EditorPartItem::with([
                 'item.pesanan',
             ])
@@ -616,23 +625,25 @@ class EditorController extends Controller
                     fn ($item) =>
                         (string) $item->id_per_produk
                 );
-
+    
             if ($partItems->isEmpty()) {
                 $spreadsheet->disconnectWorksheets();
-
-                return back()->with(
-                    'error',
-                    'Tidak ada item pending pada Part ini.'
-                );
+    
+                return redirect()
+                    ->route('editor.riwayat.index')
+                    ->with(
+                        'success',
+                        "Part {$part->kode_part} sudah tidak memiliki item pending."
+                    );
             }
-
+    
             $highestRow =
                 $sheet->getHighestDataRow();
-
+    
             $groupedRows = [];
             $invalidItemIds = [];
             $errors = [];
-
+    
             for (
                 $row = 2;
                 $row <= $highestRow;
@@ -643,55 +654,55 @@ class EditorController extends Controller
                         ->getCell("A{$row}")
                         ->getFormattedValue()
                 );
-
+    
                 $platLengkap = $this->nullableText(
                     $sheet
                         ->getCell("B{$row}")
                         ->getFormattedValue()
                 );
-
+    
                 $nama = $this->nullableText(
                     $sheet
                         ->getCell("C{$row}")
                         ->getFormattedValue()
                 );
-
+    
                 $tanggalBulanTahun = $this->nullableText(
                     $sheet
                         ->getCell("D{$row}")
                         ->getFormattedValue()
                 );
-
+    
                 $jumlah = $this->nullableText(
                     $sheet
                         ->getCell("E{$row}")
                         ->getFormattedValue()
                 );
-
+    
                 $tanpaHeartbeat = $this->nullableText(
                     $sheet
                         ->getCell("F{$row}")
                         ->getFormattedValue()
                 );
-
+    
                 $idItem = $this->nullableText(
                     $sheet
                         ->getCell("G{$row}")
                         ->getFormattedValue()
                 );
-
+    
                 $noPesanan = $this->nullableText(
                     $sheet
                         ->getCell("H{$row}")
                         ->getFormattedValue()
                 );
-
+    
                 $statusRaw = $this->nullableText(
                     $sheet
                         ->getCell("I{$row}")
                         ->getFormattedValue()
                 );
-
+    
                 if (
                     $sku === null &&
                     $platLengkap === null &&
@@ -705,84 +716,78 @@ class EditorController extends Controller
                 ) {
                     continue;
                 }
-
+    
                 if ($idItem === null) {
                     $errors[] =
                         "Baris {$row}: ID ITEM kosong.";
-
+    
                     continue;
                 }
-
+    
                 $idItem = trim(
                     (string) $idItem
                 );
-
+    
                 if (!$partItems->has($idItem)) {
                     $errors[] =
                         "Baris {$row}: ID ITEM {$idItem} bukan item pending dari {$part->kode_part}.";
-
+    
                     continue;
                 }
-
+    
                 $partItem =
-                    $partItems->get(
-                        $idItem
-                    );
-
+                    $partItems->get($idItem);
+    
                 $item =
                     $partItem->item;
-
+    
                 if (!$item) {
-                    $invalidItemIds[$idItem] =
-                        true;
-
+                    $invalidItemIds[$idItem] = true;
+    
                     $errors[] =
                         "Baris {$row}: ID ITEM {$idItem} tidak ditemukan.";
-
+    
                     continue;
                 }
-
+    
                 if (!$item->pesanan) {
-                    $invalidItemIds[$idItem] =
-                        true;
-
+                    $invalidItemIds[$idItem] = true;
+    
                     $errors[] =
                         "Baris {$row}: pesanan untuk ID ITEM {$idItem} tidak ditemukan.";
-
+    
                     continue;
                 }
-
+    
                 if (
                     $item->pesanan->status !==
                     'proses'
                 ) {
-                    $invalidItemIds[$idItem] =
-                        true;
-
+                    $invalidItemIds[$idItem] = true;
+    
                     $errors[] =
                         "Baris {$row}: pesanan {$item->no_pesanan} sudah tidak berstatus proses.";
-
+    
                     continue;
                 }
-
+    
                 if ($noPesanan === null) {
                     $noPesanan =
                         (string) $item->no_pesanan;
                 }
-
+    
                 if (
                     (string) $item->no_pesanan !==
                     (string) $noPesanan
                 ) {
-                    $invalidItemIds[$idItem] =
-                        true;
-
+                    $invalidItemIds[$idItem] = true;
+    
                     $errors[] =
                         "Baris {$row}: NO PESANAN {$noPesanan} tidak cocok dengan ID ITEM {$idItem}.";
-
+    
                     continue;
                 }
-
+    
                 if (
                     $sku !== null &&
                     strtoupper(
@@ -796,51 +801,48 @@ class EditorController extends Controller
                         )
                     )
                 ) {
-                    $invalidItemIds[$idItem] =
-                        true;
-
+                    $invalidItemIds[$idItem] = true;
+    
                     $errors[] =
                         "Baris {$row}: SKU {$sku} tidak cocok dengan ID ITEM {$idItem}.";
-
+    
                     continue;
                 }
-
+    
                 if (
                     $jumlah === null ||
                     !is_numeric($jumlah) ||
                     (int) $jumlah < 1
                 ) {
-                    $invalidItemIds[$idItem] =
-                        true;
-
+                    $invalidItemIds[$idItem] = true;
+    
                     $errors[] =
                         "Baris {$row}: JUMLAH harus minimal 1.";
-
+    
                     continue;
                 }
-
+    
                 $statusRequest =
                     $this->normalizeStatusRequest(
                         $statusRaw
                     );
-
+    
                 if ($statusRequest === null) {
-                    $invalidItemIds[$idItem] =
-                        true;
-
+                    $invalidItemIds[$idItem] = true;
+    
                     $errors[] =
                         "Baris {$row}: STATUS REQUEST hanya boleh kosong, NORMAL, MENUNGGU, atau RANDOM.";
-
+    
                     continue;
                 }
-
+    
                 $requestSearch =
                     $this->buildRequestSearch(
                         $platLengkap,
                         $nama,
                         $tanggalBulanTahun
                     );
-
+    
                 if (
                     $statusRequest === 'normal' &&
                     $requestSearch === null
@@ -848,49 +850,44 @@ class EditorController extends Controller
                     $statusRequest =
                         'menunggu';
                 }
-
+    
                 if (
                     $statusRequest === 'random' &&
                     $requestSearch === null
                 ) {
-                    $platLengkap =
-                        'RANDOM';
-
-                    $requestSearch =
-                        'RANDOM';
+                    $platLengkap = 'RANDOM';
+                    $requestSearch = 'RANDOM';
                 }
-
-                $groupedRows[
-                    $idItem
-                ][] = [
+    
+                $groupedRows[$idItem][] = [
                     'baris' =>
                         $row,
-
+    
                     'plat_lengkap' =>
                         $platLengkap,
-
+    
                     'nama' =>
                         $nama,
-
+    
                     'tanggal_bulan_tahun' =>
                         $tanggalBulanTahun,
-
+    
                     'jumlah_editor' =>
                         (int) $jumlah,
-
+    
                     'tanpa_heartbeat' =>
                         $this->excelBoolean(
                             $tanpaHeartbeat
                         ),
-
+    
                     'status_request' =>
                         $statusRequest,
-
+    
                     'request_search' =>
                         $requestSearch,
                 ];
             }
-
+    
             foreach (
                 $groupedRows
                 as $idPerProduk => $rows
@@ -904,34 +901,28 @@ class EditorController extends Controller
                 ) {
                     continue;
                 }
-
-                $statuses = collect(
-                    $rows
-                )
-                    ->pluck(
-                        'status_request'
-                    )
+    
+                $statuses = collect($rows)
+                    ->pluck('status_request')
                     ->unique()
                     ->values();
-
-                if (
-                    $statuses->count() > 1
-                ) {
+    
+                if ($statuses->count() > 1) {
                     $invalidItemIds[
                         $idPerProduk
                     ] = true;
-
+    
                     $errors[] =
                         "ID ITEM {$idPerProduk}: STATUS REQUEST harus sama pada semua baris.";
                 }
             }
-
+    
             $jumlahLocked = 0;
             $jumlahNormal = 0;
             $jumlahRandom = 0;
             $jumlahMenunggu = 0;
             $jumlahRequest = 0;
-
+    
             foreach (
                 $groupedRows
                 as $idPerProduk => $rows
@@ -945,7 +936,7 @@ class EditorController extends Controller
                 ) {
                     continue;
                 }
-
+    
                 try {
                     DB::transaction(
                         function () use (
@@ -965,7 +956,14 @@ class EditorController extends Controller
                                 )
                                     ->lockForUpdate()
                                     ->firstOrFail();
-
+    
+                            if (
+                                $lockedPart->status ===
+                                'processed'
+                            ) {
+                                return;
+                            }
+    
                             if (
                                 $lockedPart->status !==
                                 'downloaded'
@@ -974,7 +972,7 @@ class EditorController extends Controller
                                     "Part {$lockedPart->kode_part} sudah tidak dapat diproses."
                                 );
                             }
-
+    
                             $partItem =
                                 EditorPartItem::where(
                                     'editor_part_id',
@@ -986,25 +984,25 @@ class EditorController extends Controller
                                     )
                                     ->lockForUpdate()
                                     ->first();
-
+    
                             if (!$partItem) {
                                 throw new \Exception(
                                     "ID ITEM {$idPerProduk} tidak ditemukan pada Part."
                                 );
                             }
-
+    
                             if (
                                 $partItem->status !==
                                 'pending'
                             ) {
                                 return;
                             }
-
+    
                             $status =
                                 $rows[0][
                                     'status_request'
                                 ];
-
+    
                             if (
                                 $status ===
                                 'menunggu'
@@ -1017,23 +1015,23 @@ class EditorController extends Controller
                                         'locked_at'
                                     )
                                     ->delete();
-
+    
                                 $partItem->update([
                                     'status' =>
                                         'skipped',
-
+    
                                     'jumlah_final' =>
                                         null,
-
+    
                                     'processed_at' =>
                                         now(),
                                 ]);
-
+    
                                 $jumlahMenunggu++;
-
+    
                                 return;
                             }
-
+    
                             $sudahLocked =
                                 EditorRequest::where(
                                     'id_per_produk',
@@ -1043,13 +1041,13 @@ class EditorController extends Controller
                                         'locked_at'
                                     )
                                     ->exists();
-
+    
                             if ($sudahLocked) {
                                 throw new \Exception(
                                     "ID ITEM {$idPerProduk} sudah dikunci."
                                 );
                             }
-
+    
                             EditorRequest::where(
                                 'id_per_produk',
                                 $idPerProduk
@@ -1058,9 +1056,9 @@ class EditorController extends Controller
                                     'locked_at'
                                 )
                                 ->delete();
-
+    
                             $jumlahFinal = 0;
-
+    
                             foreach (
                                 $rows
                                 as $requestRow
@@ -1068,81 +1066,80 @@ class EditorController extends Controller
                                 EditorRequest::create([
                                     'id_per_produk' =>
                                         $idPerProduk,
-
+    
                                     'editor_part_id' =>
                                         $lockedPart->id,
-
+    
                                     'plat_lengkap' =>
                                         $requestRow[
                                             'plat_lengkap'
                                         ],
-
+    
                                     'nama' =>
                                         $requestRow[
                                             'nama'
                                         ],
-
+    
                                     'tanggal_bulan_tahun' =>
                                         $requestRow[
                                             'tanggal_bulan_tahun'
                                         ],
-
+    
                                     'jumlah_editor' =>
                                         $requestRow[
                                             'jumlah_editor'
                                         ],
-
+    
                                     'tanpa_heartbeat' =>
                                         $requestRow[
                                             'tanpa_heartbeat'
                                         ],
-
+    
                                     'tanpa_korlantas' =>
                                         false,
-
+    
                                     'status_request' =>
                                         $status,
-
+    
                                     'request_search' =>
                                         $requestRow[
                                             'request_search'
                                         ],
-
+    
                                     'editor_imported_by' =>
                                         Auth::id(),
-
+    
                                     'editor_imported_at' =>
                                         now(),
-
+    
                                     'locked_at' =>
                                         now(),
-
+    
                                     'locked_by' =>
                                         Auth::id(),
                                 ]);
-
+    
                                 $jumlahFinal +=
-                                    (int)
-                                    $requestRow[
+                                    (int) $requestRow[
                                         'jumlah_editor'
                                     ];
-
+    
                                 $jumlahRequest++;
                             }
-
+    
                             $partItem->update([
                                 'status' =>
                                     'locked',
-
+    
                                 'jumlah_final' =>
                                     $jumlahFinal,
-
+    
                                 'processed_at' =>
                                     now(),
                             ]);
-
+    
                             $jumlahLocked++;
-
+    
                             if (
                                 $status ===
                                 'random'
@@ -1155,21 +1152,25 @@ class EditorController extends Controller
                     );
                 } catch (\Throwable $e) {
                     report($e);
-
+    
                     $invalidItemIds[
                         $idPerProduk
                     ] = true;
-
+    
                     $errors[] =
                         "ID ITEM {$idPerProduk}: " .
                         $e->getMessage();
                 }
             }
-
+    
+            $sudahDiproses =
+                false;
+    
             DB::transaction(
                 function () use (
                     $part,
-                    &$jumlahMenunggu
+                    &$jumlahMenunggu,
+                    &$sudahDiproses
                 ) {
                     $lockedPart =
                         EditorPart::where(
@@ -1178,7 +1179,16 @@ class EditorController extends Controller
                         )
                             ->lockForUpdate()
                             ->firstOrFail();
-
+    
+                    if (
+                        $lockedPart->status ===
+                        'processed'
+                    ) {
+                        $sudahDiproses = true;
+    
+                        return;
+                    }
+    
                     if (
                         $lockedPart->status !==
                         'downloaded'
@@ -1187,7 +1197,7 @@ class EditorController extends Controller
                             "Part {$lockedPart->kode_part} sudah tidak dapat diselesaikan."
                         );
                     }
-
+    
                     $sisaPending =
                         EditorPartItem::where(
                             'editor_part_id',
@@ -1199,7 +1209,7 @@ class EditorController extends Controller
                             )
                             ->lockForUpdate()
                             ->get();
-
+    
                     foreach (
                         $sisaPending
                         as $pending
@@ -1212,74 +1222,78 @@ class EditorController extends Controller
                                 'locked_at'
                             )
                             ->delete();
-
+    
                         $pending->update([
                             'status' =>
                                 'skipped',
-
+    
                             'jumlah_final' =>
                                 null,
-
+    
                             'processed_at' =>
                                 now(),
                         ]);
-
+    
                         $jumlahMenunggu++;
                     }
-
+    
                     $lockedPart->update([
                         'status' =>
                             'processed',
-
+    
                         'uploaded_by' =>
                             Auth::id(),
-
+    
                         'uploaded_at' =>
                             now(),
                     ]);
                 }
             );
-
+    
             $spreadsheet
                 ->disconnectWorksheets();
-
+    
             $spreadsheet = null;
-
+    
+            if ($sudahDiproses) {
+                return redirect()
+                    ->route(
+                        'editor.riwayat.index'
+                    )
+                    ->with(
+                        'success',
+                        "Part {$part->kode_part} sudah berhasil diproses."
+                    );
+            }
+    
             $message =
                 "Part {$part->kode_part} selesai. " .
                 "{$jumlahLocked} item dikunci " .
                 "({$jumlahNormal} normal, {$jumlahRandom} random), " .
                 "{$jumlahRequest} request disimpan, " .
                 "{$jumlahMenunggu} item masuk Menunggu Request.";
-
-            session()->flash(
-                'success',
-                $message
-            );
-
+    
+            $redirect = redirect()
+                ->route(
+                    'editor.riwayat.index'
+                )
+                ->with(
+                    'success',
+                    $message
+                );
+    
             if (!empty($errors)) {
-                session()->flash(
+                $redirect->with(
                     'import_errors',
                     $errors
                 );
             }
-
-            if ($jumlahLocked > 0) {
-                $part->refresh();
-
-                return $this->downloadQrPart(
-                    $part
-                );
-            }
-
-            return redirect()
-                ->route(
-                    'editor.riwayat.index'
-                );
-
+    
+            return $redirect;
+    
         } catch (\Throwable $e) {
             report($e);
-
+    
             if ($spreadsheet) {
                 try {
                     $spreadsheet
@@ -1287,7 +1301,7 @@ class EditorController extends Controller
                 } catch (\Throwable $ignored) {
                 }
             }
-
+    
             return back()->with(
                 'error',
                 'Gagal import Editor: ' .
