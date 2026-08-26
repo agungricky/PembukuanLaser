@@ -7,10 +7,10 @@
         <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
             <div>
                 <h1 class="h3 fw-bold text-dark mb-1">
-                    Dashboard Gudang
+                    Dashboard Produksi
                 </h1>
                 <p class="text-muted small mb-0">
-                    Monitoring stok, mutasi gudang, distribusi stok, dan riwayat aktivitas.
+                    Monitoring proses produksi, progres pengerjaan, kebutuhan terhadap pesanan.
                 </p>
             </div>
             <div>
@@ -18,7 +18,7 @@
                     class="badge bg-white text-primary border rounded-pill px-3 py-2 fw-bold shadow-xs d-inline-flex align-items-center gap-2">
                     <span class="spinner-grow spinner-grow-sm text-primary" style="width: 6px; height: 6px;"
                         role="status"></span>
-                    LIVE MONITORING : <span id="livedate"> AGUSTUS 2026</span>
+                    LIVE MONITORING : <span id="livedate"></span>
                 </span>
             </div>
         </div>
@@ -28,7 +28,7 @@
             <i class="fa-solid fa-circle-info fs-5 text-primary mt-0.5"></i>
             <div class="small">
                 <strong class="text-primary-emphasis">Laporan :
-                </strong> Halo Admin ada <strong class="text-primary-emphasis" id="perludisiapkan"></strong>
+                </strong> Halo ada <strong class="text-primary-emphasis" id="perludisiapkan"></strong>
                 yang perlu disiapkan dari pesanan yang masuk.
             </div>
         </div>
@@ -46,57 +46,26 @@
                             <div>
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                                        TOTAL STOK TERSEDIA
+                                        TOTAL PESANAN CUSTOM
                                     </span>
                                     <div class="bg-light text-dark rounded-circle d-flex align-items-center justify-content-center"
                                         style="width: 32px; height: 32px;">
                                         <i class="bi bi-boxes"></i>
                                     </div>
                                 </div>
-                                <h2 id="cardTotalStock" class="h2 fw-bold text-dark my-1">
-                                    {{-- {{ $Card['stokTersedia'] }} --}}
-                                    13
-                                </h2>
-                                {{-- @php
-                                    $stokTersedia = $Card['stokTersedia'];
-                                    $stokMaksimal = $Card['allStok_aman'];
-                                    $persentase = $stokMaksimal > 0 ? ($stokTersedia / $stokMaksimal) * 100 : 0;
-                                    $persentase = min($persentase, 100);
-                                    if ($persentase >= 90) {
-                                        $statusStok = 'Aman';
-                                        $warnaTeks = 'text-success';
-                                        $warnaBar = 'bg-success';
-                                    } elseif ($persentase >= 50) {
-                                        $statusStok = 'Antisipasi';
-                                        $warnaTeks = 'text-warning';
-                                        $warnaBar = 'bg-warning';
-                                    } else {
-                                        $statusStok = 'Darurat';
-                                        $warnaTeks = 'text-danger';
-                                        $warnaBar = 'bg-danger';
-                                    }
-                                @endphp --}}
+                                <h2 id="cardTotalStock" class="fw-bold text-dark mb-1 d-flex align-items-baseline gap-2">
+                                    <span style="font-size: 2rem; line-height: 1;">
+                                        {{ $Card['custom'] }}
+                                    </span>
 
-                                <div class="progress mt-3" style="height: 6px;">
-                                    <div id="healthProgressBar" class="progress-bar bg-primary" role="progressbar"
-                                        style="width: 
-                                        {{-- {{ $persentase }} --}}
-                                         16%;" aria-valuenow="
-                                         {{-- {{ $stokTersedia }} --}}16
-                                          "
-                                        aria-valuemin="0" aria-valuemax="
-                                        {{-- {{ $stokMaksimal }} --}}
-                                        16 
-                                        "></div>
-                                </div>
+                                    <span class="text-secondary fw-semibold" style="font-size: .95rem;">
+                                        Item
+                                    </span>
+                                </h2>
                             </div>
                             <p class="text-muted small mb-0 mt-3">
-                                Kesehatan stok:
-                                <strong id="healthPercentText" class="
-                                {{-- {{ $warnaTeks }} --}}
-                                 ">
-                                    {{-- {{ round($persentase) }}% — {{ $statusStok }} --}}
-                                </strong>
+                                <i class="fa-solid fa-gears me-1"></i>
+                                Perlu di Produksi.
                             </p>
                         </div>
                     </div>
@@ -109,19 +78,26 @@
                             <div>
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                                        STOK MASUK HARI INI
+                                        STOK MENIPIS
                                     </span>
                                     <div class="bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center"
                                         style="width: 32px; height: 32px;">
                                         <i class="bi bi-arrow-down-circle-fill"></i>
                                     </div>
                                 </div>
-                                <h2 id="cardStockIn" class="h2 fw-bold text-dark my-1">
-                                    {{-- {{ $Card['mutasiMasuk'] }} --}}
+                                <h2 id="cardTotalStock" class="fw-bold text-dark mb-1 d-flex align-items-baseline gap-2">
+                                    <span style="font-size: 2rem; line-height: 1;">
+                                        {{ $Card['stok'] }}
+                                    </span>
+
+                                    <span class="text-secondary fw-semibold" style="font-size: .95rem;">
+                                        Produk
+                                    </span>
                                 </h2>
                             </div>
-                            <p class="text-success fw-semibold small mb-0 mt-3">
-                                ↑ Aktivitas barang masuk terdaftar
+                            <p class="text-muted small mb-0 mt-3">
+                                <i class="fa-solid fa-gears me-1"></i>
+                                Memiliki stok menipis.
                             </p>
                         </div>
                     </div>
@@ -134,7 +110,7 @@
                             <div>
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                                        STOK KELUAR HARI INI
+                                        PRODUK TERLARIS
                                     </span>
                                     <div class="bg-light text-dark rounded-circle d-flex align-items-center justify-content-center"
                                         style="width: 32px; height: 32px;">
@@ -146,7 +122,7 @@
                                 </h2>
                             </div>
                             <p class="text-muted small mb-0 mt-3">
-                                Total barang keluar berdasarkan mutasi.
+                                Total pesanan di selesaikan hari ini.
                             </p>
                         </div>
                     </div>
@@ -159,7 +135,7 @@
                             <div>
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                                        BANYAK MUTASI HARI INI
+                                        STOK DIATASI
                                     </span>
                                     <div class="bg-light text-dark rounded-circle d-flex align-items-center justify-content-center"
                                         style="width: 32px; height: 32px;">
@@ -171,7 +147,7 @@
                                 </h2>
                             </div>
                             <p class="text-muted small mb-0 mt-3">
-                                Terakhir diproses baru saja.
+                                Stok menipis yang berhasil diproduksi.
                             </p>
                         </div>
                     </div>
@@ -237,9 +213,9 @@
                 </table>
             </div>
         </section>
-     
+
     </main>
-   
+
     @include('layouts.footer')
 @endsection
 
