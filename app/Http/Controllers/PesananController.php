@@ -267,7 +267,8 @@ class PesananController extends Controller
         ]);
     }
 
-    public function getPreviewData(PesananExcelService $excelService) {
+    public function getPreviewData(PesananExcelService $excelService)
+    {
         $raw = Session::get('preview_pesanan', []);
 
         if (is_string($raw)) {
@@ -310,8 +311,14 @@ class PesananController extends Controller
                     );
 
                 $skuOriginal = trim((string) $skuOriginal);
+
                 $sku = $excelService->normalizeSku($skuOriginal) ?? '';
                 $custom = $excelService->isCustomSku($skuOriginal);
+
+                if (str_ends_with(strtoupper($skuOriginal), 'X2')) {
+                    $p['Jumlah'] = ((int) ($p['Jumlah'] ?? 0)) * 2;
+                }
+
                 if ($custom === 0 && isset($p['custom']) && (int) $p['custom'] === 1) {
                     $custom = 1;
                 }
@@ -360,7 +367,7 @@ class PesananController extends Controller
                 $key =
                     Str::upper(trim((string)
                             $r->sku
-                        )
+                    )
                     );
 
                 $skuToHpp[$key] = (float) $r->hpp;
@@ -375,8 +382,8 @@ class PesananController extends Controller
 
                 $key = Str::upper(trim((string) ($p['sku'] ?? '')));
 
-                $hpp = $key !== '' && isset($skuToHpp[$key]) ? (float)$skuToHpp[$key] : 0.0;
-                $currentHpp = isset($p['HPP']) ? (float)$p['HPP'] : null;
+                $hpp = $key !== '' && isset($skuToHpp[$key]) ? (float) $skuToHpp[$key] : 0.0;
+                $currentHpp = isset($p['HPP']) ? (float) $p['HPP'] : null;
 
                 if ($currentHpp !== $hpp) {
                     $p['HPP'] = $hpp;
