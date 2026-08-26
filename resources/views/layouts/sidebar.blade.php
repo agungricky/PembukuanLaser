@@ -463,6 +463,29 @@
         </aside>
     @endif
 
+    @if (auth()->check() && auth()->user()->role === 'produksi')
+        <aside class="d-none d-lg-flex">
+            <nav class="sidebar w-100">
+
+                <div>
+                    <div class="sidebar-heading border-bottom mt-3">
+                        # DASHBOARD
+                    </div>
+
+                    <a href="{{ route('gudang.index') }}"
+                        class="sidebar-link mt-1 {{ Request::is('produksi') ? 'active' : '' }}">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span>Dashboard</span>
+                        </div>
+                    </a>
+                </div>
+
+            </nav>
+        </aside>
+    @endif
+
 </div>
 
 <style>
