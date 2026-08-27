@@ -37,8 +37,6 @@ class produkExport implements FromArray, WithEvents, WithTitle
             ['SKU', 'NAMA PRODUK', 'VARIASI', 'HPP', 'STATUS', 'KATEGORI'], // A3 - F3
         ];
 
-        // dd($this->produk[0]->kategori->toArray());
-
         foreach ($this->produk as $item) {
             $data[] = [
                 $item->sku ?? '-',         // Kolom A
@@ -79,6 +77,12 @@ class produkExport implements FromArray, WithEvents, WithTitle
                 $sheet->getRowDimension(1)->setRowHeight(20);
 
                 // Header Title kolom A3-F3
+                $sheet->setCellValue('A3', 'SKU');
+                $sheet->setCellValue('B3', 'NAMA PRODUK');
+                $sheet->setCellValue('C3', 'VARIASI');
+                $sheet->setCellValue('D3', 'HPP');
+                $sheet->setCellValue('E3', 'STATUS');
+                $sheet->setCellValue('F3', 'KATEGORI');
                 $sheet->getStyle('A3:F3')->applyFromArray([
                     'font' => [
                         'bold' => true,
@@ -93,10 +97,15 @@ class produkExport implements FromArray, WithEvents, WithTitle
                         'vertical' => 'center',
                         'wrapText' => true,
                     ],
+                    'borders' => [
+                        'allBorders' => [
+                            'borderStyle' => Border::BORDER_THIN,
+                        ],
+                    ],
                 ]);
 
                 $jumlahProduk = count($this->produk);
-                $awal = 3;
+                $awal = 4;
                 $akhir = 3 + $jumlahProduk;
                 $sheet->getStyle("A{$awal}:F{$akhir}")->applyFromArray([
                     'borders' => [

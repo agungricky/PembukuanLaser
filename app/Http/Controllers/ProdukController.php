@@ -257,7 +257,6 @@ class ProdukController extends Controller
         $key = 'import_produk_'.$request->token;
 
         $perubahan = Cache::get($key);
-
         if (! $perubahan) {
             return response()->json([
                 'status' => false,
@@ -276,6 +275,17 @@ class ProdukController extends Controller
                 $produk = Produk::where('sku', $item['sku'])
                     ->lockForUpdate()
                     ->first();
+                
+                $kategoriBaru = kategori::where('nama_kategori', $item['kategori_baru'])->value('id');
+
+                
+                if (! $kategoriBaru) {
+                    throw new \Exception(
+                        'Kategori "'.$item['kategori_baru'].
+                        '" untuk SKU '.$item['sku'].
+                        ' tidak ditemukan.'
+                    );
+                }
 
                 if (! $produk) {
                     throw new \Exception(
@@ -296,6 +306,7 @@ class ProdukController extends Controller
 
                 $produk->update([
                     'hpp' => $item['hpp_baru'],
+                    'kategori_id' => $kategoriBaru
                 ]);
 
                 $jumlahUpdate++;
