@@ -259,15 +259,6 @@ class PesananExcelService
                     $skuRaw
                 );
 
-<<<<<<< HEAD
-            $sku = trim($r['G'] ?? '');
-            $custom = strtoupper(substr($sku, -3, 2)) === 'CX' ? 1 : 0;
-            if ($custom) {
-                $sku = preg_replace('/C.*$/', 'C', $sku);
-            }
-
-=======
->>>>>>> 008b48ada2f2a84d2af9410b2833a98ca681b90c
             $item = [
                 'no_pesanan' => trim(
                     (string) (
@@ -313,11 +304,6 @@ class PesananExcelService
 
             $item['produk_detail'] = [
                 [
-<<<<<<< HEAD
-                    'sku' => $sku,
-                    'Nama Produk' => trim($r['H'] ?? ''),
-                    'Nama Variasi' => trim($r['I'] ?? ''),
-=======
                     'sku_original' => $skuRaw,
 
                     'sku' => $sku ?? '',
@@ -338,7 +324,6 @@ class PesananExcelService
                         )
                     ),
 
->>>>>>> 008b48ada2f2a84d2af9410b2833a98ca681b90c
                     'Jumlah' => $qty,
 
                     'Harga' => $hargaSatuan,
@@ -378,10 +363,6 @@ class PesananExcelService
         $result = [];
 
         foreach ($chunks as $chunk) {
-<<<<<<< HEAD
-            $pairs = explode(';',
-                str_replace('▶', '', trim($chunk))
-=======
             $pairs = explode(
                 ';',
                 str_replace(
@@ -389,7 +370,6 @@ class PesananExcelService
                     '',
                     trim($chunk)
                 )
->>>>>>> 008b48ada2f2a84d2af9410b2833a98ca681b90c
             );
 
             $detail = [];
