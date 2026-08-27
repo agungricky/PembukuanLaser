@@ -133,7 +133,7 @@
                             Batal
                         </button>
 
-                        <button type="submit" class="btn btn-success">
+                        <button id="btnImportProduk" type="submit" class="btn btn-success">
                             <i class="fa-solid fa-file-import me-1"></i>
                             Import
                         </button>
@@ -483,13 +483,15 @@
             //     autoWidth: false
             // });
 
+            let table;
+
             function loadSkuTable() {
 
                 if ($.fn.DataTable.isDataTable('#orderlist')) {
                     $('#orderlist').DataTable().destroy();
                 }
 
-                let table = $('#orderlist').DataTable({
+                table = $('#orderlist').DataTable({
                     ajax: {
                         url: "{{ route('sku.json') }}",
                         dataSrc: ''
@@ -501,8 +503,7 @@
                     searching: true,
                     autoWidth: false,
 
-                    columns: [
-                        {
+                    columns: [{
                             data: null,
                             className: 'text-center',
                             render: function(data, type, row, meta) {
@@ -665,6 +666,16 @@
                     data: formData,
                     processData: false,
                     contentType: false,
+                    beforeSend: function() {
+                        $('#btnImportProduk')
+                            .prop('disabled', true)
+                            .html(`
+                                <span class="spinner-border spinner-border-sm me-2"
+                                    role="status"
+                                    aria-hidden="true"></span>
+                                Membaca File...
+                            `);
+                    },
                     success: function(response) {
                         if (!response.status) {
                             Swal.fire({
@@ -685,13 +696,59 @@
                             const baru = Number(item.hpp_baru)
                                 .toLocaleString('id-ID');
 
+                            const kategoriLama = item.kategori_lama;
+                            const kategoriBaru = item.kategori_baru;
+
+                            const hppHtml = lama === baru ?
+                                `
+                                    <div style="font-size: 12px;" \>
+                                        Rp ${baru}
+                                    </div>
+                                ` :
+
+                                `
+                                    <div class="text-muted mb-1" style="font-size: 12px;">
+                                        <span class="me-1">Lama</span>
+                                        <span class="text-decoration-line-through">
+                                            Rp ${lama}
+                                        </span>
+                                    </div>
+
+                                    <div class="fw-semibold text-success" style="font-size: 12px;">
+                                        <span class="me-1">Baru</span>
+                                        Rp ${baru}
+                                    </div>
+                                `;
+
+                            const kategoriHtml = kategoriLama === kategoriBaru ?
+                                `
+                                    <div style="font-size: 12px;">
+                                        ${kategoriBaru}
+                                    </div>
+                                ` :
+                                `
+                                    <div class="text-muted mb-1" style="font-size: 12px;">
+                                        <span class="me-1">Lama :</span>
+                                        <span class="text-decoration-line-through">
+                                            ${kategoriLama}
+                                        </span>
+                                    </div>
+
+                                    <div class="fw-semibold text-success" style="font-size: 12px;">
+                                        <span class="me-1">Baru :</span>
+                                        <span>${kategoriBaru}</span>
+                                    </div>
+                                `;
+
                             daftar += `
                                 <tr>
-                                    <td class="text-start">${item.sku}</td>
-                                    <td class="text-start">${item.nama_produk}</td>
-                                    <td class="text-end">Rp ${lama}</td>
-                                    <td class="text-end fw-bold text-success">
-                                        Rp ${baru}
+                                    <td class="text-start" style="font-size: 12px;">${item.sku}</td>
+                                    <td class="text-start" style="font-size: 12px;">${item.nama_produk}</td>
+                                    <td class="text-end align-middle">
+                                        ${hppHtml}
+                                    </td>
+                                    <td class="align-middle">
+                                        ${kategoriHtml}
                                     </td>
                                 </tr>
                             `;
@@ -706,8 +763,8 @@
                                             <tr>
                                                 <th>SKU</th>
                                                 <th>Produk</th>
-                                                <th>HPP Lama</th>
-                                                <th>HPP Baru</th>
+                                                <th>HPP</th>
+                                                <th>Kategori</th>
                                             </tr>
                                         </thead>
 
@@ -747,6 +804,14 @@
                             text: xhr.responseJSON?.message ?? error ??
                                 'Terjadi kesalahan.'
                         });
+                    },
+                    complete: function() {
+                        $('#btnImportProduk')
+                            .prop('disabled', false)
+                            .html(`
+                                <i class="fa-solid fa-file-import me-1"></i>
+                                Import
+                            `);
                     }
                 });
             });
