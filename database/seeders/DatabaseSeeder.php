@@ -24,10 +24,10 @@ class DatabaseSeeder extends Seeder
         // ]);
 
         User::factory()->create([
-            'name' => 'rega',
-            'role' => 'produksi',
-            'email' => 'produksi@example.com',
-            'password' => Hash::make('123456')
+            'name' => 'rico',
+            'role' => 'editor',
+            'email' => 'rico@gmail.com',
+            'password' => Hash::make('rico2345')
         ]);
 
         // $this->call([

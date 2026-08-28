@@ -736,11 +736,14 @@ class ResiImportController extends Controller
         string $noResi,
         int $idToko
     ): array {
+        $noPesanan = strtoupper(trim($noPesanan));
+        $noResi = strtoupper(trim($noResi));
+
         $pesanan = null;
 
+        // 1. Prioritas pertama: cocokkan No. Pesanan secara exact.
         if ($noPesanan !== '') {
-            $pesanan =
-                Pesanan::where(
+            $pesanan = Pesanan::where(
                     'no_pesanan',
                     $noPesanan
                 )
@@ -751,12 +754,38 @@ class ResiImportController extends Controller
                 ->first();
         }
 
+        // 2. Fallback Shopee PDF.
+        // Kadang text layer PDF memotong 1 karakter terakhir No. Pesanan.
+        // Prefix hanya dipakai jika hasilnya TEPAT satu pesanan agar aman.
+        if (
+            !$pesanan &&
+            $noPesanan !== '' &&
+            strlen($noPesanan) >= 10
+        ) {
+            $kandidatPesanan = Pesanan::where(
+                    'id_toko',
+                    $idToko
+                )
+                ->where(
+                    'no_pesanan',
+                    'like',
+                    $noPesanan . '%'
+                )
+                ->limit(2)
+                ->get();
+
+            if ($kandidatPesanan->count() === 1) {
+                $pesanan = $kandidatPesanan->first();
+                $noPesanan = (string) $pesanan->no_pesanan;
+            }
+        }
+
+        // 3. Jika No. Pesanan tidak cocok, cari dari No. Resi.
         if (
             !$pesanan &&
             $noResi !== ''
         ) {
-            $pesanan =
-                Pesanan::where(
+            $pesanan = Pesanan::where(
                     'no_resi',
                     $noResi
                 )
@@ -767,50 +796,37 @@ class ResiImportController extends Controller
                 ->first();
 
             if ($pesanan) {
-                $noPesanan =
-                    (string)
-                    $pesanan->no_pesanan;
+                $noPesanan = (string) $pesanan->no_pesanan;
             }
         }
 
         if (!$pesanan) {
             return [
-                'no_pesanan' =>
-                    $noPesanan,
-
-                'no_resi' =>
-                    $noResi,
-
-                'status' =>
-                    'not_found',
+                'no_pesanan' => $noPesanan,
+                'no_resi' => $noResi,
+                'status' => 'not_found',
             ];
         }
 
+        // Gunakan data database sebagai fallback jika resi dari PDF kosong.
         if ($noResi === '') {
-            $noResi =
-                (string)
-                $pesanan->no_resi;
+            $noResi = strtoupper(
+                trim((string) $pesanan->no_resi)
+            );
         }
 
-        $sudahAda =
-            ResiPage::where(
+        $sudahAda = ResiPage::where(
                 'no_pesanan',
                 $pesanan->no_pesanan
             )
             ->exists();
 
         return [
-            'no_pesanan' =>
-                (string)
-                $pesanan->no_pesanan,
-
-            'no_resi' =>
-                $noResi,
-
-            'status' =>
-                $sudahAda
-                    ? 'existing'
-                    : 'matched',
+            'no_pesanan' => (string) $pesanan->no_pesanan,
+            'no_resi' => $noResi,
+            'status' => $sudahAda
+                ? 'existing'
+                : 'matched',
         ];
     }
 
@@ -985,8 +1001,15 @@ class ResiImportController extends Controller
         $patterns = [
             '/No\.?\s*Resi\s*[:#]?\s*([A-Z0-9\-]{8,100})/i',
             '/Nomor\s*Resi\s*[:#]?\s*([A-Z0-9\-]{8,100})/i',
+
+            // Beberapa label Shopee hanya menulis: Resi: SPXID...
+            '/\bResi\s*[:#]?\s*([A-Z0-9\-]{8,100})/i',
+
             '/Tracking\s*ID\s*[:#]?\s*([A-Z0-9\-]{8,100})/i',
             '/Tracking\s*(?:No|Number)\.?\s*[:#]?\s*([A-Z0-9\-]{8,100})/i',
+
+            // Fallback khusus format SPX yang muncul tanpa label Resi.
+            '/\b(SPXID[A-Z0-9\-]{8,100})\b/i',
         ];
 
         foreach ($patterns as $pattern) {
@@ -997,8 +1020,8 @@ class ResiImportController extends Controller
                     $match
                 )
             ) {
-                return trim(
-                    $match[1]
+                return strtoupper(
+                    trim($match[1])
                 );
             }
         }
