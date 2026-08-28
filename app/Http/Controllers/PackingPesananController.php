@@ -1214,6 +1214,7 @@ class PackingPesananController extends Controller
         string $marketplace,
         string $tempDirectory
     ): array {
+
         if (strcasecmp($marketplace, 'Tiktok') !== 0) {
             return [
                 'path' => $sourcePath,
@@ -1228,17 +1229,29 @@ class PackingPesananController extends Controller
             uniqid('', true) .
             '.pdf';
 
-        $qpdf = config(
-            'services.qpdf.path',
-            'qpdf'
-        );
+        $ghostscript = '/bin/gs';
+
+        if (
+            !is_file($ghostscript) ||
+            !is_executable($ghostscript)
+        ) {
+            throw new \Exception(
+                'Ghostscript tidak tersedia di server.'
+            );
+        }
 
         $command =
-            escapeshellarg($qpdf) .
-            ' --object-streams=disable ' .
-            escapeshellarg($sourcePath) .
-            ' ' .
+            escapeshellarg($ghostscript) .
+            ' -q' .
+            ' -dNOPAUSE' .
+            ' -dBATCH' .
+            ' -sDEVICE=pdfwrite' .
+            ' -dCompatibilityLevel=1.4' .
+            ' -dAutoRotatePages=/None' .
+            ' -sOutputFile=' .
             escapeshellarg($normalizedPath) .
+            ' ' .
+            escapeshellarg($sourcePath) .
             ' 2>&1';
 
         $output = [];
@@ -1252,14 +1265,13 @@ class PackingPesananController extends Controller
 
         if (
             $exitCode !== 0 ||
-            !File::exists($normalizedPath)
+            !File::exists($normalizedPath) ||
+            File::size($normalizedPath) <= 0
         ) {
-            File::delete(
-                $normalizedPath
-            );
+            File::delete($normalizedPath);
 
             throw new \Exception(
-                'Gagal memproses PDF TikTok dengan qpdf. ' .
+                'Gagal memproses PDF TikTok dengan Ghostscript. ' .
                 implode(' ', $output)
             );
         }
