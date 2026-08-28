@@ -8,8 +8,9 @@ class mutasi_stok extends Model
 {
     protected $fillable = [
         'stok_produk_id',
-        'user_id',
-        'pengambil_id',
+        'gudang_id',
+        'produksi_id', 	
+        'adm_penjualan_id', 
         'jenis_mutasi',
         'keterangan',
         'jumlah'
@@ -19,12 +20,13 @@ class mutasi_stok extends Model
         return $this->belongsTo(stok_produk::class);
     }
 
-    public function user(){
-        return $this->belongsTo(User::class, 'user_id', 'id');
+
+    public function gudang(){
+        return $this->belongsTo(User::class, 'gudang_id', 'id');
     }
 
-    public function ambil_barang(){
-        return $this->belongsTo(User::class, 'pengambil_id', 'id');
+    public function admin_penjualan(){
+        return $this->belongsTo(User::class, 'adm_penjualan_id', 'id');
     }
 
     public function pesanan_per_produk(){

@@ -125,22 +125,20 @@
                             </td>
 
                             <td class="py-3 px-4 text-center">
-                                <button type="button" class="btn btn-outline-primary btn-sm rounded-3 btnViewKategori"
-                                    data-id="{{ $item->id }}">
-                                    <i class="fa-solid fa-eye me-1"></i>
-                                    View
+                                <button type="button" class="btn btn-outline-primary rounded-3 btnViewKategori p-0"
+                                    style="width: 12px; height: 32px;" data-id="{{ $item->id }}">
+                                    <i class="fa-solid fa-eye"></i>
                                 </button>
 
-                                <button type="button" class="btn btn-outline-warning btn-sm rounded-3 btnEditKategori"
-                                    data-id="{{ $item->id }}">
-                                    <i class="fa-solid fa-pen-to-square me-1"></i>
-                                    Edit
+                                <button type="button" class="btn btn-outline-warning rounded-3 btnEditKategori p-0"
+                                    style="width: 32px; height: 32px;" data-id="{{ $item->id }}">
+                                    <i class="fa-solid fa-pen-to-square"></i>
                                 </button>
 
-                                <button type="button" class="btn btn-outline-danger btn-sm rounded-3 btnDeleteKategori"
-                                    data-id="{{ $item->id }}" data-nama="{{ $item->nama_kategori }}">
-                                    <i class="fa-solid fa-trash me-1"></i>
-                                    Hapus
+                                <button type="button" class="btn btn-outline-danger rounded-3 btnDeleteKategori p-0"
+                                    style="width: 32px; height: 32px;" data-id="{{ $item->id }}"
+                                    data-nama="{{ $item->nama_kategori }}">
+                                    <i class="fa-solid fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
@@ -345,7 +343,7 @@
         }
 
         .btnViewKategori {
-            min-width: 80px;
+            min-width: 35px;
             font-weight: 600;
         }
     </style>

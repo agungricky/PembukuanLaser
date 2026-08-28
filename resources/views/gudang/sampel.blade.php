@@ -127,7 +127,7 @@
                                     </div>
 
                                     <span class="fw-semibold text-dark" style="font-size: 14px;">
-                                        {{ $item->user->name ?? '-' }}
+                                        {{ $item->gudang->name ?? '-' }}
                                     </span>
                                 </div>
 
@@ -155,7 +155,7 @@
                                     </div>
 
                                     <span class="fw-semibold text-dark" style="font-size: 14px;">
-                                        {{ $item->ambilBarang->name ?? '-' }}
+                                        {{ $item->admin_penjualan->name ?? '-' }}
                                     </span>
                                 </div>
 

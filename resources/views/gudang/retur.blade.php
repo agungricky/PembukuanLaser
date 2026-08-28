@@ -70,7 +70,6 @@
                             <th style="min-width: 180px;">Pembeli</th>
                             <th>Pengiriman</th>
                             <th>Status</th>
-                            {{-- <th>Keuangan</th> --}}
                             <th>Produk</th>
                             <th>SKU / Variasi</th>
                             <th class="text-center">Jumlah</th>
@@ -139,25 +138,6 @@
                                                 {{ $item->toko->nama_toko ?? '-' }}
                                             </div>
                                         </td>
-
-                                        <!-- KEUANGAN -->
-                                        {{-- <td rowspan="{{ $perproduk }}" class="px-3">
-                                            <div class="text-muted" style="font-size: 10px;">
-                                                Total HPP
-                                            </div>
-
-                                            <div class="fw-semibold text-dark text-nowrap">
-                                                Rp {{ number_format($item->total_hpp ?? 0, 0, ',', '.') }}
-                                            </div>
-
-                                            <div class="text-muted mt-2" style="font-size: 10px;">
-                                                Pencairan
-                                            </div>
-
-                                            <div class="fw-semibold text-danger text-nowrap">
-                                                Rp {{ number_format($item->pencairan ?? 0, 0, ',', '.') }}
-                                            </div>
-                                        </td> --}}
                                     @endif
 
 

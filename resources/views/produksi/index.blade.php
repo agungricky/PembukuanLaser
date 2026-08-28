@@ -24,14 +24,21 @@
         </div>
 
         <!-- Info Notice Banner -->
-        <div class="alert alert-primary border-primary-subtle rounded-4 shadow-xs d-flex align-items-start gap-3 p-3 mb-4">
-            <i class="fa-solid fa-circle-info fs-5 text-primary mt-0.5"></i>
-            <div class="small">
-                <strong class="text-primary-emphasis">Laporan :
-                </strong> Halo ada <strong class="text-primary-emphasis" id="perludisiapkan"></strong>
-                yang perlu disiapkan dari pesanan yang masuk.
+        @if ($Card['alert'] != 0)
+            <div
+                class="alert alert-warning border-warning-subtle rounded-4 shadow-xs d-flex align-items-start gap-3 p-3 mb-4">
+                <i class="fa-solid fa-circle-info text-primary mt-0.5"></i>
+                <div class="small">
+                    <strong class="text-warning-emphasis">
+                        Permintaan Produksi :
+                    </strong>
+
+                    Halo Operator Produksi,
+                    terdapat <strong class="text-danger">{{ $Card['alert'] }} produk</strong>
+                    yang belum memiliki stok barang dan perlu segera diproduksi.
+                </div>
             </div>
-        </div>
+        @endif
 
         <!-- 8 Metric Status Cards Grid -->
         <div class="mb-4">
@@ -39,7 +46,7 @@
             <!-- Grid Row 1: General Metrics Cards -->
             <div class="row g-3 mb-3">
 
-                <!-- Card 1: Total Stok Tersedia -->
+                <!-- Card 1: Pesanan Custom -->
                 <div class="col-12 col-sm-6 col-lg-3">
                     <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
                         <div class="card-body p-1 d-flex flex-column justify-content-between">
@@ -54,7 +61,13 @@
                                     </div>
                                 </div>
                                 <h2 id="cardTotalStock" class="fw-bold text-dark mb-1 d-flex align-items-baseline gap-2">
-                                    <span style="font-size: 2rem; line-height: 1;">
+
+                                    @if ($Card['custom'] >= 300)
+                                        <i class="fa-solid fa-triangle-exclamation" style="color: #dc3545;"></i>
+                                    @endif
+
+                                    <span class="{{ $Card['custom'] >= 300 ? 'text-danger' : 'text-dark' }}"
+                                        style="font-size: 2rem; line-height: 1;">
                                         {{ $Card['custom'] }}
                                     </span>
 
@@ -71,7 +84,7 @@
                     </div>
                 </div>
 
-                <!-- Card 2: Stok Masuk Hari Ini -->
+                <!-- Card 2: Stok Menipis -->
                 <div class="col-12 col-sm-6 col-lg-3">
                     <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
                         <div class="card-body p-1 d-flex flex-column justify-content-between">
@@ -80,14 +93,14 @@
                                     <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
                                         STOK MENIPIS
                                     </span>
-                                    <div class="bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center"
+                                    <div class="bg-warning-subtle text-success rounded-circle d-flex align-items-center justify-content-center"
                                         style="width: 32px; height: 32px;">
-                                        <i class="bi bi-arrow-down-circle-fill"></i>
+                                        <i class="bi bi-exclamation-circle-fill text-warning"></i>
                                     </div>
                                 </div>
                                 <h2 id="cardTotalStock" class="fw-bold text-dark mb-1 d-flex align-items-baseline gap-2">
                                     <span style="font-size: 2rem; line-height: 1;">
-                                        {{ $Card['stok'] }}
+                                        {{ $Card['menipis'] }}
                                     </span>
 
                                     <span class="text-secondary fw-semibold" style="font-size: .95rem;">
@@ -110,32 +123,7 @@
                             <div>
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                                        PRODUK TERLARIS
-                                    </span>
-                                    <div class="bg-light text-dark rounded-circle d-flex align-items-center justify-content-center"
-                                        style="width: 32px; height: 32px;">
-                                        <i class="bi bi-arrow-up-circle-fill"></i>
-                                    </div>
-                                </div>
-                                <h2 id="cardStockOut" class="h2 fw-bold text-dark my-1">
-                                    {{-- {{ $Card['mutasiKeluar'] }} --}}
-                                </h2>
-                            </div>
-                            <p class="text-muted small mb-0 mt-3">
-                                Total pesanan di selesaikan hari ini.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 4: Mutasi Hari Ini -->
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
-                        <div class="card-body p-1 d-flex flex-column justify-content-between">
-                            <div>
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                                        STOK DIATASI
+                                        PRODUKSI HARI INI
                                     </span>
                                     <div class="bg-light text-dark rounded-circle d-flex align-items-center justify-content-center"
                                         style="width: 32px; height: 32px;">
@@ -143,11 +131,37 @@
                                     </div>
                                 </div>
                                 <h2 id="cardMutationCount" class="h2 fw-bold text-dark my-1">
-                                    {{-- {{ $Card['banyakMutasi'] }} --}}
+                                    {{-- {{ $Card['produksi'] }} --}}
                                 </h2>
                             </div>
                             <p class="text-muted small mb-0 mt-3">
-                                Stok menipis yang berhasil diproduksi.
+                                <i class="bi bi-box-seam me-1"></i>
+                                Termasuk Stok & Pesanan
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Card 4: Mutasi Hari Ini -->
+
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
+                        <div class="card-body p-1 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
+                                        PRODUK TERLARIS
+                                    </span>
+                                    <div class="bg-light text-dark rounded-circle d-flex align-items-center justify-content-center"
+                                        style="width: 32px; height: 32px;">
+                                        {{-- <i class="bi bi-arrow-up-circle-fill"></i> --}}
+                                    </div>
+                                </div>
+                                <h2 id="cardStockOut" class="h2 fw-bold text-dark my-1">
+                                    {{ $Card['terlaris'] }}
+                                </h2>
+                            </div>
+                            <p class="text-muted small mb-0 mt-3">
+                                Pesanan Produk > 1000
                             </p>
                         </div>
                     </div>

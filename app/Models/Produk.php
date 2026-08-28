@@ -36,6 +36,7 @@ class Produk extends Model
         return $this->hasMany(PesananPerProduk::class, 'sku', 'sku');
     }
 
+
     public function kategori()
     {
         return $this->belongsTo(
@@ -43,9 +44,5 @@ class Produk extends Model
             'kategori_id',
             'id'
         );
-    }
-
-    public function produk_custom(){
-        return $this->hasMany(produkCustom::class, 'sku_id', 'sku');
     }
 }

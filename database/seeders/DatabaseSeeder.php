@@ -16,6 +16,13 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
+        User::factory()->create([
+            'name' => 'ricko',
+            'role' => 'editor',
+            'email' => 'editor@example.com',
+            'password' => Hash::make('123456')
+        ]);
+
         // User::factory()->create([
         //     'name' => 'santo',
         //     'role' => 'gudang',
@@ -23,12 +30,19 @@ class DatabaseSeeder extends Seeder
         //     'password' => Hash::make('123456')
         // ]);
 
-        User::factory()->create([
-            'name' => 'rico',
-            'role' => 'editor',
-            'email' => 'rico@gmail.com',
-            'password' => Hash::make('rico2345')
-        ]);
+        // User::factory()->create([
+        //     'name' => 'rega',
+        //     'role' => 'produksi',
+        //     'email' => 'produksi@example.com',
+        //     'password' => Hash::make('123456')
+        // ]);
+
+        // User::factory()->create([
+        //     'name' => 'rico',
+        //     'role' => 'editor',
+        //     'email' => 'rico@gmail.com',
+        //     'password' => Hash::make('rico2345')
+        // ]);
 
         // $this->call([
         //     KategorisSeeder::class,

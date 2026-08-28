@@ -268,12 +268,22 @@
 
                     {{-- Table Detail --}}
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle text-nowrap">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <select id="per_page_modal" class="form-select form-select-sm" style="width: 80px;">
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                            </select>
+
+                            <input type="text" id="searchTableModal" class="form-control form-control-sm"
+                                placeholder="Cari..." style="width: 180px;">
+                        </div>
+
+                        <table class="table table-hover align-middle text-nowrap" id="orderlistModal">
                             <thead class="table-light">
                                 <tr>
                                     <th width="50">No</th>
                                     <th>No Pesanan</th>
-                                    <th>Pembeli</th>
                                     <th>Produk</th>
                                     <th>Variasi</th>
                                     <th class="text-center">Qty</th>
@@ -300,53 +310,172 @@
     </div>
 @endsection
 
-@push('styles')
-    <style>
-        #orderlist tbody tr {
-            transition: all .15s ease;
-        }
-
-        #orderlist tbody tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        #orderlist td {
-            padding-top: 14px;
-            padding-bottom: 14px;
-        }
-
-        #orderlist .badge {
-            font-weight: 500;
-        }
-
-        #orderlist th {
-            font-size: 13px;
-            font-weight: 600;
-            color: #6c757d;
-            text-transform: uppercase;
-            letter-spacing: .3px;
-        }
-    </style>
-@endpush
 
 @push('scripts')
     <script>
         $(document).ready(function() {
+
             const table = new DataTable('#orderlist', {
                 pageLength: 10,
                 searching: true,
                 lengthChange: false,
                 autoWidth: false
             });
-
+            
             $('#per_page').val(10);
             $('#per_page').on('change', function() {
-                table.page.len(parseInt(this.value)).draw();
+                table.page
+                    .len(parseInt(this.value))
+                    .draw();
             });
 
             $('#searchTable').on('input', function() {
-                table.search(this.value).draw();
+                table
+                    .search(this.value)
+                    .draw();
             });
+
+            const tableModal = new DataTable('#orderlistModal', {
+                pageLength: 10,
+                searching: true,
+                lengthChange: false,
+                autoWidth: false,
+                language: {
+                    emptyTable: `
+                        <div class="text-muted py-4">
+                            <i class="fa-solid fa-box-open fa-2x mb-2 opacity-50"></i>
+                            <div class="fw-semibold">
+                                Tidak ada detail data
+                            </div>
+                        </div>
+                    `,
+                    zeroRecords: `
+                        <div class="text-muted py-4">
+                            <i class="fa-solid fa-magnifying-glass fa-2x mb-2 opacity-50"></i>
+                            <div class="fw-semibold">
+                                Data tidak ditemukan
+                            </div>
+                        </div>
+                    `
+                }
+            });
+
+            $('#per_page_modal').val(10);
+            $('#per_page_modal').on('change', function() {
+                tableModal
+                    .page
+                    .len(parseInt(this.value))
+                    .draw();
+            });
+
+            $('#searchTableModal').on('input', function() {
+                tableModal
+                    .search(this.value)
+                    .draw();
+            });
+
+            $('#modalProduk').on('shown.bs.modal', function() {
+                tableModal.columns.adjust();
+
+            });
+
+            function wrapWords(text, limit = 5) {
+                if (!text) {
+                    return '-';
+                }
+
+                const words = text.split(' ');
+                let result = [];
+                for (let i = 0; i < words.length; i += limit) {
+                    result.push(
+                        words
+                        .slice(i, i + limit)
+                        .join(' ')
+                    );
+
+                }
+
+                return result.join('<br>');
+            }
+
+            function statusBadge(status) {
+                switch (status) {
+                    case 'proses':
+                        return `
+                            <span class="badge bg-warning text-dark">
+                                <i class="fa-solid fa-clock me-1"></i>
+                                Diproses
+                            </span>
+                        `;
+
+                    case 'dikirim':
+                        return `
+                            <span class="badge bg-primary">
+                                <i class="fa-solid fa-truck me-1"></i>
+                                Dikirim
+                            </span>
+                        `;
+
+                    case 'retur':
+                        return `
+                            <span class="badge bg-danger">
+                                <i class="fa-solid fa-rotate-left me-1"></i>
+                                Retur
+                            </span>
+                        `;
+
+                    case 'pengembalian':
+                        return `
+                            <span class="badge bg-danger">
+                                <i class="fa-solid fa-rotate-left me-1"></i>
+                                Pengembalian
+                            </span>
+                        `;
+
+                    case 'pengiriman_gagal':
+                        return `
+                            <span class="badge bg-danger">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                Pengiriman Gagal
+                            </span>
+                        `;
+
+                    case 'selesai':
+                        return `
+                            <span class="badge bg-success">
+                                <i class="fa-solid fa-circle-check me-1"></i>
+                                Selesai
+                            </span>
+                        `;
+
+                    default:
+                        return `
+                            <span class="badge bg-secondary">
+                                ${escapeHtml(status ?? '-')}
+                            </span>
+                        `;
+                }
+            }
+
+            function formatTanggal(tanggal) {
+                if (!tanggal) {
+                    return '-';
+                }
+
+                const date = new Date(tanggal);
+                return date.toLocaleDateString('id-ID', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                });
+            }
+
+            function escapeHtml(text) {
+                return $('<div>')
+                    .text(text ?? '')
+                    .html();
+            }
+
 
             $(document).on('click', '.btn-view', function() {
                 const sku = $(this).data('sku');
@@ -356,7 +485,6 @@
                 const tahun = $(this).data('tahun');
 
                 let detail = $(this).attr('data-detail');
-
                 try {
                     detail = JSON.parse(detail);
                 } catch (e) {
@@ -366,7 +494,9 @@
                 $('#detailSku').text(sku);
                 $('#detailNamaProduk').text(nama);
                 $('#infoSku').text(sku);
-                $('#infoVariasi').text(variasi || '-');
+                $('#infoVariasi').text(
+                    variasi || '-'
+                );
 
                 const namaBulan = [
                     '',
@@ -387,198 +517,127 @@
                 $('#infoPeriode').text(
                     namaBulan[bulan] + ' ' + tahun
                 );
+                $('#searchTableModal').val('');
+                $('#per_page_modal').val(10);
 
-                let html = '';
+                tableModal.search('').page.len(10);
+                tableModal.clear();
 
-                if (!detail.length) {
-                    html = `
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-4">
-                                Tidak ada detail data.
-                            </td>
-                        </tr>
-                    `;
-                } else {
-
+                if (detail.length > 0) {
+                    const rows = [];
                     detail.forEach((item, index) => {
-
                         const pesanan = item.pesanan ?? {};
-
                         const tanggal = pesanan.tanggal ?
                             formatTanggal(pesanan.tanggal) :
                             '-';
 
-                        html += `
-                            <tr>
-                                <td class="text-center text-muted">
-                                    ${index + 1}
-                                </td>
+                        rows.push([
+                            `<span class="text-muted">${index + 1}</span>`,
+                            `
+                                <div class="fw-semibold">
+                                    ${escapeHtml(item.no_pesanan ?? '-')}
+                                </div>
+                            `,
+                            `
+                                <div>
+                                    ${escapeHtml(pesanan.nama_pembeli ?? '-')}
+                                </div>
 
-                                <td>
-                                    <div class="fw-semibold">
-                                        ${item.no_pesanan ?? '-'}
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <div>
-                                        ${pesanan.nama_pembeli ?? '-'}
-                                    </div>
-
-                                    <small class="text-muted">
-                                        ${pesanan.username ?? ''}
-                                    </small>
-                                </td>
-
-                                <td>
-                                    ${wrapWords(escapeHtml(item.nama_produk ?? '-'), 5)}
-                                </td>
-
-                                <td>
-                                    ${escapeHtml(item.variasi ?? '-')}
-                                </td>
-
-                                <td class="text-center">
-                                    <span class="badge bg-light text-dark border">
-                                        ${item.jumlah ?? 0}
-                                    </span>
-                                </td>
-
-                                <td>
-                                    ${statusBadge(pesanan.status)}
-                                </td>
-
-                                <td>
-                                    ${tanggal}
-                                </td>
-                            </tr>
-                        `;
+                                <small class="text-muted">
+                                    ${escapeHtml(pesanan.username ?? '')}
+                                </small>
+                            `,
+                            `
+                                ${wrapWords(
+                                    escapeHtml(item.nama_produk ?? '-'),
+                                    5
+                                )}
+                            `,
+                            `
+                                ${escapeHtml(item.variasi ?? '-')}
+                            `,
+                            `
+                                <span class="badge bg-light text-dark border">
+                                    ${item.jumlah ?? 0}
+                                </span>
+                            `,
+                            `
+                                ${statusBadge(pesanan.status)}
+                            `,
+                            `
+                                ${tanggal}
+                            `
+                        ]);
                     });
+
+                    tableModal
+                        .rows
+                        .add(rows);
+
                 }
 
-                $('#detailProdukBody').html(html);
+                tableModal.draw();
 
-                function wrapWords(text, limit = 5) {
-                    if (!text) return '-';
-
-                    const words = text.split(' ');
-                    let result = [];
-
-                    for (let i = 0; i < words.length; i += limit) {
-                        result.push(words.slice(i, i + limit).join(' '));
-                    }
-
-                    return result.join('<br>');
-                }
-
-                function statusBadge(status) {
-
-                    switch (status) {
-
-                        case 'proses':
-                            return `
-                                <span class="badge bg-warning text-dark">
-                                    <i class="fa-solid fa-clock me-1"></i>
-                                    Diproses
-                                </span>
-                            `;
-
-                        case 'dikirim':
-                            return `
-                                <span class="badge bg-primary">
-                                    <i class="fa-solid fa-truck me-1"></i>
-                                    Dikirim
-                                </span>
-                            `;
-
-                        case 'retur':
-                            return `
-                                <span class="badge bg-danger">
-                                    <i class="fa-solid fa-rotate-left me-1"></i>
-                                    Retur
-                                </span>
-                            `;
-
-                        case 'selesai':
-                            return `
-                                <span class="badge bg-success">
-                                    <i class="fa-solid fa-circle-check me-1"></i>
-                                    Selesai
-                                </span>
-                            `;
-
-                        default:
-                            return `
-                                <span class="badge bg-secondary">
-                                    ${status ?? '-'}
-                                </span>
-                            `;
-                    }
-                }
-
-                function formatTanggal(tanggal) {
-                    const date = new Date(tanggal);
-                    return date.toLocaleDateString('id-ID', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric'
-                    });
-                }
-
-                function escapeHtml(text) {
-                    return $('<div>')
-                        .text(text ?? '')
-                        .html();
-                }
             });
 
             let filterStartDate = null;
             let filterEndDate = null;
-
-
-            /*
-            |--------------------------------------------------------------------------
-            | Filter DataTable berdasarkan periode
-            |--------------------------------------------------------------------------
-            */
             function filterTableBulan() {
-                table.search.fixed('tanggal', function(searchStr, rowData, rowIdx) {
-                    // Kalau filter belum dipilih
-                    if (!filterStartDate || !filterEndDate) {
-                        return true;
+                table.search.fixed(
+                    'tanggal',
+                    function(searchStr, rowData, rowIdx) {
+                        if (!filterStartDate || !filterEndDate) {
+                            return true;
+                        }
+
+                        const row = table
+                            .row(rowIdx)
+                            .node();
+
+
+                        if (!row) {
+                            return true;
+                        }
+
+
+                        const rowStart = row.getAttribute('data-start');
+                        const rowEnd = row.getAttribute('data-end');
+
+
+                        if (!rowStart || !rowEnd) {
+                            return true;
+                        }
+
+
+                        const start = moment(
+                            rowStart,
+                            'YYYY-MM-DD'
+                        );
+
+                        const end = moment(
+                            rowEnd,
+                            'YYYY-MM-DD'
+                        );
+
+
+                        return (
+                            start.isSameOrBefore(
+                                filterEndDate,
+                                'day'
+                            ) &&
+                            end.isSameOrAfter(
+                                filterStartDate,
+                                'day'
+                            )
+                        );
                     }
+                );
 
-                    const row = table.row(rowIdx).node();
-
-                    if (!row) {
-                        return true;
-                    }
-
-                    const rowStart = row.getAttribute('data-start');
-                    const rowEnd = row.getAttribute('data-end');
-
-                    if (!rowStart || !rowEnd) {
-                        return true;
-                    }
-
-                    const start = moment(rowStart, 'YYYY-MM-DD');
-                    const end = moment(rowEnd, 'YYYY-MM-DD');
-
-                    return (
-                        start.isSameOrBefore(filterEndDate, 'day') &&
-                        end.isSameOrAfter(filterStartDate, 'day')
-                    );
-                });
 
                 table.draw();
             }
 
 
-            /*
-            |--------------------------------------------------------------------------
-            | Date Range
-            |--------------------------------------------------------------------------
-            */
             $('#reportrange').daterangepicker({
                 startDate: moment().startOf('month'),
                 endDate: moment().endOf('month'),
@@ -590,35 +649,59 @@
                     ],
 
                     'Bulan Lalu': [
-                        moment().subtract(1, 'month').startOf('month'),
-                        moment().subtract(1, 'month').endOf('month')
+                        moment()
+                        .subtract(1, 'month')
+                        .startOf('month'),
+
+                        moment()
+                        .subtract(1, 'month')
+                        .endOf('month')
                     ],
 
                     '3 Bulan Terakhir': [
-                        moment().subtract(2, 'month').startOf('month'),
+                        moment()
+                        .subtract(2, 'month')
+                        .startOf('month'),
+
                         moment().endOf('month')
                     ],
 
                     '6 Bulan Terakhir': [
-                        moment().subtract(5, 'month').startOf('month'),
+                        moment()
+                        .subtract(5, 'month')
+                        .startOf('month'),
+
                         moment().endOf('month')
                     ]
+
                 },
 
+
                 locale: {
+
                     applyLabel: 'Pilih',
+
                     cancelLabel: 'Batal',
+
                     customRangeLabel: 'Pilih Periode'
+
                 }
 
+
             }, function(start, end) {
-                // Karena datamu bulanan,
-                // paksa mulai dari awal bulan sampai akhir bulan
-                filterStartDate = start.clone().startOf('month');
-                filterEndDate = end.clone().endOf('month');
+
+                filterStartDate = start
+                    .clone()
+                    .startOf('month');
+
+
+                filterEndDate = end
+                    .clone()
+                    .endOf('month');
+
+
                 let text;
 
-                // Kalau bulan awal dan akhir sama
                 if (
                     filterStartDate.format('YYYY-MM') ===
                     filterEndDate.format('YYYY-MM')
@@ -630,62 +713,54 @@
                         .format('MMMM YYYY');
 
                 } else {
-
                     text =
                         filterStartDate
                         .clone()
                         .locale('id')
-                        .format('MMMM YYYY') +
+                        .format('MMMM YYYY')
+
+                        +
                         ' - ' +
+
                         filterEndDate
                         .clone()
                         .locale('id')
                         .format('MMMM YYYY');
+
                 }
+
 
                 $('#reportrange span').text(text);
 
+
+
                 filterTableBulan();
+
             });
 
 
-            /*
-            |--------------------------------------------------------------------------
-            | Reset
-            |--------------------------------------------------------------------------
-            */
+
+
             $('#resetDate').on('click', function() {
 
                 filterStartDate = null;
                 filterEndDate = null;
 
-                $('#reportrange span').text('Pilih periode');
 
-                // Hapus hanya filter periode
-                table.search.fixed('tanggal', null);
+                $('#reportrange span')
+                    .text('Pilih periode');
+
+
+                table.search.fixed(
+                    'tanggal',
+                    null
+                );
+
 
                 table.draw();
+
             });
 
-            function nodata() {
-                $('#orderlist').DataTable({
-                    language: {
-                        emptyTable: `
-                                        <div class="text-muted py-4">
-                                            <i class="fa-solid fa-box-open fa-2x mb-3 opacity-50"></i>
-
-                                            <div class="fw-semibold">
-                                                Tidak ada data
-                                            </div>
-
-                                            <small>
-                                                Data produk custom belum tersedia.
-                                            </small>
-                                        </div>
-                                    `
-                    }
-                });
-            }
         });
     </script>
 @endpush
