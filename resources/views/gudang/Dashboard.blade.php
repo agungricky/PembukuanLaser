@@ -274,7 +274,6 @@
 
         <!-- Inventory Stock Table Section -->
         <section id="stockTableSection" class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-            <!-- Table Header Bar -->
             <div
                 class="card-header bg-white border-bottom p-3 p-md-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                 <div>
@@ -580,7 +579,6 @@
                 url: "{{ route('pesanan.json') }}",
                 dataType: "JSON",
                 success: function(response) {
-
                     let html = '';
                     let no = 1;
                     $.each(response, function(index, item) {
@@ -645,7 +643,7 @@
                     });
 
                     $('#stockTableBody').html(html);
-                    $('#perludisiapkan').text(response.length + " Barang");
+                    $('#perludisiapkan').text(response.length + " Jenis Barang");
                     const table = new DataTable('#orderlist', {
                         pageLength: 10,
                         searching: true,

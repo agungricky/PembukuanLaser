@@ -94,7 +94,12 @@ class GudangController extends Controller
 
     public function gudanginventory()
     {
-        $pesanan = Pesanan::with('pesanan_per_produk.produk')
+        $pesanan = Pesanan::with([
+            'pesanan_per_produk' => function ($query) {
+                $query->where('custom', 0)
+                    ->with('produk');
+            },
+        ])
             ->where('status', 'proses')
             ->get();
 
@@ -135,7 +140,12 @@ class GudangController extends Controller
     public function allpesanan($filter)
     {
         if ($filter === 'siapkan') {
-            $pesanan = Pesanan::with('pesanan_per_produk.produk')
+            $pesanan = Pesanan::with([
+                'pesanan_per_produk' => function ($query) {
+                    $query->where('custom', 0)
+                        ->with('produk');
+                },
+            ])
                 ->where('status', 'proses')
                 ->get();
 
@@ -224,9 +234,14 @@ class GudangController extends Controller
                 $produk = Produk::with('stok_produk')->where('sku', $sku)->first();
                 $kebutuhanProduk[] = [
                     'produk' => $produk,
+                    'stok' => $produk->stok_produk->jumlah_tersedia ?? 0,
                     'kebutuhan' => $jumlah,
                 ];
             }
+
+            $kebutuhanProduk = collect($kebutuhanProduk)
+                ->sortByDesc('stok')
+                ->values();
 
             return response()->json($kebutuhanProduk);
 
@@ -302,7 +317,7 @@ class GudangController extends Controller
             foreach ($kebutuhan as $sku => $data) {
                 $mutasi = mutasi_stok::create([
                     'stok_produk_id' => $data['stok_produk_id'],
-                    'user_id' => auth()->id(),
+                    'gudang_id' => auth()->id(),
                     'jenis_mutasi' => 'siap',
                     'jumlah' => $data['jumlah'],
                     'keterangan' => '',
@@ -347,11 +362,11 @@ class GudangController extends Controller
 
                 if ($data) {
                     $data->jenis_mutasi = 'keluar';
-                    $data->pengambil_id = $request->pengambil_barang;
+                    $data->adm_penjualan_id = $request->pengambil_barang;
                     $data->save();
 
                     stok_produk::where('id', $data->stok_produk_id)->update([
-                        'jumlah_tersedia' => $stok->jumlah_tersedia - $data->jumlah
+                        'jumlah_tersedia' => $stok->jumlah_tersedia - $data->jumlah,
                     ]);
                 }
             }
@@ -410,7 +425,7 @@ class GudangController extends Controller
 
                 mutasi_stok::create([
                     'stok_produk_id' => $stok->id,
-                    'user_id' => auth()->id(),
+                    'gudang_id' => auth()->id(),
                     'jenis_mutasi' => 'masuk',
                     'jumlah' => $request->jumlah_add,
                     'keterangan' => null,
@@ -422,7 +437,7 @@ class GudangController extends Controller
 
                 mutasi_stok::create([
                     'stok_produk_id' => $stok->id,
-                    'user_id' => auth()->id(),
+                    'gudang_id' => auth()->id(),
                     'jenis_mutasi' => 'edit',
                     'jumlah' => $request->jumlah_edit,
                     'keterangan' => $request->keterangan
@@ -442,7 +457,7 @@ class GudangController extends Controller
 
                     mutasi_stok::create([
                         'stok_produk_id' => $stokProduk->id,
-                        'user_id' => auth()->id(),
+                        'gudang_id' => auth()->id(),
                         'jenis_mutasi' => 'masuk',
                         'jumlah' => $request->jumlah_add,
                         'keterangan' => null,
@@ -456,7 +471,7 @@ class GudangController extends Controller
 
                     mutasi_stok::create([
                         'stok_produk_id' => $stokProduk->id,
-                        'user_id' => auth()->id(),
+                        'gudang_id' => auth()->id(),
                         'jenis_mutasi' => 'masuk',
                         'jumlah' => $request->jumlah_edit,
                         'keterangan' => null,
@@ -694,7 +709,7 @@ class GudangController extends Controller
 
     public function barangsampel()
     {
-        $produk = mutasi_stok::with('user', 'ambilBarang', 'stok_produk.produk.kategori')
+        $produk = mutasi_stok::with('gudang', 'ambil_barang', 'stok_produk.produk.kategori')
             ->where('jenis_mutasi', 'sampel')
             ->orderBy('created_at', 'DESC')
             ->get();
@@ -736,8 +751,8 @@ class GudangController extends Controller
 
             mutasi_stok::create([
                 'stok_produk_id' => $stok->id,
-                'user_id' => auth()->id(),
-                'pengambil_id' => $request->nama_peminta,
+                'gudang_id' => auth()->id(),
+                'adm_penjualan_id' => $request->nama_peminta,
                 'jenis_mutasi' => 'sampel',
                 'jumlah' => $request->jumlah,
                 'keterangan' => 'Permintaan sampel',
@@ -863,8 +878,8 @@ class GudangController extends Controller
                 $stok_id = stok_produk::where('sku_id', $perProduk->sku)->first();
                 mutasi_stok::create([
                     'stok_produk_id' => $stok_id->id,
-                    'user_id' => Auth::id(),
-                    'pengambil_id' => null,
+                    'gudang_id' => Auth::id(),
+                    'adm_penjualan_id' => null,
                     'jenis_mutasi' => 'masuk',
                     'jumlah' => $produk['diterima'],
                     'keterangan' => 'Barang masuk dari retur',
