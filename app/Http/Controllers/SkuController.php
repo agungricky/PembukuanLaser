@@ -44,7 +44,10 @@ class SkuController extends Controller
         ]);
 
         $prefix = strtoupper(trim($request->sku ?? ''));
-        $data = Produk::whereRaw('sku REGEXP ?', ['^'.preg_quote($prefix).'[0-9]+$'])
+        $data = Produk::whereRaw(
+            'sku REGEXP ?',
+            ['^'.preg_quote($prefix).'[0-9]+C?$']
+        )
             ->orderByRaw(
                 'CAST(SUBSTRING(sku, ?) AS UNSIGNED) DESC',
                 [strlen($prefix) + 1]
@@ -86,11 +89,11 @@ class SkuController extends Controller
             ]);
         }
 
-        $sku = $data->sku;
-        $angka = (int) preg_replace('/\D/', '', $sku);
+        $angka = (int) preg_replace('/\D/', '', $data->sku);
         $angka++;
-        $kode = substr($sku, 0, 3);
-        $skuBaru = $kode.$angka;
+        $angkaFormat = str_pad($angka, 3, '0', STR_PAD_LEFT);
+        $skuBaru = $prefix.$angkaFormat;
+
         if ($request->custom === 'Y') {
             $view = [
                 'sku' => $skuBaru.'C',

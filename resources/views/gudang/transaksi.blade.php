@@ -445,7 +445,7 @@
 
                                     <div class="fw-bold text-dark py-1"
                                         style="font-size: 16px; line-height: 1.1;">
-                                        ${item.user?.name ?? '-'}
+                                        ${item.gudang?.name ?? '-'}
                                     </div>
 
                                     <div class="text-muted d-flex align-items-center justify-content-center gap-2"
@@ -481,7 +481,7 @@
 
                                                 <div class="fw-bold text-dark py-1"
                                                     style="font-size: 16px; line-height: 1.1;">
-                                                    ${item.ambil_barang?.name ?? '-'}
+                                                    ${item.admin_penjualan?.name ?? '-'}
                                                 </div>
 
                                                 <div class="text-muted d-flex align-items-center justify-content-center gap-2"

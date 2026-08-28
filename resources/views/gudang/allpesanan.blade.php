@@ -196,15 +196,15 @@
                                         </td>
 
                                         <td class="py-3 px-4 text-center">
-                                            <span class="fw-bold text-danger">
-                                                ${item.jumlah ?? 0}
-                                            </span>
-                                        </td>
+                                            <div class="d-flex flex-column align-items-center gap-1">
+                                                <span class="fw-bold text-danger">
+                                                    ${item.kebutuhan ?? 0}
+                                                </span>
 
-                                        <td class="py-3 px-4 text-center">
-                                            <span class="fw-bold text-primary">
-                                                ${item.stok_produk?.jumlah_tersedia ?? 0}
-                                            </span>
+                                                <span class="fw-bold text-primary">
+                                                    ${item.produk?.stok_produk?.jumlah_tersedia ?? 0}
+                                                </span>
+                                            </div>
                                         </td>
 
                                         <td class="py-3 px-4 text-center">

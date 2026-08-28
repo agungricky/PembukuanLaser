@@ -25,7 +25,7 @@ class mutasi_stok extends Model
         return $this->belongsTo(User::class, 'gudang_id', 'id');
     }
 
-    public function ambil_barang(){
+    public function admin_penjualan(){
         return $this->belongsTo(User::class, 'adm_penjualan_id', 'id');
     }
 

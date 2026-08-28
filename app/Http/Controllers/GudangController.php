@@ -66,9 +66,9 @@ class GudangController extends Controller
             ->take(10);
 
         $aktivitas = mutasi_stok::with(['stok_produk.produk.kategori'])
-            ->latest()
-            ->take(10)
+            ->whereIn('jenis_mutasi', ['keluar', 'masuk'])
             ->orderBy('created_at', 'DESC')
+            ->take(10)
             ->get();
 
         return view('gudang.Dashboard', [
@@ -246,7 +246,7 @@ class GudangController extends Controller
             return response()->json($kebutuhanProduk);
 
         } elseif ($filter === 'siap') {
-            $kebutuhanProduk = mutasi_stok::with('stok_produk.produk', 'user', 'ambil_barang')
+            $kebutuhanProduk = mutasi_stok::with('stok_produk.produk', 'gudang', 'admin_penjualan')
                 ->where('jenis_mutasi', 'siap')
                 ->orderBy('updated_at', 'DESC')
                 ->get();
@@ -256,8 +256,8 @@ class GudangController extends Controller
         } elseif ($filter === 'diambil') {
             $kebutuhanProduk = mutasi_stok::with(
                 'stok_produk.produk',
-                'user',
-                'ambil_barang'
+                'gudang',
+                'admin_penjualan'
             )
                 ->where('jenis_mutasi', 'keluar')
                 ->where('updated_at', '>=', now()->subMonths(3))
@@ -536,7 +536,7 @@ class GudangController extends Controller
         |--------------------------------------------------------------------------
         */
         $query = mutasi_stok::with([
-            'stok_produk.produk.kategori', 'user', 'ambil_barang',
+            'stok_produk.produk.kategori', 'gudang', 'admin_penjualan',
         ]);
 
         /*
@@ -709,7 +709,7 @@ class GudangController extends Controller
 
     public function barangsampel()
     {
-        $produk = mutasi_stok::with('gudang', 'ambil_barang', 'stok_produk.produk.kategori')
+        $produk = mutasi_stok::with('gudang', 'admin_penjualan', 'stok_produk.produk.kategori')
             ->where('jenis_mutasi', 'sampel')
             ->orderBy('created_at', 'DESC')
             ->get();
@@ -825,23 +825,22 @@ class GudangController extends Controller
         $pesanan = PesananPerProduk::with('pesanan.toko')
             ->where('no_pesanan', $no_pesanan)
             ->whereHas('pesanan', function ($query) {
-                $query->where('tanggal', '>=', now()->subMonths(3));
+                $query->where('tanggal', '>=', now()->subMonths(6));
             })
             ->get();
 
         if ($pesanan->isEmpty()) {
             return response()->json([
                 'status' => false,
-                'message' => 'Pesanan tidak ditemukan.',
+                'message' => 'Pesanan tidak ditemukan atau pesanan sudah lebih dari 6 Bulan.',
             ], 404);
         }
 
         $status = $pesanan->first()->pesanan->status;
-
         if (! in_array($status, ['pengembalian', 'pengiriman_gagal'])) {
             return response()->json([
                 'status' => false,
-                'message' => 'Pesanan masih dalam proses pengiriman minta admin penjualan melakukan update pesanan.',
+                'message' => 'Pesanan masih dalam proses pengiriman, minta admin penjualan melakukan update pesanan.',
             ], 422);
         }
 
