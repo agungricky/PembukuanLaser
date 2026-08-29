@@ -271,9 +271,6 @@ class PesananController extends Controller
     {
         $raw = Session::get('preview_pesanan', []);
 
-        // =========================================================
-        // 1. AMBIL DATA SESSION
-        // =========================================================
         if (is_string($raw)) {
             $decoded = json_decode($raw, true);
             $data = is_array($decoded) ? $decoded : [];
@@ -286,11 +283,7 @@ class PesananController extends Controller
         $skuList = [];
         $changed = false;
 
-        // =========================================================
-        // 2. NORMALISASI SKU + PROSES X2
-        // =========================================================
         for ($i = 0; $i < count($data); $i++) {
-
             if (! isset($data[$i]) || ! is_array($data[$i])) {
                 $data[$i] = [];
             }
@@ -310,14 +303,10 @@ class PesananController extends Controller
                     ? $data[$i]['produk_detail'][$j]
                     : [];
 
-                // =================================================
-                // AMBIL SKU ORIGINAL
-                // =================================================
                 $skuOriginal = $this->firstNonEmpty(
                     $p,
                     [
                         'sku_original',
-                        'Nomor Referensi SKU',
                         'sku',
                         '__sku',
                         'SKU Induk',
@@ -327,17 +316,30 @@ class PesananController extends Controller
 
                 $skuOriginal = trim((string) $skuOriginal);
 
-                // =================================================
-                // NORMALISASI SKU
-                // contoh:
-                // PLT012CX2 -> PLT012C
-                // =================================================
                 $sku = $excelService->normalizeSku($skuOriginal) ?? '';
-
-                // =================================================
-                // CEK CUSTOM
-                // =================================================
                 $custom = $excelService->isCustomSku($skuOriginal);
+
+                // =========================
+                // AMAN UNTUK SKU X2
+                // =========================
+                if (str_ends_with(strtoupper($skuOriginal), 'X2')) {
+                    if (! array_key_exists('Jumlah_original', $p)) {
+                        $p['Jumlah_original'] = (int) ($p['Jumlah'] ?? 0);
+                    }
+
+                    if (! array_key_exists('Harga_original', $p)) {
+                        $p['Harga_original'] = $p['Harga'] ?? 0;
+                    }
+
+                    $p['Jumlah'] = ((int) $p['Jumlah_original']) * 2;
+                    $hargaOriginal = preg_replace(
+                        '/[^0-9]/',
+                        '',
+                        (string) $p['Harga_original']
+                    );
+                    $p['Harga'] = ((int) $hargaOriginal) / 2;
+                    $changed = true;
+                }
 
                 if (
                     $custom === 0 &&
@@ -347,79 +349,17 @@ class PesananController extends Controller
                     $custom = 1;
                 }
 
-                // =================================================
-                // SIMPAN SKU ORIGINAL
-                // =================================================
                 if (
                     ! isset($p['sku_original']) ||
                     trim((string) $p['sku_original']) === ''
                 ) {
                     $p['sku_original'] = $skuOriginal;
-                    $changed = true;
                 }
 
-                // =================================================
-                // CEK X2
-                // =================================================
-                $isX2 = str_ends_with(
-                    strtoupper($skuOriginal),
-                    'X2'
-                );
-
-                // =================================================
-                // PROSES X2
-                // =================================================
-                if ($isX2 && empty($p['_x2_processed'])) {
-
-                    // =============================================
-                    // JUMLAH ASLI
-                    // =============================================
-                    $jumlahAsli = (int) ($p['Jumlah'] ?? 0);
-
-                    // =============================================
-                    // HARGA ASLI
-                    // =============================================
-                    $hargaRaw = $p['Harga'] ?? ($p['harga'] ?? 0);
-
-                    $hargaAsli = (float) preg_replace(
-                        '/[^0-9]/',
-                        '',
-                        (string) $hargaRaw
-                    );
-
-                    // =============================================
-                    // JUMLAH HASIL
-                    // =============================================
-                    $jumlahHasil = $jumlahAsli * 2;
-
-                    // =============================================
-                    // HARGA JUAL
-                    // harga asli × JUMLAH ASLI
-                    // =============================================
-                    $hargaJual = $hargaAsli * $jumlahAsli;
-
-                    // Update jumlah
-                    $p['Jumlah'] = $jumlahHasil;
-
-                    // Replace Harga Shopee
-                    $p['Harga'] = $hargaJual;
-
-                    // Supaya tidak dihitung X2 berkali-kali
-                    $p['_x2_processed'] = true;
-
-                    $changed = true;
-                }
-
-                // =================================================
-                // SKU NORMALISASI
-                // =================================================
                 $p['sku'] = $sku;
                 $p['__sku'] = $sku;
                 $p['custom'] = $custom;
 
-                // =================================================
-                // KUMPULKAN SKU UNTUK HPP
-                // =================================================
                 if ($sku !== '') {
                     $skuList[] = $sku;
                 }
@@ -428,122 +368,50 @@ class PesananController extends Controller
             }
         }
 
-        // =========================================================
-        // 3. BERSIHKAN SKU LIST
-        // =========================================================
-        $skuList = array_values(
-            array_unique(
-                array_filter(
-                    array_map(
-                        fn ($s) => Str::upper(
-                            trim((string) $s)
-                        ),
-                        $skuList
+        $skuList =
+            array_values(
+                array_unique(
+                    array_filter(
+                        array_map(
+                            fn ($s) => strtoupper(
+                                trim(
+                                    (string) $s
+                                )
+                            ),
+                            $skuList
+                        )
                     )
                 )
-            )
-        );
+            );
 
-        // =========================================================
-        // 4. AMBIL HPP SATUAN DARI DATABASE
-        // =========================================================
         $skuToHpp = [];
 
         if (! empty($skuList)) {
-
-            $rows = DB::table('produk')
-                ->whereIn('sku', $skuList)
-                ->select(
-                    'sku',
-                    'hpp'
-                )
+            $rows = DB::table('produk')->whereIn('sku', $skuList)
+                ->select('sku', 'hpp')
                 ->get();
 
             foreach ($rows as $r) {
-
-                $key = Str::upper(
-                    trim((string) $r->sku)
-                );
+                $key =
+                    Str::upper(trim((string)
+                            $r->sku
+                    )
+                    );
 
                 $skuToHpp[$key] = (float) $r->hpp;
             }
         }
 
-        // =========================================================
-        // 5. HITUNG HPP
-        // =========================================================
+        $changed = false;
+
         for ($i = 0; $i < count($data); $i++) {
-
-            if (
-                ! isset($data[$i]['produk_detail']) ||
-                ! is_array($data[$i]['produk_detail'])
-            ) {
-                continue;
-            }
-
-            for (
-                $j = 0;
-                $j < count($data[$i]['produk_detail']);
-                $j++
-            ) {
-
+            for ($j = 0; $j < count($data[$i]['produk_detail'] ?? []); $j++) {
                 $p = $data[$i]['produk_detail'][$j];
 
-                // SKU hasil normalisasi
-                $key = Str::upper(
-                    trim((string) ($p['sku'] ?? ''))
-                );
+                $key = Str::upper(trim((string) ($p['sku'] ?? '')));
 
-                // =================================================
-                // HPP SATUAN DATABASE
-                // =================================================
-                $hppSatuan =
-                    $key !== '' && isset($skuToHpp[$key])
-                        ? (float) $skuToHpp[$key]
-                        : 0;
-
-                // =================================================
-                // JUMLAH HASIL
-                // Untuk X2 :
-                // jumlah asli × 2
-                // =================================================
-                $jumlahHasil = (int) ($p['Jumlah'] ?? 0);
-
-                // =================================================
-                // CEK SKU ORIGINAL X2
-                // =================================================
-                $skuOriginal = Str::upper(
-                    trim(
-                        (string) ($p['sku_original'] ?? '')
-                    )
-                );
-
-                $isX2 = str_ends_with(
-                    $skuOriginal,
-                    'X2'
-                );
-
-                // =================================================
-                // HITUNG HPP
-                // =================================================
-                if ($isX2) {
-
-                    // =============================================
-                    // HPP TOTAL
-                    // HPP satuan × jumlah hasil
-                    // =============================================
-                    $hpp = $hppSatuan * $jumlahHasil;
-
-                } else {
-                    $hpp = $hppSatuan;
-                }
-
-                // =================================================
-                // UPDATE HPP
-                // =================================================
-                $currentHpp = isset($p['HPP'])
-                    ? (float) $p['HPP']
-                    : null;
+                $hpp = $key !== '' && isset($skuToHpp[$key]) ? (float) $skuToHpp[$key] : 0.0;
+                $currentHpp = isset($p['HPP']) ? (float) $p['HPP'] : null;
 
                 if ($currentHpp !== $hpp) {
                     $p['HPP'] = $hpp;
@@ -554,52 +422,18 @@ class PesananController extends Controller
             }
         }
 
-        // =========================================================
-        // 6. SIMPAN KE SESSION
-        // =========================================================
         if ($changed) {
-            Session::put(
-                'preview_pesanan',
+            Session::put('preview_pesanan',
                 $data
             );
         }
 
-        // =========================================================
-        // 7. RESPONSE DATA
-        // =========================================================
-        $responseData = $data;
-
-        // Hapus penanda internal dari JSON
-        for ($i = 0; $i < count($responseData); $i++) {
-
-            if (
-                ! isset($responseData[$i]['produk_detail']) ||
-                ! is_array($responseData[$i]['produk_detail'])
-            ) {
-                continue;
-            }
-
-            for (
-                $j = 0;
-                $j < count($responseData[$i]['produk_detail']);
-                $j++
-            ) {
-
-                unset(
-                    $responseData[$i]['produk_detail'][$j]['_x2_processed']
-                );
-            }
-        }
-
-        // =========================================================
-        // 8. RESPONSE JSON
-        // =========================================================
         return response()->json([
             'status' => 'success',
-            'data' => $responseData,
+            'data' => $data,
         ]);
     }
- 
+
     private function firstNonEmpty(array $arr, array $keys): string
     {
         foreach ($keys as $k) {
