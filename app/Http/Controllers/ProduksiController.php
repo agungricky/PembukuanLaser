@@ -14,7 +14,7 @@ class ProduksiController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    private function card()
     {
         // ALERT
         $produk = Produk::where('nama_produk', '!=', null)->get();
@@ -33,8 +33,12 @@ class ProduksiController extends Controller
         $menipis = $produk->count() - $menipis->count();
 
         // Produk Terlaris
-        $mutasi = mutasi_stok::with('stok_produk')->where('jenis_mutasi', 'keluar')->get();
-        $terlaris = [];
+        $mutasi = mutasi_stok::with('stok_produk')
+            ->where('jenis_mutasi', 'keluar')
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->get();
+
         $terlaris = $mutasi
             ->groupBy('stok_produk.sku_id')
             ->map(function ($items, $sku) {
@@ -45,28 +49,45 @@ class ProduksiController extends Controller
             })
             ->where('jumlah', '>=', 1000)
             ->values();
-        $terlaris = $terlaris->count();
-   
-        // Produksi Hari ini
-        // $dataLogin = Auth::user();
-        // $bukanCustom = PesananPerProduk::whereDate('updated_at', now()->toDateString())
-        //     ->where('produksi_id', $dataLogin->id)
-        //     ->get();
-        // $produkCustom = PesananPerProduk::whereDate('updated_at', now()->toDateString())
-        //     ->where('produksi_id', $dataLogin->id)
-        //     ->where('status_pesanan', "1")
-        //     ->get();
-        // $produksiNow = $bukanCustom->sum('jumlah') + $produkCustom->sum('jumlah');
 
-        $Card = [
+        $terlaris = $terlaris->count();
+
+        // Produksi Hari ini
+        $dataLogin = Auth::user();
+        $produksiNow = mutasi_stok::where('produksi_id', $dataLogin->id)
+            ->whereDate('created_at', now()->toDateString())
+            ->get();
+        $produksiNow = $produksiNow->sum('jumlah');
+
+        return [
             'alert' => $alert,
             'custom' => $custom,
             'menipis' => $menipis,
             'terlaris' => $terlaris,
-            // 'produksi' => $produksiNow
+            'produksi' => $produksiNow,
         ];
+    }
 
-        return view('produksi.index', compact('Card'));
+    public function index()
+    {
+        $Card = $this->card();
+
+        $produkTerlaris = mutasi_stok::with('stok_produk')
+            ->where('jenis_mutasi', 'keluar')
+            ->where('created_at', '>=', now()->subMonths(3))
+            ->get()
+            ->groupBy('stok_produk_id')
+            ->map(function ($items) {
+                return [
+                    'sku' => $items->first()->stok_produk->sku_id,
+                    'jumlah' => $items->sum('jumlah'),
+                    'stok' => $items->first()->stok_produk->jumlah_tersedia,
+                ];
+            })
+            ->take(30)
+            ->values()->toArray();
+
+        return view('produksi.index', compact('Card', 'produkTerlaris'));
     }
 
     /**
@@ -88,9 +109,29 @@ class ProduksiController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(string $produksi)
     {
-        //
+        return view('produksi.pesanan', compact('produksi'));
+    }
+
+    public function showpesanan($id)
+    {
+        $pesanan = PesananPerProduk::with([
+            'pesanan' => function ($query) {
+                $query->where('status', 'proses');
+            },
+        ])
+            ->whereHas('pesanan', function ($query) {
+                $query->where('status', 'proses');
+            })
+            ->where('custom', false)
+            ->where('status_pesanan', false)
+            ->where('status_produksi', false)
+            ->whereNull('mutasi_stok_id')
+            ->take(50)
+            ->get();
+
+        dd($pesanan->toArray());
     }
 
     /**

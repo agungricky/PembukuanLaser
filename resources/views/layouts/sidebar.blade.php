@@ -472,7 +472,7 @@
                         # DASHBOARD
                     </div>
 
-                    <a href="{{ route('gudang.index') }}"
+                    <a href="{{ route('produksi.index') }}"
                         class="sidebar-link mt-1 {{ Request::is('produksi') ? 'active' : '' }}">
 
                         <div class="d-flex align-items-center gap-3">
@@ -483,30 +483,39 @@
                 </div>
 
                 <div>
-                    <div class="sidebar-heading border-bottom mt-3">
-                        # MASTER DATA
+                    <div class="sidebar-heading mt-3 border-bottom">
+                        # TRANSAKSI
                     </div>
 
-                    <a href="
-                    {{-- {{ route('gudang.produk') }} --}}
-                     "
-                        class="sidebar-link mt-1 
-                        {{-- {{ Route::is('gudang.produk') ? 'active' : '' }} --}}
-                         ">
+                    <a class="sidebar-link justify-content-between mt-1" data-bs-toggle="collapse"
+                        href="#transaksiMenu">
 
                         <div class="d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-box"></i>
+                            <i class="fa-solid fa-arrow-right-arrow-left"></i>
                             <span>Pesanan</span>
                         </div>
 
-                        <span class="badge rounded-pill bg-primary">
-                            {{-- {{ $countProduk ?? 0 }} --}} 15
-                        </span>
+                        <i class="fa-solid fa-chevron-down small"></i>
                     </a>
 
-                    <a href="
-                    {{-- {{ route('gudang.kategori') }} --}}
-                     "
+                    <div class="collapse {{ request()->routeIs('produksi.show') ? 'show' : '' }}" id="transaksiMenu">
+
+                        <a href="{{ route('produksi.show', ['produksi' => 'reguler']) }}"
+                            class="sidebar-sublink {{ request()->route('produksi') === 'reguler' ? 'active' : '' }}">
+
+                            <i class="fa-solid fa-box"></i>
+                            <small>Produk Reguler</small>
+                        </a>
+
+                        <a href="{{ route('transaksi.show', ['transaksi' => 'siap']) }}"
+                            class="sidebar-sublink {{ request()->route('transaksi') === 'siap' ? 'active' : '' }}">
+
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <small>Produk Custom</small>
+                        </a>
+
+                    </div>
+                    <a href=""
                         class="sidebar-link 
                         {{-- {{ Request::is('kategori-produk') ? 'active' : '' }} --}}
                          ">

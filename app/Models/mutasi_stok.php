@@ -20,7 +20,6 @@ class mutasi_stok extends Model
         return $this->belongsTo(stok_produk::class);
     }
 
-
     public function gudang(){
         return $this->belongsTo(User::class, 'gudang_id', 'id');
     }
