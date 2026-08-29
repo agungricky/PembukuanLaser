@@ -267,146 +267,172 @@ class PesananController extends Controller
         ]);
     }
 
-    // public function getPreviewData(PesananExcelService $excelService)
-    // {
-    //     $raw = Session::get('preview_pesanan', []);
+    public function getPreviewData(PesananExcelService $excelService)
+    {
+        $raw = Session::get('preview_pesanan', []);
 
-    //     if (is_string($raw)) {
-    //         $decoded = json_decode($raw, true);
-    //         $data = is_array($decoded) ? $decoded : [];
-    //     } elseif (is_array($raw)) {
-    //         $data = $raw;
-    //     } else {
-    //         $data = [];
-    //     }
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            $data = is_array($decoded) ? $decoded : [];
+        } elseif (is_array($raw)) {
+            $data = $raw;
+        } else {
+            $data = [];
+        }
 
-    //     $skuList = [];
+        $skuList = [];
+        $changed = false;
 
-    //     for ($i = 0; $i < count($data); $i++) {
-    //         if (! isset($data[$i]) || ! is_array($data[$i])) {
-    //             $data[$i] = [];
-    //         }
+        for ($i = 0; $i < count($data); $i++) {
+            if (! isset($data[$i]) || ! is_array($data[$i])) {
+                $data[$i] = [];
+            }
 
-    //         if (! isset($data[$i]['produk_detail']) || ! is_array($data[$i]['produk_detail'])) {
-    //             $data[$i][
-    //                 'produk_detail'
-    //             ] = [];
+            if (
+                ! isset($data[$i]['produk_detail']) ||
+                ! is_array($data[$i]['produk_detail'])
+            ) {
+                $data[$i]['produk_detail'] = [];
 
-    //             continue;
-    //         }
+                continue;
+            }
 
-    //         for ($j = 0; $j < count($data[$i]['produk_detail']); $j++) {
-    //             $p = is_array($data[$i]['produk_detail'][$j]) ? $data[$i]['produk_detail'][$j] : [];
+            for ($j = 0; $j < count($data[$i]['produk_detail']); $j++) {
 
-    //             $skuOriginal =
-    //                 $this->firstNonEmpty(
-    //                     $p,
-    //                     [
-    //                         'sku_original',
-    //                         'sku',
-    //                         '__sku',
-    //                         'SKU Induk',
-    //                         'SKU',
-    //                     ]
-    //                 );
+                $p = is_array($data[$i]['produk_detail'][$j])
+                    ? $data[$i]['produk_detail'][$j]
+                    : [];
 
-    //             $skuOriginal = trim((string) $skuOriginal);
+                $skuOriginal = $this->firstNonEmpty(
+                    $p,
+                    [
+                        'sku_original',
+                        'sku',
+                        '__sku',
+                        'SKU Induk',
+                        'SKU',
+                    ]
+                );
 
-    //             $sku = $excelService->normalizeSku($skuOriginal) ?? '';
-    //             $custom = $excelService->isCustomSku($skuOriginal);
+                $skuOriginal = trim((string) $skuOriginal);
 
-    //             if (str_ends_with(strtoupper($skuOriginal), 'X2')) {
-    //                 $p['Jumlah'] = ((int) ($p['Jumlah'] ?? 0)) * 2;
-    //                 $p['harga'] = $p['harga'] * $p['jumlah'];
-    //             }
+                $sku = $excelService->normalizeSku($skuOriginal) ?? '';
+                $custom = $excelService->isCustomSku($skuOriginal);
 
-    //             if ($custom === 0 && isset($p['custom']) && (int) $p['custom'] === 1) {
-    //                 $custom = 1;
-    //             }
+                // =========================
+                // AMAN UNTUK SKU X2
+                // =========================
+                if (str_ends_with(strtoupper($skuOriginal), 'X2')) {
+                    if (! array_key_exists('Jumlah_original', $p)) {
+                        $p['Jumlah_original'] = (int) ($p['Jumlah'] ?? 0);
+                    }
 
-    //             if (! isset($p['sku_original']) || trim((string) $p['sku_original']) === '') {
-    //                 $p['sku_original'] =
-    //                     $skuOriginal;
-    //             }
+                    if (! array_key_exists('Harga_original', $p)) {
+                        $p['Harga_original'] = $p['Harga'] ?? 0;
+                    }
 
-    //             $p['sku'] = $sku;
-    //             $p['__sku'] = $sku;
-    //             $p['custom'] = $custom;
+                    $p['Jumlah'] = ((int) $p['Jumlah_original']) * 2;
+                    $hargaOriginal = preg_replace(
+                        '/[^0-9]/',
+                        '',
+                        (string) $p['Harga_original']
+                    );
+                    $p['Harga'] = ((int) $hargaOriginal) / 2;
+                    $changed = true;
+                }
 
-    //             if ($sku !== '') {
-    //                 $skuList[] = $sku;
-    //             }
+                if (
+                    $custom === 0 &&
+                    isset($p['custom']) &&
+                    (int) $p['custom'] === 1
+                ) {
+                    $custom = 1;
+                }
 
-    //             $data[$i]['produk_detail'][$j] = $p;
-    //         }
-    //     }
+                if (
+                    ! isset($p['sku_original']) ||
+                    trim((string) $p['sku_original']) === ''
+                ) {
+                    $p['sku_original'] = $skuOriginal;
+                }
 
-    //     $skuList =
-    //         array_values(
-    //             array_unique(
-    //                 array_filter(
-    //                     array_map(
-    //                         fn ($s) => strtoupper(
-    //                             trim(
-    //                                 (string) $s
-    //                             )
-    //                         ),
-    //                         $skuList
-    //                     )
-    //                 )
-    //             )
-    //         );
+                $p['sku'] = $sku;
+                $p['__sku'] = $sku;
+                $p['custom'] = $custom;
 
-    //     $skuToHpp = [];
+                if ($sku !== '') {
+                    $skuList[] = $sku;
+                }
 
-    //     if (! empty($skuList)) {
-    //         $rows = DB::table('produk')->whereIn('sku', $skuList)
-    //             ->select('sku', 'hpp')
-    //             ->get();
+                $data[$i]['produk_detail'][$j] = $p;
+            }
+        }
 
-    //         foreach ($rows as $r) {
-    //             $key =
-    //                 Str::upper(trim((string)
-    //                         $r->sku
-    //                 )
-    //                 );
+        $skuList =
+            array_values(
+                array_unique(
+                    array_filter(
+                        array_map(
+                            fn ($s) => strtoupper(
+                                trim(
+                                    (string) $s
+                                )
+                            ),
+                            $skuList
+                        )
+                    )
+                )
+            );
 
-    //             $skuToHpp[$key] = (float) $r->hpp;
-    //         }
-    //     }
+        $skuToHpp = [];
 
-    //     $changed = false;
+        if (! empty($skuList)) {
+            $rows = DB::table('produk')->whereIn('sku', $skuList)
+                ->select('sku', 'hpp')
+                ->get();
 
-    //     for ($i = 0; $i < count($data); $i++) {
-    //         for ($j = 0; $j < count($data[$i]['produk_detail'] ?? []); $j++) {
-    //             $p = $data[$i]['produk_detail'][$j];
+            foreach ($rows as $r) {
+                $key =
+                    Str::upper(trim((string)
+                            $r->sku
+                    )
+                    );
 
-    //             $key = Str::upper(trim((string) ($p['sku'] ?? '')));
+                $skuToHpp[$key] = (float) $r->hpp;
+            }
+        }
 
-    //             $hpp = $key !== '' && isset($skuToHpp[$key]) ? (float) $skuToHpp[$key] : 0.0;
-    //             $currentHpp = isset($p['HPP']) ? (float) $p['HPP'] : null;
+        $changed = false;
 
-    //             if ($currentHpp !== $hpp) {
-    //                 $p['HPP'] = $hpp;
-    //                 $changed = true;
-    //             }
+        for ($i = 0; $i < count($data); $i++) {
+            for ($j = 0; $j < count($data[$i]['produk_detail'] ?? []); $j++) {
+                $p = $data[$i]['produk_detail'][$j];
 
-    //             $data[$i]['produk_detail'][$j] = $p;
-    //         }
-    //     }
+                $key = Str::upper(trim((string) ($p['sku'] ?? '')));
 
-    //     if ($changed) {
-    //         Session::put('preview_pesanan',
-    //             $data
-    //         );
-    //     }
+                $hpp = $key !== '' && isset($skuToHpp[$key]) ? (float) $skuToHpp[$key] : 0.0;
+                $currentHpp = isset($p['HPP']) ? (float) $p['HPP'] : null;
 
-    //     return response()->json([
-    //         'status' => 'success',
-    //         'data' => $data,
-    //         'lokasi' => "disini bolo",
-    //     ]);
-    // }
+                if ($currentHpp !== $hpp) {
+                    $p['HPP'] = $hpp;
+                    $changed = true;
+                }
+
+                $data[$i]['produk_detail'][$j] = $p;
+            }
+        }
+
+        if ($changed) {
+            Session::put('preview_pesanan',
+                $data
+            );
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $data,
+        ]);
+    }
 
     private function firstNonEmpty(array $arr, array $keys): string
     {
