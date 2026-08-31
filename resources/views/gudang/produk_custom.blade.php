@@ -532,20 +532,22 @@
                             '-';
 
                         rows.push([
-                            `<span class="text-muted">${index + 1}</span>`,
-                            `
-                                <div class="fw-semibold">
-                                    ${escapeHtml(item.no_pesanan ?? '-')}
-                                </div>
+                            `<span class="text-muted">${index + 1}</span>
                             `,
                             `
-                                <div>
-                                    ${escapeHtml(pesanan.nama_pembeli ?? '-')}
-                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="fw-semibold">
+                                        ${escapeHtml(item.no_pesanan ?? '-')}
+                                    </span>
 
-                                <small class="text-muted">
-                                    ${escapeHtml(pesanan.username ?? '')}
-                                </small>
+                                    <span>
+                                        ${escapeHtml(pesanan.nama_pembeli ?? '-')}
+                                    </span>
+
+                                    <small class="text-muted">
+                                        ${escapeHtml(pesanan.username ?? '')}
+                                    </small>
+                                </div>
                             `,
                             `
                                 ${wrapWords(
@@ -554,7 +556,7 @@
                                 )}
                             `,
                             `
-                                ${escapeHtml(item.variasi ?? '-')}
+                                ${escapeHtml(item.variasi ?? '-').replace(/,\s*/g, ',<br>')}
                             `,
                             `
                                 <span class="badge bg-light text-dark border">

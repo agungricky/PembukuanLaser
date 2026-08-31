@@ -537,7 +537,7 @@ class GudangController extends Controller
         */
         $query = mutasi_stok::with([
             'stok_produk.produk.kategori', 'gudang', 'admin_penjualan',
-        ]);
+        ])->whereIn('jenis_mutasi', ['keluar', 'masuk']);
 
         /*
         |--------------------------------------------------------------------------
@@ -642,8 +642,8 @@ class GudangController extends Controller
                 'jumlah' => $item->jumlah ?? 0,
                 'jenis_mutasi' => $item->jenis_mutasi ?? '-',
                 'keterangan' => $item->keterangan ?? '-',
-                'admin_gudang' => $item->user?->name ?? '-',
-                'pengambil' => $item->ambil_barang?->name ?? '-',
+                'admin_gudang' => $item->gudang?->name ?? '-',
+                'pengambil' => $item->admin_penjualan?->name ?? '-',
                 'created_at' => $item->created_at,
             ];
         }

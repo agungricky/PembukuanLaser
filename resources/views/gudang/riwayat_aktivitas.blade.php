@@ -167,7 +167,6 @@
                         data: 'admin_gudang',
                         orderable: false,
                         render: function(data, type, row) {
-
                             let admin = row.admin_gudang ?? '-';
 
                             let tanggal = '-';
