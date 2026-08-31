@@ -114,24 +114,191 @@ class ProduksiController extends Controller
         return view('produksi.pesanan', compact('produksi'));
     }
 
-    public function showpesanan($id)
+    public function showreguler(Request $request)
     {
-        $pesanan = PesananPerProduk::with([
-            'pesanan' => function ($query) {
+        $draw = (int) $request->input('draw', 1);
+        $start = (int) $request->input('start', 0);
+        $length = (int) $request->input('length', 10);
+        $search = trim($request->input('search.value', ''));
+
+        /*
+        |--------------------------------------------------------------------------
+        | QUERY DASAR
+        |--------------------------------------------------------------------------
+        */
+        $query = PesananPerProduk::with('pesanan')
+            ->where('custom', 0)
+            ->where('status_pesanan', '0')
+            ->where('status_produksi', false)
+            ->whereHas('pesanan', function ($query) {
                 $query->where('status', 'proses');
-            },
-        ])
+            });
+
+        /*
+        |--------------------------------------------------------------------------
+        | TOTAL SKU (Melakukan filtering total sku unik)
+        |--------------------------------------------------------------------------
+        */
+        $recordsTotal = (clone $query)
+            ->distinct()
+            ->count('sku');
+
+        /*
+        |--------------------------------------------------------------------------
+        | SEARCH
+        |--------------------------------------------------------------------------
+        */
+        if ($search !== '') {
+            $query->where(function ($query) use ($search) {
+                $query->where('sku', 'like', "%{$search}%")
+                    ->orWhereIn('sku', function ($subQuery) use ($search) {
+                        $subQuery->select('sku')
+                            ->from('produk')
+                            ->where('nama_produk', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | TOTAL SETELAH SEARCH
+        |--------------------------------------------------------------------------
+        */
+        $recordsFiltered = (clone $query)
+            ->distinct()
+            ->count('sku');
+
+        /*
+        |--------------------------------------------------------------------------
+        | SKU HALAMAN DATATABLES
+        |--------------------------------------------------------------------------
+        */
+        $skuList = (clone $query)
+            ->select('sku')
+            ->groupBy('sku')
+            ->orderBy('sku')
+            ->skip($start)
+            ->take($length)
+            ->pluck('sku');
+
+        /*
+        |--------------------------------------------------------------------------
+        | TOTAL PESANAN PER SKU
+        |--------------------------------------------------------------------------
+        | Database langsung COUNT + SUM agar lebih ringan
+        */
+        $items = PesananPerProduk::query()
+            ->whereIn('sku', $skuList)
+            ->where('custom', 0)
+            ->where('status_pesanan', '0')
+            ->where('status_produksi', false)
+            ->whereNull('mutasi_stok_id')
             ->whereHas('pesanan', function ($query) {
                 $query->where('status', 'proses');
             })
-            ->where('custom', false)
-            ->where('status_pesanan', false)
-            ->where('status_produksi', false)
-            ->whereNull('mutasi_stok_id')
-            ->take(50)
-            ->get();
+            ->select('sku')
+            ->selectRaw('COUNT(*) AS jumlah_pesanan')
+            ->selectRaw('COALESCE(SUM(jumlah), 0) AS total_pesanan')
+            ->groupBy('sku')
+            ->get()
+            ->keyBy('sku');
 
-        dd($pesanan->toArray());
+        /*
+        |--------------------------------------------------------------------------
+        | PRODUK + STOK
+        |--------------------------------------------------------------------------
+        */
+        $produk = Produk::with('stok_produk')
+            ->whereIn('sku', $skuList)
+            ->get()
+            ->keyBy('sku');
+
+        /*
+        |--------------------------------------------------------------------------
+        | ID STOK PRODUK
+        |--------------------------------------------------------------------------
+        */
+        $stokProdukIds = $produk
+            ->pluck('stok_produk.id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        /*
+        |--------------------------------------------------------------------------
+        | TOTAL MUTASI KELUAR 7 HARI
+        |--------------------------------------------------------------------------
+        */
+        $mutasiKeluar = mutasi_stok::query()
+            ->whereIn('stok_produk_id', $stokProdukIds)
+            ->where('jenis_mutasi', 'keluar')
+            ->where('created_at', '>=', now()->subDays(7))
+            ->select('stok_produk_id')
+            ->selectRaw('COALESCE(SUM(jumlah), 0) AS total')
+            ->groupBy('stok_produk_id')
+            ->pluck('total', 'stok_produk_id');
+
+        /*
+        |--------------------------------------------------------------------------
+        | DATA RESPONSE
+        |--------------------------------------------------------------------------
+        */
+        $data = $skuList->map(function ($sku) use (
+            $items,
+            $produk,
+            $mutasiKeluar
+        ) {
+            $item = $items->get($sku);
+            $produkData = $produk->get($sku);
+            $stokProduk = $produkData?->stok_produk;
+
+            /*
+            |--------------------------------------------------------------
+            | PESANAN AKTIF
+            |--------------------------------------------------------------
+            */
+            $pesananMasuk = (int) ($item?->total_pesanan ?? 0);
+
+            /*
+            |--------------------------------------------------------------
+            | STOK TERSEDIA
+            |--------------------------------------------------------------
+            */
+            $stok = (int) ($stokProduk?->jumlah_tersedia ?? 0);
+
+            /*
+            |--------------------------------------------------------------
+            | KEBUTUHAN STOK BERDASARKAN 7 HARI TERAKHIR
+            |--------------------------------------------------------------
+            */
+            $mutasi7Hari = $stokProduk ? (int) ($mutasiKeluar->get($stokProduk->id) ?? 0) : 0;
+            $kekuranganStok = max($pesananMasuk - $stok, 0);
+
+            /*
+            |--------------------------------------------------------------
+            | KEBUTUHAN PRODUKSI
+            |--------------------------------------------------------------
+            */
+            $kebutuhanProduksi = $mutasi7Hari + $kekuranganStok;
+            return [
+                'sku' => $sku,
+                'nama_produk' => $produkData?->nama_produk ?? '-',
+                'variasi' => $produkData?->variasi ?? '-',
+                'jumlah_pesanan' => (int) ($item?->jumlah_pesanan ?? 0),
+                'pesanan_masuk' => $pesananMasuk,
+                'stok' => $stok,
+                'mutasi_terakhir' => $mutasi7Hari,
+                'kekurangan_stok' => $kekuranganStok,
+                'kebutuhan_produksi' => $kebutuhanProduksi,
+            ];
+        });
+
+        return response()->json([
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $data,
+        ]);
     }
 
     /**

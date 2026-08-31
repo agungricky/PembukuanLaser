@@ -34,7 +34,7 @@
                     <strong>Informasi Kebutuhan Produksi</strong>
                     <div class="small mt-1">
                         Kolom <strong>Kebutuhan Produksi</strong> merupakan total kebutuhan dari
-                        <strong>pesanan yang harus diproduksi</strong> ditambah
+                        <strong>pesanan yang harus diproduksi</strong> +
                         <strong>kebutuhan stok berdasarkan pesanan 7 hari terakhir</strong>.
                     </div>
                 </div>
@@ -66,8 +66,8 @@
                     </div>
 
                     <select id="per_page" class="form-select form-select-sm" style="width: auto;">
-                        <option value="10">10</option>
-                        <option value="20" selected>20</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
@@ -103,180 +103,225 @@
                             <th scope="col" class="py-3 px-4 text-center">Kebutuhan Produksi</th>
                         </tr>
                     </thead>
-                    <tbody id="stockTableBody"></tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </section>
     </main>
 
     @include('layouts.footer')
-
-    <!-- Modal Detail -->
-    {{-- <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow">
-
-                <div class="modal-header">
-                    <div>
-                        <h5 class="modal-title fw-bold" id="modalTitle"></h5>
-                        <small class="text-muted" id="detailSku"></small>
-                    </div>
-
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="table-responsive">
-                        <table id="detailTable" class="table table-hover align-middle w-100">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 50px;">No</th>
-                                    <th>Pesanan</th>
-                                    <th>Produk</th>
-                                    <th class="text-center">Qty</th>
-                                    <th>Pengiriman</th>
-                                    <th class="text-center">Status</th>
-                                    <th>Tanggal Order</th>
-                                </tr>
-                            </thead>
-
-                            <tbody id="detailTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div> --}}
-
-    <!-- Modal Pengambil Barang -->
-    {{-- <div class="modal fade" id="pengambilModal" tabindex="-1" aria-labelledby="pengambilModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow">
-
-                <div class="modal-header">
-                    <div>
-                        <h5 class="modal-title fw-bold" id="pengambilModalLabel">
-                            Pengambil Barang
-                        </h5>
-                        <small class="text-muted">
-                            Pilih orang yang mengambil barang dari gudang
-                        </small>
-                    </div>
-
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-                    </button>
-                </div>
-
-                <div class="modal-body">
-
-                    <div class="mb-3">
-                        <label for="pengambil_id" class="form-label fw-semibold">
-                            Nama Pengambil
-                        </label>
-
-                        <select class="form-select" id="pengambil_id" name="pengambil_id" required>
-                            <option>-- Pilih Pengambil --</option>
-                        </select>
-                    </div>
-
-                </div>
-
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                        Batal
-                    </button>
-                    <button type="button" class="btn btn-primary" id="btnSiap">
-                        <i class="ri-save-line me-1"></i>
-                        Simpan
-                    </button>
-                </div>
-
-            </div>
-        </div>
-    </div> --}}
 @endsection
-{{-- 
-@push('styles')
-    <style>
-        #detailModal .dt-length {
-            margin-left: 16px;
-            margin-top: 0 !important;
-            padding-top: 0 !important;
-        }
-
-        #detailModal .dt-search {
-            display: flex !important;
-            align-items: center;
-            justify-content: flex-end;
-            padding: 0 12px !important;
-            margin: 0 !important;
-            gap: 6px;
-        }
-
-        #detailModal .dt-search label {
-            font-size: 11px;
-            color: #6c757d;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-
-        #detailModal .dt-search input {
-            width: 160px !important;
-            height: 30px;
-            padding: 4px 9px;
-            font-size: 11px;
-            border: 1px solid #dee2e6;
-            border-radius: 7px;
-            background: #fff;
-            outline: none;
-
-            margin: 0 !important;
-        }
-
-        #detailModal .dt-search input:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.08);
-        }
-
-        #detailModal .dt-layout-row:first-child {
-            align-items: center !important;
-            margin: 0 !important;
-            padding-top: 0 !important;
-        }
-    </style>
-@endpush --}}
 
 @push('scripts')
     <script>
+        let table = null;
+        let searchTimer = null;
+
         $(document).ready(function() {
-            let table = new DataTable('#orderlist', {
-                pageLength: 10,
+
+            table = $('#orderlist').DataTable({
+                processing: true,
+                serverSide: true,
+
+                ajax: {
+                    url: "{{ route('produksi.pesanan.json') }}",
+                    type: 'GET'
+                },
                 searching: true,
                 lengthChange: false,
-                autoWidth: false
+                pageLength: 10,
+                /*
+                |--------------------------------------------------------------------------
+                | Hilangkan search bawaan DataTables
+                |--------------------------------------------------------------------------
+                | r = table
+                | t = table
+                | i = info
+                | p = pagination
+                */
+                dom: `
+                    rt
+                    <"d-flex justify-content-between align-items-center px-3 py-2"
+                        i
+                        p
+                    >
+                `,
+                columns: [{
+                        data: null,
+                        orderable: true,
+                        searchable: false,
+                        className: 'text-center',
+                        render: function(data, type, row, meta) {
+                            const api = new $.fn.dataTable.Api(meta.settings);
+                            const info = api.page.info();
+                            return info.start + meta.row + 1;
+                        }
+                    },
+                    {
+                        data: 'nama_produk',
+                        name: 'nama_produk',
+                        render: function(data, type, row) {
+                            const namaProduk = data ?? '-';
+                            const namaFormat = namaProduk
+                                .split(' ')
+                                .reduce(function(hasil, kata, index) {
+                                    if (index > 0 && index % 4 === 0) {
+                                        hasil += '<br>';
+                                    }
+
+                                    hasil += (index % 4 === 0 ? '' : ' ') + kata;
+                                    return hasil;
+                                }, '');
+
+                            return `
+                                    <div class="fw-semibold text-dark" style="font-size:14px; line-height: 1.4;">
+                                        ${namaFormat}
+                                    </div>
+                                    <div class="mt-1">
+                                        <span class="badge bg-light text-secondary border fw-normal">
+                                            ${row.sku ?? '-'}
+                                        </span>
+                                    </div>
+                                `;
+                        }
+                    },
+                    {
+                        data: 'variasi',
+                        name: 'variasi',
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            const variasi = data ?? '-';
+                            const variasiFormat = variasi
+                                .split(' ')
+                                .reduce(function(hasil, kata, index) {
+
+                                    if (index > 0 && index % 3 === 0) {
+                                        hasil += '<br>';
+                                    }
+
+                                    hasil +=
+                                        (index % 3 === 0 ? '' : ' ') +
+                                        kata;
+
+                                    return hasil;
+
+                                }, '');
+
+                            return `
+                                <div style="
+                                    font-size: 12px;
+                                    font-weight: 500;
+                                    color: #495057;
+                                    line-height: 1.5;
+                                ">
+                                    ${variasiFormat}
+                                </div>
+                            `;
+                        }
+                    },
+                    {
+                        data: null,
+                        orderable: false,
+                        searchable: false,
+                        render: function(data, type, row) {
+                            const pesananMasuk = parseInt(row.pesanan_masuk ?? 0);
+                            const stok = parseInt(row.stok ?? 0);
+                            const mutasi = parseInt(row.mutasi_terakhir ?? 0);
+                            const kekuranganStok = parseInt(row.kekurangan_stok ?? 0);
+                            return `
+                                <div class="small">
+                                    <div class="d-flex justify-content-between gap-3 mb-1">
+                                        <span class="text-muted">
+                                            Pesanan Masuk
+                                        </span>
+                                        <span class="fw-semibold text-primary">
+                                            ${pesananMasuk}
+                                        </span>
+                                    </div>
+                                    <div class="d-flex justify-content-between gap-3 mb-1">
+                                        <span class="text-muted">
+                                            Ketersediaan Stok
+                                        </span>
+                                        <span class="fw-semibold text-success">
+                                            ${stok}
+                                        </span>
+                                    </div>
+                                    <div class="d-flex justify-content-between gap-3 mb-1">
+                                        <span class="text-muted">
+                                            Kekurangan Stok
+                                        </span>
+                                        <span class="fw-semibold text-danger">
+                                            ${Math.max(pesananMasuk - stok, 0)}
+                                        </span>
+                                    </div>
+                                    <div class="d-flex justify-content-between gap-3">
+                                        <span class="text-muted">
+                                            Order 7 Hari terakhir
+                                        </span>
+                                        <span class="fw-semibold text-danger">
+                                            ${mutasi}
+                                        </span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    },
+                    {
+                        data: null,
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center',
+                        render: function(data, type, row) {
+                            const kebutuhanProduksi = parseInt(row.kebutuhan_produksi ?? 0);
+                            return `
+                                <div class="fw-bold fs-6">
+                                    ${kebutuhanProduksi} pcs
+                                </div>
+                            `;
+                        }
+                    }
+
+                ]
             });
 
-            $('#per_page').val(10);
-            $('#per_page').on('change', function() {
-                if (table) {
-                    table.page.len(parseInt(this.value)).draw();
-                }
-            });
+            $(document)
+                .off('change.orderlist', '#per_page')
+                .on('change.orderlist', '#per_page', function() {
+                    if (!table) {
+                        return;
+                    }
+                    const length = parseInt(this.value, 10);
+                    table
+                        .page
+                        .len(length)
+                        .draw();
 
-            $('#searchTable').on('input', function() {
-                if (table) {
-                    table.search(this.value).draw();
-                }
-            });
+                });
 
-            const id = @json($produksi);
-            $.ajax({
-                type: "GET",
-                url: "{{ route('produksi.pesanan.json', ':produksi') }}".replace(':produksi', id),
-                dataType: "json",
-                success: function (response) {
-                    console.log(response);
-                }
+            $(document)
+                .off('input.orderlist', '#searchTable')
+                .on('input.orderlist', '#searchTable', function() {
+                    if (!table) {
+                        return;
+                    }
+
+                    const keyword = this.value;
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(function() {
+                        table
+                            .search(keyword)
+                            .draw();
+
+                    }, 350);
+                });
+
+            $('#orderlist').on('preXhr.dt', function(e, settings, data) {
+                console.log('Request server-side:', {
+                    start: data.start,
+                    length: data.length,
+                    search: data.search.value
+                });
+
             });
 
         });

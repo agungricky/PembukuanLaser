@@ -232,7 +232,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     Route::middleware(['role:produksi'])->group(function () {
         Route::resource('/produksi', ProduksiController::class);
-        Route::get('/produksi/pesanan/{id}/json', [ProduksiController::class, 'showpesanan'])->name('produksi.pesanan.json');
+        Route::get('/produksi/reguler/json', [ProduksiController::class, 'showreguler'])->name('produksi.pesanan.json');
     });
 
 });
