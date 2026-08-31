@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Pesanan;
 use App\Models\Toko;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -17,7 +17,7 @@ class PesananKirimController extends Controller
         $allowedPerPage = [10, 20, 50, 100];
         $perPage = (int) $request->input('per_page', 20);
 
-        if (!in_array($perPage, $allowedPerPage, true)) {
+        if (! in_array($perPage, $allowedPerPage, true)) {
             $perPage = 50;
         }
 
@@ -131,6 +131,13 @@ class PesananKirimController extends Controller
             }
 
             $pesanan = Pesanan::where('no_pesanan', $noPesanan)->first();
+            if (! $pesanan) {
+                continue;
+            }
+
+            if ($pesanan->status !== 'kirim') {
+                continue;
+            }
 
             $data[] = [
                 'no_pesanan' => $noPesanan,
@@ -172,45 +179,47 @@ class PesananKirimController extends Controller
             'data.*.pencairan' => ['nullable', 'numeric'],
             'data.*.notes' => ['nullable', 'string'],
         ]);
-    
+
         DB::beginTransaction();
-    
+
         try {
             $updated = 0;
             $skipped = 0;
-    
+
             foreach ($request->input('data') as $item) {
                 $noPesanan = $this->normalizeOrderNumber($item['no_pesanan'] ?? '');
-    
+
                 if ($noPesanan === '') {
                     $skipped++;
+
                     continue;
                 }
-    
+
                 $pesanan = Pesanan::where('no_pesanan', $noPesanan)
                     ->lockForUpdate()
                     ->first();
-    
-                if (!$pesanan) {
+
+                if (! $pesanan) {
                     $skipped++;
+
                     continue;
                 }
-    
+
                 if ($pesanan->status !== 'affiliate') {
                     $pesanan->status = 'selesai';
                 }
-    
+
                 $pesanan->pencairan = (float) ($item['pencairan'] ?? 0);
                 $pesanan->notes = $item['notes'] ?? null;
                 $pesanan->save();
-    
+
                 $updated++;
             }
-    
+
             DB::commit();
-    
+
             Session::forget('preview_pencairan');
-    
+
             return response()->json([
                 'status' => 'success',
                 'updated' => $updated,
@@ -218,7 +227,7 @@ class PesananKirimController extends Controller
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
-    
+
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
