@@ -1891,7 +1891,7 @@ class EditorController extends Controller
                 '=',
                 'er.id_per_produk'
             )
-            ->join(
+            ->leftJoin(
                 'produk as pr',
                 'pr.sku',
                 '=',
@@ -1936,36 +1936,45 @@ class EditorController extends Controller
                 'er.status_request',
 
                 'pp.no_pesanan',
+                'pp.sku',
+                'pp.nama_produk as pp_nama_produk',
+                'pp.variasi as pp_variasi',
 
-                'pr.nama_produk',
-                'pr.variasi',
+                'pr.nama_produk as master_nama_produk',
+                'pr.variasi as master_variasi',
 
                 'epi.urutan',
             ])
-
             ->orderByRaw("
                 CASE
-                    WHEN pr.variasi IS NULL
-                        OR TRIM(pr.variasi) = ''
+                    WHEN COALESCE(
+                        NULLIF(TRIM(pr.variasi), ''),
+                        NULLIF(TRIM(pp.variasi), '')
+                    ) IS NULL
                     THEN 1
                     ELSE 0
                 END
             ")
-
-            ->orderByRaw(
-                'LOWER(TRIM(pr.variasi)) ASC'
-            )
-
+            ->orderByRaw("
+                LOWER(
+                    COALESCE(
+                        NULLIF(TRIM(pr.variasi), ''),
+                        NULLIF(TRIM(pp.variasi), ''),
+                        ''
+                    )
+                ) ASC
+            ")
+            ->orderByRaw("
+                LOWER(TRIM(pp.sku)) ASC
+            ")
             ->orderBy(
                 'epi.urutan',
                 'asc'
             )
-
             ->orderBy(
                 'er.id',
                 'asc'
             )
-
             ->get();
 
         if ($requests->isEmpty()) {
@@ -1987,14 +1996,34 @@ class EditorController extends Controller
             $renderer
         );
 
-
         $rows = collect();
 
         foreach ($requests as $request) {
-
             $jumlah = max(
                 1,
                 (int) $request->jumlah_editor
+            );
+
+            $namaProduk = trim(
+                (string) (
+                    $request->master_nama_produk
+                    ?: $request->pp_nama_produk
+                    ?: ''
+                )
+            );
+
+            $variasi = trim(
+                (string) (
+                    $request->master_variasi
+                    ?: $request->pp_variasi
+                    ?: ''
+                )
+            );
+
+            $sku = strtoupper(
+                trim(
+                    (string) $request->sku
+                )
             );
 
             $svg = $writer->writeString(
@@ -2006,20 +2035,21 @@ class EditorController extends Controller
                 base64_encode($svg);
 
             for ($i = 1; $i <= $jumlah; $i++) {
-
                 $rows->push([
-
                     'id_per_produk' =>
                         $request->id_per_produk,
 
                     'no_pesanan' =>
                         $request->no_pesanan,
 
+                    'sku' =>
+                        $sku,
+
                     'nama_produk' =>
-                        $request->nama_produk,
+                        $namaProduk,
 
                     'variasi' =>
-                        $request->variasi,
+                        $variasi,
 
                     'plat_lengkap' =>
                         $request->plat_lengkap,
@@ -2041,13 +2071,27 @@ class EditorController extends Controller
 
                     'qr_code' =>
                         $qrCode,
-
                 ]);
             }
         }
 
-        $pages = $rows
-            ->chunk(7);
+        $pages = collect();
+
+        $rows
+            ->groupBy('sku')
+            ->each(
+                function ($skuRows) use (&$pages) {
+                    $skuRows
+                        ->chunk(7)
+                        ->each(
+                            function ($pageRows) use (&$pages) {
+                                $pages->push(
+                                    $pageRows->values()
+                                );
+                            }
+                        );
+                }
+            );
 
         $pdf = Pdf::loadView(
             'editor.part.qr-pdf',
