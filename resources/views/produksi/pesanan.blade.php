@@ -4,42 +4,29 @@
         <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
             <div>
                 <h1 class="h3 fw-bold text-dark mb-1" id="headertitle">PESANAN PRODUK {{ Str::upper($produksi) }}</h1>
-                @if ($produksi == 'reguler')
-                    <span class="text-muted">
-                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                        Produksi
-                    </span>
-                    <span class="mx-2 text-secondary">/</span>
-                    <span class="fw-semibold text-primary">
-                        Pesanan Reguler
-                    </span>
-                @elseif ($produksi == 'custom')
-                    <span class="text-muted">
-                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                        Produksi
-                    </span>
-                    <span class="mx-2 text-secondary">/</span>
-                    <span class="fw-semibold text-primary">
-                        Pesanan Custom
-                    </span>
-                @endif
+                <span class="text-muted">
+                    <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                    Produksi
+                </span>
+                <span class="mx-2 text-secondary">/</span>
+                <span class="fw-semibold text-primary">
+                    Pesanan Reguler
+                </span>
             </div>
         </div>
 
-        @if ($produksi == 'reguler')
-            <div class="alert alert-primary d-flex align-items-start gap-2 mb-3" role="alert">
-                <i class="fa-solid fa-circle-info mt-1"></i>
+        <div class="alert alert-primary d-flex align-items-start gap-2 mb-3" role="alert">
+            <i class="fa-solid fa-circle-info mt-1"></i>
 
-                <div>
-                    <strong>Informasi Kebutuhan Produksi</strong>
-                    <div class="small mt-1">
-                        Kolom <strong>Kebutuhan Produksi</strong> merupakan total kebutuhan dari
-                        <strong>pesanan yang harus diproduksi</strong> +
-                        <strong>kebutuhan stok berdasarkan pesanan 7 hari terakhir</strong>.
-                    </div>
+            <div>
+                <strong>Informasi Kebutuhan Produksi</strong>
+                <div class="small mt-1">
+                    Kolom <strong>Kebutuhan Produksi</strong> merupakan total kebutuhan dari
+                    <strong>pesanan yang harus diproduksi</strong> +
+                    <strong>kebutuhan stok berdasarkan pesanan 7 hari terakhir</strong>.
                 </div>
             </div>
-        @endif
+        </div>
 
         <!-- Inventory Stock Table Section -->
         <section id="stockTableSection" class="card border-0 shadow-sm rounded-4 overflow-hidden mb-0 pb-0">
@@ -77,17 +64,10 @@
                         <i class="fa-solid fa-file-import me-1"></i>
                         Import Excell
                     </button>
-                    @if ($produksi === 'reguler')
-                        <button type="button" class="btn btn-success btn-sm text-nowrap" id="btnreguler">
-                            <i class="fa-solid fa-file-excel me-1"></i>
-                            Export Excell
-                        </button>
-                    @elseif ($produksi === 'custom')
-                        <button type="button" class="btn btn-success btn-sm text-nowrap" id="btncustom">
-                            <i class="fa-solid fa-file-excel me-1"></i>
-                            Export Excell
-                        </button>
-                    @endif
+                    <a href="{{ route('produksi.export') }}" class="btn btn-success btn-sm text-nowrap">
+                        <i class="fa-solid fa-file-excel me-1"></i>
+                        Export Excel
+                    </a>
                 </div>
             </div>
 
