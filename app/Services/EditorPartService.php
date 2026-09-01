@@ -36,10 +36,11 @@ class EditorPartService
                 ->whereNotNull('pp.sku')
                 ->whereRaw("UPPER(pp.sku) LIKE 'PLT%'")
                 ->where('p.status', 'proses')
-                ->whereDate(
-                    'p.tanggal',
+                ->whereNotNull('p.input_at')
+                ->where(
+                    'p.input_at',
                     '>=',
-                    self::MULAI_EDITOR
+                    self::MULAI_EDITOR . ' 00:00:00'
                 )
                 ->whereNotExists(function ($q) {
                     $q->select(DB::raw(1))
@@ -61,7 +62,7 @@ class EditorPartService
                     'CASE WHEN p.batas_kirim_at IS NULL THEN 1 ELSE 0 END'
                 )
                 ->orderBy('p.batas_kirim_at')
-                ->orderBy('p.tanggal')
+                ->orderBy('p.input_at')
                 ->orderBy('pp.id_per_produk')
                 ->pluck('pp.id_per_produk')
                 ->map(fn ($id) => (int) $id)
@@ -152,10 +153,11 @@ class EditorPartService
             ->whereNotNull('pp.sku')
             ->whereRaw("UPPER(pp.sku) LIKE 'PLT%'")
             ->where('p.status', 'proses')
-            ->whereDate(
-                'p.tanggal',
+            ->whereNotNull('p.input_at')
+            ->where(
+                'p.input_at',
                 '>=',
-                self::MULAI_EDITOR
+                self::MULAI_EDITOR . ' 00:00:00'
             )
             ->select([
                 'pp.id_per_produk',
@@ -166,14 +168,14 @@ class EditorPartService
                 'pp.variasi as item_variasi',
                 'pr.nama_produk as master_nama_produk',
                 'pr.variasi as master_variasi',
-                'p.tanggal',
+                'p.input_at',
                 'p.batas_kirim_at',
             ])
             ->orderByRaw(
                 'CASE WHEN p.batas_kirim_at IS NULL THEN 1 ELSE 0 END'
             )
             ->orderBy('p.batas_kirim_at')
-            ->orderBy('p.tanggal')
+            ->orderBy('p.input_at')
             ->orderBy('pp.id_per_produk')
             ->get();
 
@@ -244,7 +246,9 @@ class EditorPartService
                 $variasi
             );
 
-            $waktuDasar = $this->sekarangWib();
+            $waktuDasar = $gunakanWaktuMasuk
+                ? $this->waktuMasukItem($item)
+                : $this->sekarangWib();
 
             [$tanggalPart, $sesi] = $this->tentukanAntrianDariWaktu(
                 $waktuDasar
@@ -527,6 +531,22 @@ class EditorPartService
             $tanggalBerikutnya,
             self::SESI_PAGI,
         ];
+    }
+
+    private function waktuMasukItem(object $item): Carbon
+    {
+        if (empty($item->input_at)) {
+            return $this->sekarangWib();
+        }
+
+        try {
+            return Carbon::parse(
+                $item->input_at,
+                $this->timezone()
+            );
+        } catch (\Throwable $e) {
+            return $this->sekarangWib();
+        }
     }
 
     private function sekarangWib(): Carbon

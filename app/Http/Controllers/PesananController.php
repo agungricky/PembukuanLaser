@@ -631,6 +631,7 @@ class PesananController extends Controller
                 DB::table('pesanan')->insert([
                     'no_pesanan' => $noPesanan,
                     'tanggal' => $tanggal,
+                    'input_at' => now(),
                     'no_resi' => ! empty($item['no_resi'])
                         ? trim((string) $item['no_resi'])
                         : null,
