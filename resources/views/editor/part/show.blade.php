@@ -4,6 +4,17 @@
 
 <div class="container-fluid">
 
+    @php
+        $sesi = strtoupper($part->sesi ?? '-');
+
+        $badgeSesi = match($part->sesi) {
+            'pagi' => 'bg-primary',
+            'siang' => 'bg-warning text-dark',
+            'malam' => 'bg-dark',
+            default => 'bg-secondary',
+        };
+    @endphp
+
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
 
         <div>
@@ -24,17 +35,25 @@
                     class="text-decoration-none small">
 
                     <i class="fa-solid fa-arrow-left me-1"></i>
-                    Kembali ke Part Produksi
+                    Kembali ke Antrian Editor
 
                 </a>
 
             @endif
 
-            <h4 class="fw-bold mb-1 mt-2">
-                {{ $part->kode_part }}
-            </h4>
+            <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
 
-            <div class="text-muted small">
+                <h4 class="fw-bold mb-0">
+                    {{ $part->kode_part }}
+                </h4>
+
+                <span class="badge {{ $badgeSesi }}">
+                    {{ $sesi }}
+                </span>
+
+            </div>
+
+            <div class="text-muted small mt-1">
                 {{ $part->tanggal_part->translatedFormat('d F Y') }}
             </div>
 
@@ -84,7 +103,7 @@
                 <div class="card-body">
 
                     <div class="small text-muted mb-2">
-                        Status Part
+                        Status Antrian
                     </div>
 
                     @if($part->status === 'open')
@@ -187,15 +206,6 @@
 
             @foreach($kelompok as $nama => $data)
 
-                @php
-                    $kapasitas = $part->kapasitas_per_kelompok ?: 52;
-
-                    $persen = min(
-                        100,
-                        ($data['jumlah'] / $kapasitas) * 100
-                    );
-                @endphp
-
                 <div class="col-xl-4 col-md-6">
 
                     <div class="card border-0 shadow-sm h-100">
@@ -210,30 +220,28 @@
                                 {{ str_replace('|', ' • ', $nama) }}
                             </div>
 
-                            <div class="d-flex justify-content-between mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
 
-                                <span class="text-muted small">
-                                    Kapasitas
-                                </span>
+                                <div>
+                                    <div class="small text-muted">
+                                        Total Qty
+                                    </div>
 
-                                <strong>
-                                    {{ $data['jumlah'] }}/{{ $kapasitas }}
-                                </strong>
-
-                            </div>
-
-                            <div class="progress"
-                                style="height: 7px">
-
-                                <div class="progress-bar"
-                                    role="progressbar"
-                                    style="width: {{ $persen }}%">
+                                    <div class="fs-5 fw-bold">
+                                        {{ $data['jumlah'] }} pcs
+                                    </div>
                                 </div>
 
-                            </div>
+                                <div class="text-end">
+                                    <div class="small text-muted">
+                                        Item Pesanan
+                                    </div>
 
-                            <div class="small text-muted mt-2">
-                                {{ $data['item'] }} item pesanan
+                                    <div class="fs-5 fw-bold">
+                                        {{ $data['item'] }}
+                                    </div>
+                                </div>
+
                             </div>
 
                         </div>
@@ -437,7 +445,7 @@
                             <td colspan="{{ $part->status === 'processed' ? 9 : 8 }}"
                                 class="text-center py-5 text-muted">
 
-                                Tidak ada item dalam Part ini.
+                                Tidak ada item dalam antrian ini.
 
                             </td>
 

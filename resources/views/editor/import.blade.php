@@ -11,7 +11,7 @@
         </h4>
 
         <div class="text-muted small">
-            Upload Excel Part setelah proses Editor dan VBA Corel selesai
+            Upload Excel Antrian Editor setelah proses Editor dan VBA Corel selesai
         </div>
 
     </div>
@@ -77,7 +77,7 @@
                                 for="fileEditor"
                                 class="form-label fw-semibold">
 
-                                File Excel
+                                File Excel Antrian Editor
 
                             </label>
 
@@ -116,7 +116,7 @@
                                 </span>
 
                                 <div class="small">
-                                    Sedang memproses hasil Editor. Tunggu sampai halaman berpindah ke Riwayat Part.
+                                    Sedang memproses hasil Editor. Tunggu sampai halaman berpindah ke Riwayat Antrian Editor.
                                 </div>
 
                             </div>
