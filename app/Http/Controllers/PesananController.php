@@ -788,6 +788,8 @@ class PesananController extends Controller
                             'harga' => $hargaJualReal,
                             'sku' => $sku,
                             'custom' => $custom,
+                            'created_at' => now(),
+                            'updated_at' => now(),
                         ], 'id_per_produk');
 
                     if ($sku && str_starts_with($sku, 'PLT')) {

@@ -31,11 +31,20 @@ class AppServiceProvider extends ServiceProvider
             $dataLogin = Auth::user();
             $countProduk = Produk::count();
             $countKategori = kategori::count();
+            $produksiMenipis = Produk::with('stok_produk')
+            ->whereNotNull('nama_produk')
+            ->where(function ($query) {
+                $query->whereDoesntHave('stok_produk')
+                    ->orWhereHas('stok_produk', function ($query) {
+                        $query->where('jumlah_tersedia', '<', 5);
+                    });
+            })->count();
 
             $view->with([
                 'dataLogin' => $dataLogin,
                 'countProduk' => $countProduk,
-                'countKategori' => $countKategori
+                'countKategori' => $countKategori,
+                'produksiMenipis' => $produksiMenipis
             ]);
         });
     }

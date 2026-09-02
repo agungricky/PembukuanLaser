@@ -8,9 +8,8 @@ class PesananPerProduk extends Model
 {
     protected $table = 'pesanan_per_produk';
     protected $primaryKey = 'id_per_produk';
-
-    // public $timestamps = false;
-
+    public $timestamps = true;
+    
     protected $fillable = [
         'no_pesanan',
         'nama_produk',
