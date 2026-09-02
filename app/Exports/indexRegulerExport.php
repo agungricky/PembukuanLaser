@@ -74,13 +74,6 @@ class indexRegulerExport implements WithMultipleSheets
             ->map(function ($items) {
                 return $items->values();
             });
-
-        // testing
-        // dd(
-        //     $this->tabtwo
-        //         ->take(-10)
-        //         ->toArray()
-        // );
     }
 
     public function sheets(): array

@@ -2,7 +2,6 @@
 
 namespace App\Exports;
 
-use Maatwebsite\Excel\Concerns\FromCollection;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -15,6 +14,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 class perprodukRegulerExport implements FromArray, WithEvents, WithTitle
 {
     protected Collection $data;
+
     protected array $mergeSku = [];
 
     public function __construct(Collection $tabtwo)
@@ -26,7 +26,7 @@ class perprodukRegulerExport implements FromArray, WithEvents, WithTitle
     {
         $hasil = [];
 
-        $hasil[] = ['SKU','ID PER PRODUK','STATUS',];
+        $hasil[] = ['SKU', 'ID PER PRODUK', 'STATUS'];
         $rowExcel = 2;
         foreach ($this->data as $sku => $items) {
             $awal = $rowExcel;
@@ -78,11 +78,7 @@ class perprodukRegulerExport implements FromArray, WithEvents, WithTitle
                     ],
                 ]);
 
-                /*
-                |--------------------------------------------------------------------------
-                | MERGE SKU YANG SAMA
-                |--------------------------------------------------------------------------
-                */
+                // MERGE SKU YANG SAMA
                 foreach ($this->mergeSku as $merge) {
 
                     $awal = $merge['awal'];
@@ -93,11 +89,7 @@ class perprodukRegulerExport implements FromArray, WithEvents, WithTitle
                     );
                 }
 
-                /*
-                |--------------------------------------------------------------------------
-                | ALIGNMENT SKU
-                |--------------------------------------------------------------------------
-                */
+                // ALIGNMENT SKU
                 $akhirData = $sheet->getHighestRow();
 
                 $sheet->getStyle("A2:A{$akhirData}")
@@ -122,24 +114,22 @@ class perprodukRegulerExport implements FromArray, WithEvents, WithTitle
                 for ($row = 2; $row <= $akhirData; $row++) {
 
                     $formula =
-                        '=XLOOKUP('.
-                            'LOOKUP(2,1/($A$2:A'.$row.'<>""),$A$2:A'.$row.'),'.
-                            "'Order Reguler'!\$A:\$A,".
-                            "'Order Reguler'!\$E:\$E,".
+                        '=IFERROR('.
+                            'INDEX('.
+                                "'Produksi Reguler'!\$E:\$E,".
+                                'MATCH('.
+                                    'LOOKUP(2,1/($A$2:A'.$row.'<>""),$A$2:A'.$row.'),'.
+                                    "'Produksi Reguler'!\$A:\$A,".
+                                    '0'.
+                                ')'.
+                            '),'.
                             '""'.
                         ')';
 
-                    $sheet->setCellValue(
-                        "C{$row}",
-                        $formula
-                    );
+                    $sheet->setCellValue("C{$row}", $formula);
                 }
 
-                /*
-                |--------------------------------------------------------------------------
-                | BORDER
-                |--------------------------------------------------------------------------
-                */
+                // BORDER
                 $sheet->getStyle("A1:C{$akhirData}")
                     ->getBorders()
                     ->getAllBorders()
@@ -147,27 +137,12 @@ class perprodukRegulerExport implements FromArray, WithEvents, WithTitle
                         Border::BORDER_THIN
                     );
 
-                /*
-                |--------------------------------------------------------------------------
-                | COLUMN WIDTH
-                |--------------------------------------------------------------------------
-                */
-                $sheet->getColumnDimension('A')
-                    ->setWidth(20);
-
-                $sheet->getColumnDimension('B')
-                    ->setWidth(20);
-
-                $sheet->getColumnDimension('C')
-                    ->setWidth(18);
-
-                /*
-                |--------------------------------------------------------------------------
-                | ROW HEIGHT
-                |--------------------------------------------------------------------------
-                */
-                $sheet->getRowDimension(1)
-                    ->setRowHeight(25);
+                // COLUMN WIDTH
+                $sheet->getColumnDimension('A')->setWidth(20);
+                $sheet->getColumnDimension('B')->setWidth(20);
+                $sheet->getColumnDimension('C')->setWidth(18);
+                // ROW HEIGHT
+                $sheet->getRowDimension(1)->setRowHeight(25);
             },
         ];
     }

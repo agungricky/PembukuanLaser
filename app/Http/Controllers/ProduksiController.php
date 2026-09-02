@@ -304,6 +304,7 @@ class ProduksiController extends Controller
     {
         return Excel::download(
             new indexRegulerExport(),
+        new indexRegulerExport,
             'produk-reguler-'.now()->format('Y-m-d').'.xlsx'
         );
     }
