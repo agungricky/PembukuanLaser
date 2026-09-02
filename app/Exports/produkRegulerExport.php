@@ -2,15 +2,16 @@
 
 namespace App\Exports;
 
+use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
-use PhpOffice\PhpSpreadsheet\Style\Conditional;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Color;
+use PhpOffice\PhpSpreadsheet\Style\Conditional;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class produkRegulerExport implements FromArray, WithEvents, WithTitle
 {
@@ -29,7 +30,7 @@ class produkRegulerExport implements FromArray, WithEvents, WithTitle
         $row = [
             ['', '', '', '', ''],
             ['', '', '', '', ''],
-            ['Tanggal Export : ', now()->format('d/m/Y'), '', '', '', ''],
+            ['Tanggal Export : '.now()->format('d/m/Y H:i'), 'Export By : '.(Auth::user()?->name ?? '-'), '', '', ''],
             ['SKU', 'Nama Produk', 'Variasi', 'Kebutuhan Produksi', 'Status Produksi'],
         ];
         foreach ($this->data as $item) {
@@ -51,24 +52,32 @@ class produkRegulerExport implements FromArray, WithEvents, WithTitle
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                // Header formatting A1:E2
-                $sheet->mergeCells('A1:E2');
-                $sheet->setCellValue('A1', 'DAFTAR  PESANAN PRODUK NON CUSTOM');
+                // Header formatting A1:E1
+                $sheet->mergeCells('A1:E1');
+                $sheet->setCellValue('A1', "DAFTAR PESANAN PRODUK NON CUSTOM");
                 $sheet->getStyle('A1')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 14],
                     'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
                 ]);
                 $sheet->getRowDimension(1)->setRowHeight(50);
 
-                // Header formatting A3
-                $sheet->getStyle('A3')->applyFromArray([
-                    'font' => ['bold' => false],
+                // Header formatting A3:B3
+                $sheet->mergeCells('A2:E2');
+                $sheet->setCellValue('A2', "Jangan berikan file export ini kepada operator produksi lain. 1 file export hanya untuk 1 operator produksi.");
+                $sheet->getStyle('A2')->applyFromArray([
+                    'font' => ['bold' => false, 'size' => 12],
+                    'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
                 ]);
-
-                // Header formatting B3:E3
-                $sheet->mergeCells('B3:E3');
-                $sheet->getStyle('B3:E3')->applyFromArray([
-                    'font' => ['bold' => false],
+                
+                $sheet->getStyle('A3:B3')->applyFromArray([
+                    'font' => [
+                        'bold' => true,
+                        'color' => ['rgb' => 'FFFFFF'],
+                    ],
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => '133458'],
+                    ],
                     'alignment' => ['horizontal' => 'start', 'vertical' => 'center', 'wrapText' => true],
                 ]);
 
@@ -77,6 +86,29 @@ class produkRegulerExport implements FromArray, WithEvents, WithTitle
                     'font' => [
                         'bold' => true,
                         'color' => ['rgb' => 'FFFFFF'], // Warna teks putih
+                    ],
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => '000000'],
+                    ],
+                    'alignment' => [
+                        'horizontal' => 'center',
+                        'vertical' => 'center',
+                        'wrapText' => true,
+                    ],
+                ]);
+
+                $sheet->mergeCells('C3:C4');
+                $sheet->setCellValue('C3', 'Variasi');
+                $sheet->mergeCells('D3:D4');
+                $sheet->setCellValue('D3', 'Kebutuhan Produksi');
+                $sheet->mergeCells('E3:E4');
+                $sheet->setCellValue('E3', 'Status Produksi');
+
+                $sheet->getStyle('C3:E4')->applyFromArray([
+                    'font' => [
+                        'bold' => true,
+                        'color' => ['rgb' => 'FFFFFF'],
                     ],
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
