@@ -76,14 +76,18 @@ class indexRegulerExport implements WithMultipleSheets
             });
 
         // testing
-        dd($this->tabtwo->take(30)->toArray());
+        // dd(
+        //     $this->tabtwo
+        //         ->take(-10)
+        //         ->toArray()
+        // );
     }
 
     public function sheets(): array
     {
         return [
             new produkRegulerExport($this->tabone),
-            new perprodukRegulerExport($this->tabone),
+            new perprodukRegulerExport($this->tabtwo),
         ];
     }
 }
