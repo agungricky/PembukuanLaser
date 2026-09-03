@@ -164,7 +164,7 @@
                                 </h2>
                             </div>
                             <p class="text-muted small mb-0 mt-3">
-                                Pesanan Produk > 1000
+                                Pesanan Produk > 100
                             </p>
                         </div>
                     </div>

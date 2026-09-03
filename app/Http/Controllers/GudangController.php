@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\gudangStokExport;
+use App\Imports\stokImport;
 use App\Models\kategori;
 use App\Models\mutasi_stok;
 use App\Models\Pesanan;
@@ -13,13 +15,16 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Str;
 
 class GudangController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    // ==================================================//
+    // ================== DASHBOARD =====================//
+    // ==================================================//
     public function gudang()
     {
         $produk = Produk::whereNotNull(['nama_produk', 'variasi'])->get();
@@ -194,9 +199,53 @@ class GudangController extends Controller
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
+    public function detailcard($card)
+    {
+        $query = stok_produk::with([
+            'produk.kategori',
+        ]);
+
+        if ($card === 'aman') {
+            $query->where('jumlah_tersedia', '>', 5);
+        } elseif ($card === 'menipis') {
+            $query->whereBetween('jumlah_tersedia', [3, 5]);
+        } elseif ($card === 'kritis') {
+            $query->whereBetween('jumlah_tersedia', [1, 2]);
+        } elseif ($card === 'habis') {
+            $query->where('jumlah_tersedia', '=', 0);
+        } else {
+            return response()->json([
+                'message' => 'Filter tidak valid',
+            ], 400);
+        }
+        $data = $query->orderBy('jumlah_tersedia', 'asc')->get();
+
+        return response()->json($data);
+    }
+
+    public function detailpesanan($filter, $sku)
+    {
+        if ($filter === 'siapkan') {
+            $data = PesananPerProduk::with('pesanan.toko', 'produk')
+                ->where('sku', $sku)
+                ->where('status_pesanan', '0')
+                ->whereHas('pesanan', function ($query) {
+                    $query->where('status', 'proses');
+                })->get();
+
+            return response()->json($data);
+
+        } else {
+            $kebutuhanProduk = PesananPerProduk::with('pesanan.toko', 'produk')->where('mutasi_stok_id', $sku)->get();
+
+            return response()->json($kebutuhanProduk);
+
+        }
+    }
+
+    // ==================================================//
+    // ================== TRANSAKSI =====================//
+    // ==================================================//
     public function show(string $id)
     {
         return view('gudang.transaksi', compact('id'));
@@ -268,9 +317,6 @@ class GudangController extends Controller
         }
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -388,9 +434,262 @@ class GudangController extends Controller
         }
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
+    // ==================================================//
+    // ============== BARANG SAMPEL =====================//
+    // ==================================================//
+    public function barangsampel()
+    {
+        $produk = mutasi_stok::with('gudang', 'admin_penjualan', 'stok_produk.produk.kategori')
+            ->where('jenis_mutasi', 'sampel')
+            ->orderBy('created_at', 'DESC')
+            ->get();
+        $allproduk = Produk::with('kategori')->where('status', 'aktif')->get();
+        $user = User::where('role', 'pegawai')->get();
+
+        return view('gudang.sampel', compact('produk', 'allproduk', 'user'));
+    }
+
+    public function sampelcreate(Request $request)
+    {
+        $request->validate([
+            'produk_id' => ['required', 'exists:produk,sku'],
+            'nama_peminta' => ['required', 'exists:users,id'],
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $stok = stok_produk::where('sku_id', $request->produk_id)->first();
+
+            if (! $stok) {
+                $stok = stok_produk::create([
+                    'sku_id' => $request->produk_id,
+                    'jumlah_tersedia' => '0',
+                    'min_stok' => '5',
+                ]);
+            }
+
+            if ($stok->jumlah_tersedia < $request->jumlah) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Permintaan gagal Stok Tidak Cukup.',
+                ], 500);
+            }
+
+            stok_produk::where('sku_id', $request->produk_id)->update([
+                'jumlah_tersedia' => $stok->jumlah_tersedia - $request->jumlah,
+            ]);
+
+            mutasi_stok::create([
+                'stok_produk_id' => $stok->id,
+                'gudang_id' => auth()->id(),
+                'adm_penjualan_id' => $request->nama_peminta,
+                'jenis_mutasi' => 'sampel',
+                'jumlah' => $request->jumlah,
+                'keterangan' => 'Permintaan sampel',
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Permintaan sampel berhasil dibuat.',
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // ==================================================//
+    // =============== BARANG RETUR =====================//
+    // ==================================================//
+    public function barangretur(Request $request)
+    {
+        $search = $request->search;
+        $perPage = $request->per_page ?? 10;
+        $pesanan = Pesanan::with([
+            'pesanan_per_produk.retur',
+            'user',
+            'toko',
+        ])->whereIn('status', [
+            'pengembalian',
+            'pengiriman_gagal',
+        ])->whereHas('pesanan_per_produk.retur')
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+
+                    $q->where('no_pesanan', 'like', '%'.$search.'%')
+                        ->orWhere('nama_pembeli', 'like', '%'.$search.'%')
+                        ->orWhere('username', 'like', '%'.$search.'%')
+                        ->orWhere('no_resi', 'like', '%'.$search.'%')
+                        ->orWhere('kurir', 'like', '%'.$search.'%')
+                        ->orWhere('status', 'like', '%'.$search.'%')
+
+                        ->orWhereHas('pesanan_per_produk', function ($produk) use ($search) {
+                            $produk->where('sku', 'like', '%'.$search.'%')
+                                ->orWhere('nama_produk', 'like', '%'.$search.'%')
+                                ->orWhere('variasi', 'like', '%'.$search.'%');
+                        })
+
+                        ->orWhereHas('user', function ($user) use ($search) {
+                            $user->where('name', 'like', '%'.$search.'%');
+                        })
+
+                        ->orWhereHas('toko', function ($toko) use ($search) {
+                            $toko->where('nama_toko', 'like', '%'.$search.'%');
+                        });
+                });
+            })
+
+            ->orderBy('tanggal', 'DESC')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('gudang.retur', compact('pesanan'));
+    }
+
+    public function detailRetur($no_pesanan)
+    {
+        $pesanan = PesananPerProduk::with('pesanan.toko')
+            ->where('no_pesanan', $no_pesanan)
+            ->whereHas('pesanan', function ($query) {
+                $query->where('tanggal', '>=', now()->subMonths(6));
+            })
+            ->get();
+
+        if ($pesanan->isEmpty()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pesanan tidak ditemukan atau pesanan sudah lebih dari 6 Bulan.',
+            ], 404);
+        }
+
+        $status = $pesanan->first()->pesanan->status;
+        if (! in_array($status, ['pengembalian', 'pengiriman_gagal'])) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Pesanan masih dalam proses pengiriman, minta admin penjualan melakukan update pesanan.',
+            ], 422);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => $pesanan,
+        ]);
+    }
+
+    public function returCreate(Request $request)
+    {
+        $request->validate([
+            'produk' => ['required', 'array', 'min:1'],
+            'produk.*.per_produk_id' => ['required', 'integer', 'exists:pesanan_per_produk,id_per_produk'],
+            'produk.*.diterima' => ['required', 'integer', 'min:0'],
+        ]);
+
+        DB::beginTransaction();
+        try {
+            foreach ($request->produk as $produk) {
+                if ($produk['diterima'] <= 0) {
+                    continue;
+                }
+
+                retur::create([
+                    'per_produk_id' => $produk['per_produk_id'],
+                    'diterima' => $produk['diterima'],
+                ]);
+
+                $perProduk = PesananPerProduk::where('id_per_produk', $produk['per_produk_id'])->first();
+                stok_produk::where('sku_id', $perProduk->sku)
+                    ->increment('jumlah_tersedia', $produk['diterima']);
+
+                $stok_id = stok_produk::where('sku_id', $perProduk->sku)->first();
+                mutasi_stok::create([
+                    'stok_produk_id' => $stok_id->id,
+                    'gudang_id' => Auth::id(),
+                    'adm_penjualan_id' => null,
+                    'jenis_mutasi' => 'masuk',
+                    'jumlah' => $produk['diterima'],
+                    'keterangan' => 'Barang masuk dari retur',
+                ]);
+
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Data retur berhasil disimpan.',
+            ]);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+
+    }
+
+    // ==================================================//
+    // ============== PRODUK CUSTOM =====================//
+    // ==================================================//
+    public function produkcustom()
+    {
+        $pesanan_perproduk = PesananPerProduk::with('pesanan')
+            ->where('custom', 1)
+            ->whereHas('pesanan')
+            ->get();
+
+        $data = $pesanan_perproduk
+            ->groupBy(function ($item) {
+                $tanggal = Carbon::parse($item->pesanan->tanggal);
+
+                return $item->sku.'-'.$tanggal->format('Y-m');
+            })
+            ->map(function ($items) {
+                $firstItem = $items->first();
+                $produk = Produk::where('sku', $firstItem->sku)->first();
+                $tanggal = Carbon::parse($firstItem->pesanan->tanggal);
+
+                return [
+                    'sku' => $firstItem->sku,
+                    'nama_produk' => $produk?->nama_produk ?? $firstItem->nama_produk,
+                    'variasi' => $produk?->variasi ?? $firstItem->variasi,
+                    'qty' => $items->sum('jumlah'),
+                    'diproses' => $items
+                        ->filter(fn ($item) => $item->pesanan->status === 'proses')
+                        ->sum('jumlah'),
+                    'kirim' => $items
+                        ->filter(fn ($item) => $item->pesanan->status === 'kirim')
+                        ->sum('jumlah'),
+                    'retur' => $items
+                        ->filter(fn ($item) => $item->pesanan->status === 'pengiriman gagal' && $item->pesanan->status === 'pengembalian')
+                        ->sum('jumlah'),
+                    'selesai' => $items
+                        ->filter(fn ($item) => $item->pesanan->status === 'selesai')
+                        ->sum('jumlah'),
+                    'bulan' => $tanggal->month,
+                    'tahun' => $tanggal->year,
+                    'tanggal_awal' => $tanggal->copy()->startOfMonth(),
+                    'tanggal_akhir' => $tanggal->copy()->endOfMonth(),
+                    'data' => $items->values(),
+                ];
+            })
+            ->values();
+
+        return view('gudang.produk_custom', compact('data'));
+    }
+
+    // ==================================================//
+    // ================== PRODUK ========================//
+    // ==================================================//
     public function produk()
     {
         $produk = Produk::with('stok_produk', 'kategori')->get();
@@ -497,9 +796,76 @@ class GudangController extends Controller
         }
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
+    public function stokExport()
+    {
+        return Excel::download(new gudangStokExport, 'Stok-'.now()->format('Y-m-d').'.xlsx');
+    }
+
+    public function stokImport(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls',
+        ]);
+
+        $fullPath = null;
+        try {
+            $file = $request->file('file');
+            $folder = storage_path('app/imports');
+            if (! is_dir($folder)) {
+                mkdir($folder, 0777, true);
+            }
+
+            $namaFile = time().'_'.$file->getClientOriginalName();
+            $fileBaru = $file->move($folder, $namaFile);
+            $fullPath = $fileBaru->getPathname();
+            $import = new stokImport;
+            Excel::import($import, $fullPath);
+            $perubahan = $import->getDataBerubah();
+            $skuTidakDitemukan = $import->getSkuTidakDitemukan();
+
+            if (empty($perubahan) && empty($skuTidakDitemukan)) {
+                return response()->json([
+                    'status' => false,
+                    'type' => 'no_changes',
+                    'message' => 'Tidak ada perubahan stok.',
+                ]);
+            }
+
+            $token = (string) Str::uuid();
+            Cache::put(
+                'import_stok_'.$token,
+                [
+                    'perubahan' => $perubahan,
+                    'sku_tidak_ditemukan' => $skuTidakDitemukan,
+                ],
+                now()->addMinutes(10)
+            );
+
+            return response()->json([
+                'status' => true,
+                'jumlah' => count($perubahan),
+                'jumlah_tidak_ditemukan' => count($skuTidakDitemukan),
+                'data' => $perubahan,
+                'sku_tidak_ditemukan' => $skuTidakDitemukan,
+                'token' => $token,
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+
+        } finally {
+            if ($fullPath && file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+        }
+    }
+
+    // ==================================================//
+    // ================== KATEGORI ======================//
+    // ==================================================//
     public function kategori()
     {
         $kategori = kategori::with('produk')->get();
@@ -523,6 +889,9 @@ class GudangController extends Controller
         ]);
     }
 
+    // ==================================================//
+    // ========== RIWAYAT AKTIVITAS =====================//
+    // ==================================================//
     public function riwayataktivitas()
     {
         return view('gudang.riwayat_aktivitas');
@@ -661,293 +1030,5 @@ class GudangController extends Controller
             'data' => $result,
 
         ]);
-    }
-
-    public function detailcard($card)
-    {
-        $query = stok_produk::with([
-            'produk.kategori',
-        ]);
-
-        if ($card === 'aman') {
-            $query->where('jumlah_tersedia', '>', 5);
-        } elseif ($card === 'menipis') {
-            $query->whereBetween('jumlah_tersedia', [3, 5]);
-        } elseif ($card === 'kritis') {
-            $query->whereBetween('jumlah_tersedia', [1, 2]);
-        } elseif ($card === 'habis') {
-            $query->where('jumlah_tersedia', '=', 0);
-        } else {
-            return response()->json([
-                'message' => 'Filter tidak valid',
-            ], 400);
-        }
-        $data = $query->orderBy('jumlah_tersedia', 'asc')->get();
-
-        return response()->json($data);
-    }
-
-    public function detailpesanan($filter, $sku)
-    {
-        if ($filter === 'siapkan') {
-            $data = PesananPerProduk::with('pesanan.toko', 'produk')
-                ->where('sku', $sku)
-                ->where('status_pesanan', '0')
-                ->whereHas('pesanan', function ($query) {
-                    $query->where('status', 'proses');
-                })->get();
-
-            return response()->json($data);
-
-        } else {
-            $kebutuhanProduk = PesananPerProduk::with('pesanan.toko', 'produk')->where('mutasi_stok_id', $sku)->get();
-
-            return response()->json($kebutuhanProduk);
-
-        }
-    }
-
-    public function barangsampel()
-    {
-        $produk = mutasi_stok::with('gudang', 'admin_penjualan', 'stok_produk.produk.kategori')
-            ->where('jenis_mutasi', 'sampel')
-            ->orderBy('created_at', 'DESC')
-            ->get();
-        $allproduk = Produk::with('kategori')->where('status', 'aktif')->get();
-        $user = User::where('role', 'pegawai')->get();
-
-        return view('gudang.sampel', compact('produk', 'allproduk', 'user'));
-    }
-
-    public function sampelcreate(Request $request)
-    {
-        $request->validate([
-            'produk_id' => ['required', 'exists:produk,sku'],
-            'nama_peminta' => ['required', 'exists:users,id'],
-        ]);
-
-        DB::beginTransaction();
-        try {
-            $stok = stok_produk::where('sku_id', $request->produk_id)->first();
-
-            if (! $stok) {
-                $stok = stok_produk::create([
-                    'sku_id' => $request->produk_id,
-                    'jumlah_tersedia' => '0',
-                    'min_stok' => '5',
-                ]);
-            }
-
-            if ($stok->jumlah_tersedia < $request->jumlah) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Permintaan gagal Stok Tidak Cukup.',
-                ], 500);
-            }
-
-            stok_produk::where('sku_id', $request->produk_id)->update([
-                'jumlah_tersedia' => $stok->jumlah_tersedia - $request->jumlah,
-            ]);
-
-            mutasi_stok::create([
-                'stok_produk_id' => $stok->id,
-                'gudang_id' => auth()->id(),
-                'adm_penjualan_id' => $request->nama_peminta,
-                'jenis_mutasi' => 'sampel',
-                'jumlah' => $request->jumlah,
-                'keterangan' => 'Permintaan sampel',
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Permintaan sampel berhasil dibuat.',
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'status' => false,
-                'message' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function barangretur(Request $request)
-    {
-        $search = $request->search;
-        $perPage = $request->per_page ?? 10;
-        $pesanan = Pesanan::with([
-            'pesanan_per_produk.retur',
-            'user',
-            'toko',
-        ])->whereIn('status', [
-            'pengembalian',
-            'pengiriman_gagal',
-        ])->whereHas('pesanan_per_produk.retur')
-            ->when($search, function ($query) use ($search) {
-                $query->where(function ($q) use ($search) {
-
-                    $q->where('no_pesanan', 'like', '%'.$search.'%')
-                        ->orWhere('nama_pembeli', 'like', '%'.$search.'%')
-                        ->orWhere('username', 'like', '%'.$search.'%')
-                        ->orWhere('no_resi', 'like', '%'.$search.'%')
-                        ->orWhere('kurir', 'like', '%'.$search.'%')
-                        ->orWhere('status', 'like', '%'.$search.'%')
-
-                        ->orWhereHas('pesanan_per_produk', function ($produk) use ($search) {
-                            $produk->where('sku', 'like', '%'.$search.'%')
-                                ->orWhere('nama_produk', 'like', '%'.$search.'%')
-                                ->orWhere('variasi', 'like', '%'.$search.'%');
-                        })
-
-                        ->orWhereHas('user', function ($user) use ($search) {
-                            $user->where('name', 'like', '%'.$search.'%');
-                        })
-
-                        ->orWhereHas('toko', function ($toko) use ($search) {
-                            $toko->where('nama_toko', 'like', '%'.$search.'%');
-                        });
-                });
-            })
-
-            ->orderBy('tanggal', 'DESC')
-            ->paginate($perPage)
-            ->withQueryString();
-
-        return view('gudang.retur', compact('pesanan'));
-    }
-
-    public function detailRetur($no_pesanan)
-    {
-        $pesanan = PesananPerProduk::with('pesanan.toko')
-            ->where('no_pesanan', $no_pesanan)
-            ->whereHas('pesanan', function ($query) {
-                $query->where('tanggal', '>=', now()->subMonths(6));
-            })
-            ->get();
-
-        if ($pesanan->isEmpty()) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Pesanan tidak ditemukan atau pesanan sudah lebih dari 6 Bulan.',
-            ], 404);
-        }
-
-        $status = $pesanan->first()->pesanan->status;
-        if (! in_array($status, ['pengembalian', 'pengiriman_gagal'])) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Pesanan masih dalam proses pengiriman, minta admin penjualan melakukan update pesanan.',
-            ], 422);
-        }
-
-        return response()->json([
-            'status' => true,
-            'data' => $pesanan,
-        ]);
-    }
-
-    public function returCreate(Request $request)
-    {
-        $request->validate([
-            'produk' => ['required', 'array', 'min:1'],
-            'produk.*.per_produk_id' => ['required', 'integer', 'exists:pesanan_per_produk,id_per_produk'],
-            'produk.*.diterima' => ['required', 'integer', 'min:0'],
-        ]);
-
-        DB::beginTransaction();
-        try {
-            foreach ($request->produk as $produk) {
-                if ($produk['diterima'] <= 0) {
-                    continue;
-                }
-
-                retur::create([
-                    'per_produk_id' => $produk['per_produk_id'],
-                    'diterima' => $produk['diterima'],
-                ]);
-
-                $perProduk = PesananPerProduk::where('id_per_produk', $produk['per_produk_id'])->first();
-                stok_produk::where('sku_id', $perProduk->sku)
-                    ->increment('jumlah_tersedia', $produk['diterima']);
-
-                $stok_id = stok_produk::where('sku_id', $perProduk->sku)->first();
-                mutasi_stok::create([
-                    'stok_produk_id' => $stok_id->id,
-                    'gudang_id' => Auth::id(),
-                    'adm_penjualan_id' => null,
-                    'jenis_mutasi' => 'masuk',
-                    'jumlah' => $produk['diterima'],
-                    'keterangan' => 'Barang masuk dari retur',
-                ]);
-
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Data retur berhasil disimpan.',
-            ]);
-
-        } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'status' => false,
-                'message' => $e->getMessage(),
-            ], 500);
-        }
-
-    }
-
-    public function produkcustom()
-    {
-        $pesanan_perproduk = PesananPerProduk::with('pesanan')
-            ->where('custom', 1)
-            ->whereHas('pesanan')
-            ->get();
-
-        $data = $pesanan_perproduk
-            ->groupBy(function ($item) {
-                $tanggal = Carbon::parse($item->pesanan->tanggal);
-
-                return $item->sku.'-'.$tanggal->format('Y-m');
-            })
-            ->map(function ($items) {
-                $firstItem = $items->first();
-                $produk = Produk::where('sku', $firstItem->sku)->first();
-                $tanggal = Carbon::parse($firstItem->pesanan->tanggal);
-
-                return [
-                    'sku' => $firstItem->sku,
-                    'nama_produk' => $produk?->nama_produk ?? $firstItem->nama_produk,
-                    'variasi' => $produk?->variasi ?? $firstItem->variasi,
-                    'qty' => $items->sum('jumlah'),
-                    'diproses' => $items
-                        ->filter(fn ($item) => $item->pesanan->status === 'proses')
-                        ->sum('jumlah'),
-                    'kirim' => $items
-                        ->filter(fn ($item) => $item->pesanan->status === 'kirim')
-                        ->sum('jumlah'),
-                    'retur' => $items
-                        ->filter(fn ($item) => $item->pesanan->status === 'pengiriman gagal' && $item->pesanan->status === 'pengembalian')
-                        ->sum('jumlah'),
-                    'selesai' => $items
-                        ->filter(fn ($item) => $item->pesanan->status === 'selesai')
-                        ->sum('jumlah'),
-                    'bulan' => $tanggal->month,
-                    'tahun' => $tanggal->year,
-                    'tanggal_awal' => $tanggal->copy()->startOfMonth(),
-                    'tanggal_akhir' => $tanggal->copy()->endOfMonth(),
-                    'data' => $items->values(),
-                ];
-            })
-            ->values();
-
-        return view('gudang.produk_custom', compact('data'));
     }
 }
