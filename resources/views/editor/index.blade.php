@@ -10,7 +10,7 @@
         </h4>
 
         <div class="text-muted small">
-            Monitoring pekerjaan Editor dan Antrian Produksi
+            Monitoring pekerjaan dan antrian Editor Shopee / TikTok
         </div>
     </div>
 
@@ -51,7 +51,7 @@
                     </div>
 
                     <div class="small text-muted">
-                        item
+                        item pending
                     </div>
 
                 </div>
@@ -71,7 +71,7 @@
                     </div>
 
                     <div class="small text-muted">
-                        item
+                        item selesai Editor
                     </div>
 
                 </div>
@@ -83,15 +83,15 @@
                 <div class="card-body p-4">
 
                     <div class="text-muted small">
-                        Menunggu Request
+                        Dialihkan
                     </div>
 
-                    <div class="fs-2 fw-bold text-danger">
-                        {{ number_format($totalMenunggu) }}
+                    <div class="fs-2 fw-bold text-secondary">
+                        {{ number_format($totalDialihkan) }}
                     </div>
 
                     <div class="small text-muted">
-                        item
+                        item dialihkan ke antrian berikutnya
                     </div>
 
                 </div>
@@ -128,11 +128,12 @@
                 <thead class="table-light">
                     <tr>
                         <th>Antrian</th>
+                        <th>Marketplace</th>
                         <th>Tanggal</th>
                         <th>Item</th>
                         <th>Pending</th>
                         <th>Locked</th>
-                        <th>Menunggu</th>
+                        <th>Dialihkan</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -143,11 +144,18 @@
 
                         @php
                             $sesi = strtoupper($part->sesi ?? '-');
+                            $marketplace = strtoupper($part->marketplace ?? '-');
 
                             $badgeSesi = match($part->sesi) {
                                 'pagi' => 'bg-primary',
                                 'siang' => 'bg-warning text-dark',
                                 'malam' => 'bg-dark',
+                                default => 'bg-secondary',
+                            };
+
+                            $badgeMarketplace = match(strtolower($part->marketplace ?? '')) {
+                                'shopee' => 'bg-danger',
+                                'tiktok' => 'bg-dark',
                                 default => 'bg-secondary',
                             };
                         @endphp
@@ -174,23 +182,31 @@
                             </td>
 
                             <td>
+
+                                <span class="badge {{ $badgeMarketplace }}">
+                                    {{ $marketplace }}
+                                </span>
+
+                            </td>
+
+                            <td>
                                 {{ $part->tanggal_part->format('d/m/Y') }}
                             </td>
 
                             <td class="fw-semibold">
-                                {{ $part->jumlah_item }}
+                                {{ number_format($part->jumlah_item) }}
                             </td>
 
-                            <td>
-                                {{ $part->pending_count }}
+                            <td class="text-warning fw-semibold">
+                                {{ number_format($part->pending_count) }}
                             </td>
 
                             <td class="text-success fw-semibold">
-                                {{ $part->locked_count }}
+                                {{ number_format($part->locked_count) }}
                             </td>
 
-                            <td class="text-danger fw-semibold">
-                                {{ $part->skipped_count }}
+                            <td class="text-secondary fw-semibold">
+                                {{ number_format($part->skipped_count) }}
                             </td>
 
                             <td>
@@ -229,7 +245,7 @@
 
                         <tr>
 
-                            <td colspan="7"
+                            <td colspan="8"
                                 class="text-center py-5">
 
                                 <div class="text-muted mb-2">
@@ -241,7 +257,7 @@
                                 </div>
 
                                 <div class="small text-muted">
-                                    Antrian akan muncul otomatis ketika ada pesanan PLT yang perlu dikerjakan.
+                                    Antrian akan muncul otomatis ketika ada pesanan PLT Shopee atau TikTok yang perlu dikerjakan.
                                 </div>
 
                             </td>

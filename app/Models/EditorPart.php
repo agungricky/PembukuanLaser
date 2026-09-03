@@ -15,6 +15,7 @@ class EditorPart extends Model
     protected $fillable = [
         'tanggal_part',
         'sesi',
+        'marketplace',
         'nomor_part',
         'kode_part',
         'kapasitas_per_kelompok',

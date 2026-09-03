@@ -40,24 +40,47 @@
                             STATUS REQUEST
                         </div>
 
-                        <div class="small mb-1">
+                        <div class="small mb-2">
 
-                            <strong>Kosong</strong>
-                            = Normal, langsung dikunci
+                            <strong>NORMAL / Kosong</strong>
+                            <br>
+                            Jika data request terisi, hasil langsung dikunci dan masuk QR produksi.
 
                         </div>
 
-                        <div class="small mb-1">
+                        <div class="small mb-2">
 
                             <strong>RANDOM</strong>
-                            = Random, langsung dikunci
+                            <br>
+                            Request random langsung dikunci dan masuk QR produksi.
 
                         </div>
 
                         <div class="small">
 
-                            <strong>MENUNGGU</strong>
-                            = Belum ada request customer
+                            <strong>Request belum tersedia / MENUNGGU</strong>
+                            <br>
+                            Item tidak dikunci dan otomatis dialihkan ke antrian Editor berikutnya.
+
+                        </div>
+
+                    </div>
+
+                    <div class="alert alert-info">
+
+                        <div class="d-flex gap-2">
+
+                            <i class="fa-solid fa-circle-info mt-1"></i>
+
+                            <div class="small">
+
+                                Marketplace dan antrian akan dibaca otomatis dari file.
+
+                                <div class="mt-1">
+                                    Item Shopee tetap masuk antrian Shopee dan item TikTok tetap masuk antrian TikTok.
+                                </div>
+
+                            </div>
 
                         </div>
 
@@ -154,51 +177,41 @@ $(function () {
 
     let isSubmitting = false;
 
-    $('#formImportEditor').on(
-        'submit',
-        function (event) {
+    $('#formImportEditor').on('submit', function (event) {
 
-            if (isSubmitting) {
-                event.preventDefault();
-
-                return false;
-            }
-
-            const fileInput =
-                $('#fileEditor')[0];
-
-            if (
-                !fileInput ||
-                !fileInput.files ||
-                fileInput.files.length === 0
-            ) {
-                event.preventDefault();
-
-                $('#fileEditor').trigger(
-                    'focus'
-                );
-
-                return false;
-            }
-
-            isSubmitting = true;
-
-            $('#btnImportEditor')
-                .prop(
-                    'disabled',
-                    true
-                )
-                .html(`
-                    <span
-                        class="spinner-border spinner-border-sm me-2"
-                        role="status">
-                    </span>
-                    Mengimport...
-                `);
-
-            $('#importInfo').show();
+        if (isSubmitting) {
+            event.preventDefault();
+            return false;
         }
-    );
+
+        const fileInput = $('#fileEditor')[0];
+
+        if (
+            !fileInput ||
+            !fileInput.files ||
+            fileInput.files.length === 0
+        ) {
+            event.preventDefault();
+
+            $('#fileEditor').trigger('focus');
+
+            return false;
+        }
+
+        isSubmitting = true;
+
+        $('#btnImportEditor')
+            .prop('disabled', true)
+            .html(`
+                <span
+                    class="spinner-border spinner-border-sm me-2"
+                    role="status">
+                </span>
+                Mengimport...
+            `);
+
+        $('#importInfo').show();
+    });
 
 });
 </script>

@@ -10,17 +10,24 @@ use Illuminate\Support\Facades\DB;
 class EditorPartService
 {
     private const MULAI_EDITOR = '2026-08-26';
+    private const TIMEZONE = 'Asia/Jakarta';
 
     private const SESI_PAGI = 'pagi';
     private const SESI_SIANG = 'siang';
     private const SESI_MALAM = 'malam';
 
-    public function sinkronkanPekerjaanTersedia(
-        ?int $userId = null
-    ): array {
+    private const MARKETPLACE_SHOPEE = 'Shopee';
+    private const MARKETPLACE_TIKTOK = 'TikTok';
+
+    private const SKU_DILEWATI = [
+        'PLT028C',
+    ];
+
+    public function sinkronkanPekerjaanTersedia(?int $userId = null): array
+    {
         return DB::transaction(function () use ($userId) {
             $partsBaru = 0;
-
+            $skuDilewati = $this->bersihkanSkuDilewatiDariAntrianOpen();
             $dipindahMalam = $this->pindahkanMalamBelumDidownload(
                 $userId,
                 $partsBaru
@@ -33,8 +40,16 @@ class EditorPartService
                     '=',
                     'pp.no_pesanan'
                 )
+                ->join(
+                    'toko as t',
+                    't.id_toko',
+                    '=',
+                    'p.id_toko'
+                )
                 ->whereNotNull('pp.sku')
-                ->whereRaw("UPPER(pp.sku) LIKE 'PLT%'")
+                ->whereRaw("UPPER(TRIM(pp.sku)) LIKE 'PLT%'")
+                ->whereRaw("UPPER(TRIM(pp.sku)) <> 'PLT028C'")
+                ->whereRaw("LOWER(TRIM(t.marketplace)) IN ('shopee', 'tiktok')")
                 ->where('p.status', 'proses')
                 ->whereNotNull('p.input_at')
                 ->where(
@@ -76,6 +91,7 @@ class EditorPartService
             );
 
             $hasil['dipindah_malam'] = $dipindahMalam;
+            $hasil['sku_dilewati'] = $skuDilewati;
 
             return $hasil;
         });
@@ -96,12 +112,9 @@ class EditorPartService
             return $this->hasilKosong();
         }
 
-        return DB::transaction(function () use (
-            $idPerProduk,
-            $userId
-        ) {
+        return DB::transaction(function () use ($idPerProduk, $userId) {
             $partsBaru = 0;
-
+            $skuDilewati = $this->bersihkanSkuDilewatiDariAntrianOpen();
             $dipindahMalam = $this->pindahkanMalamBelumDidownload(
                 $userId,
                 $partsBaru
@@ -115,6 +128,7 @@ class EditorPartService
             );
 
             $hasil['dipindah_malam'] = $dipindahMalam;
+            $hasil['sku_dilewati'] = $skuDilewati;
 
             return $hasil;
         });
@@ -140,6 +154,12 @@ class EditorPartService
                 '=',
                 'pp.no_pesanan'
             )
+            ->join(
+                'toko as t',
+                't.id_toko',
+                '=',
+                'p.id_toko'
+            )
             ->leftJoin(
                 'produk as pr',
                 'pr.sku',
@@ -151,7 +171,9 @@ class EditorPartService
                 $idPerProduk
             )
             ->whereNotNull('pp.sku')
-            ->whereRaw("UPPER(pp.sku) LIKE 'PLT%'")
+            ->whereRaw("UPPER(TRIM(pp.sku)) LIKE 'PLT%'")
+            ->whereRaw("UPPER(TRIM(pp.sku)) <> 'PLT028C'")
+            ->whereRaw("LOWER(TRIM(t.marketplace)) IN ('shopee', 'tiktok')")
             ->where('p.status', 'proses')
             ->whereNotNull('p.input_at')
             ->where(
@@ -170,6 +192,7 @@ class EditorPartService
                 'pr.variasi as master_variasi',
                 'p.input_at',
                 'p.batas_kirim_at',
+                't.marketplace',
             ])
             ->orderByRaw(
                 'CASE WHEN p.batas_kirim_at IS NULL THEN 1 ELSE 0 END'
@@ -204,8 +227,16 @@ class EditorPartService
         foreach ($items as $item) {
             $idItem = (int) $item->id_per_produk;
             $jumlah = (int) $item->jumlah;
+            $sku = mb_strtoupper(trim((string) $item->sku));
+            $marketplace = $this->normalizeMarketplace(
+                $item->marketplace ?? null
+            );
 
-            if ($jumlah < 1) {
+            if (
+                $jumlah < 1 ||
+                $marketplace === null ||
+                in_array($sku, self::SKU_DILEWATI, true)
+            ) {
                 $ignored[] = $idItem;
                 continue;
             }
@@ -268,6 +299,7 @@ class EditorPartService
             $part = $this->cariAntrianTersedia(
                 $tanggalPart,
                 $sesi,
+                $marketplace,
                 $userId,
                 $partsBaru,
                 $partCache,
@@ -288,9 +320,7 @@ class EditorPartService
             EditorPartItem::create([
                 'editor_part_id' => $partId,
                 'id_per_produk' => $idItem,
-                'sku' => mb_strtoupper(
-                    trim((string) $item->sku)
-                ),
+                'sku' => $sku,
                 'kelompok_produksi' => $kelompok,
                 'jumlah_awal' => $jumlah,
                 'jumlah_final' => null,
@@ -312,6 +342,30 @@ class EditorPartService
         ];
     }
 
+    private function bersihkanSkuDilewatiDariAntrianOpen(): int
+    {
+        $partIds = EditorPart::where('status', 'open')
+            ->pluck('id');
+
+        if ($partIds->isEmpty()) {
+            return 0;
+        }
+
+        $jumlah = EditorPartItem::whereIn(
+            'editor_part_id',
+            $partIds
+        )
+            ->where('status', 'pending')
+            ->whereRaw("UPPER(TRIM(sku)) = 'PLT028C'")
+            ->delete();
+
+        EditorPart::where('status', 'open')
+            ->whereDoesntHave('items')
+            ->delete();
+
+        return $jumlah;
+    }
+
     private function pindahkanMalamBelumDidownload(
         ?int $userId,
         int &$partsBaru
@@ -322,6 +376,13 @@ class EditorPartService
             'sesi',
             self::SESI_MALAM
         )
+            ->whereIn(
+                'marketplace',
+                [
+                    self::MARKETPLACE_SHOPEE,
+                    self::MARKETPLACE_TIKTOK,
+                ]
+            )
             ->where('status', 'open')
             ->whereDate('tanggal_part', '<', $hariIni)
             ->orderBy('tanggal_part')
@@ -337,11 +398,20 @@ class EditorPartService
         $urutanCache = [];
 
         foreach ($partsMalam as $partMalam) {
+            $marketplace = $this->normalizeMarketplace(
+                $partMalam->marketplace
+            );
+
+            if ($marketplace === null) {
+                continue;
+            }
+
             $pendingItems = EditorPartItem::where(
                 'editor_part_id',
                 $partMalam->id
             )
                 ->where('status', 'pending')
+                ->whereRaw("UPPER(TRIM(sku)) <> 'PLT028C'")
                 ->orderBy('urutan')
                 ->lockForUpdate()
                 ->get();
@@ -364,6 +434,7 @@ class EditorPartService
             $partTujuan = $this->cariAntrianTersedia(
                 $tanggalPagi,
                 self::SESI_PAGI,
+                $marketplace,
                 $userId,
                 $partsBaru,
                 $partCache,
@@ -416,13 +487,14 @@ class EditorPartService
     private function cariAntrianTersedia(
         string $tanggal,
         string $sesi,
+        string $marketplace,
         ?int $userId,
         int &$partsBaru,
         array &$partCache,
         array &$urutanCache
     ): EditorPart {
         for ($i = 0; $i < 370; $i++) {
-            $key = $tanggal . '|' . $sesi;
+            $key = $tanggal . '|' . $sesi . '|' . $marketplace;
 
             if (array_key_exists($key, $partCache)) {
                 $part = $partCache[$key];
@@ -432,6 +504,7 @@ class EditorPartService
                     $tanggal
                 )
                     ->where('sesi', $sesi)
+                    ->where('marketplace', $marketplace)
                     ->lockForUpdate()
                     ->first();
 
@@ -454,10 +527,12 @@ class EditorPartService
             $part = EditorPart::create([
                 'tanggal_part' => $tanggal,
                 'sesi' => $sesi,
+                'marketplace' => $marketplace,
                 'nomor_part' => $this->nomorPartBerikutnya($tanggal),
                 'kode_part' => $this->buatKodePart(
                     $tanggal,
-                    $sesi
+                    $sesi,
+                    $marketplace
                 ),
                 'kapasitas_per_kelompok' => 0,
                 'status' => 'open',
@@ -476,9 +551,8 @@ class EditorPartService
         );
     }
 
-    private function tentukanAntrianDariWaktu(
-        Carbon $waktu
-    ): array {
+    private function tentukanAntrianDariWaktu(Carbon $waktu): array
+    {
         $tanggal = $waktu->toDateString();
         $jamMenit = $waktu->format('H:i');
 
@@ -549,6 +623,23 @@ class EditorPartService
         }
     }
 
+    private function normalizeMarketplace(?string $marketplace): ?string
+    {
+        $marketplace = mb_strtolower(
+            trim((string) $marketplace)
+        );
+
+        if ($marketplace === 'shopee') {
+            return self::MARKETPLACE_SHOPEE;
+        }
+
+        if ($marketplace === 'tiktok') {
+            return self::MARKETPLACE_TIKTOK;
+        }
+
+        return null;
+    }
+
     private function sekarangWib(): Carbon
     {
         return Carbon::now(
@@ -558,10 +649,7 @@ class EditorPartService
 
     private function timezone(): string
     {
-        return config(
-            'app.timezone',
-            'Asia/Jakarta'
-        );
+        return self::TIMEZONE;
     }
 
     private function nomorPartBerikutnya(string $tanggal): int
@@ -634,13 +722,14 @@ class EditorPartService
 
     private function buatKodePart(
         string $tanggal,
-        string $sesi
+        string $sesi,
+        string $marketplace
     ): string {
         return str_replace(
             '-',
             '',
             $tanggal
-        ) . '-' . mb_strtoupper($sesi);
+        ) . '-' . mb_strtoupper($sesi) . '-' . mb_strtoupper($marketplace);
     }
 
     private function hasilKosong(): array
@@ -651,6 +740,7 @@ class EditorPartService
             'oversize' => [],
             'ignored' => [],
             'dipindah_malam' => 0,
+            'sku_dilewati' => 0,
         ];
     }
 }

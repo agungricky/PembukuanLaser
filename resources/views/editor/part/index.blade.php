@@ -6,10 +6,12 @@
 
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
         <div>
-            <h4 class="fw-bold mb-1">Antrian Editor</h4>
+            <h4 class="fw-bold mb-1">
+                Antrian Editor
+            </h4>
 
             <div class="text-muted small">
-                Daftar antrian PAGI, SIANG, dan MALAM yang perlu dikerjakan Editor
+                Daftar antrian Editor Shopee dan TikTok berdasarkan sesi PAGI, SIANG, dan MALAM
             </div>
         </div>
     </div>
@@ -25,6 +27,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>Antrian</th>
+                        <th>Marketplace</th>
                         <th>Tanggal</th>
                         <th>Isi Produksi</th>
                         <th class="text-center">Item</th>
@@ -40,11 +43,12 @@
 
                         @php
                             $kelompok = $part->items
-                                ->where('status', '!=', 'skipped')
+                                ->where('status', 'pending')
                                 ->groupBy('kelompok_produksi')
-                                ->map(fn($items) => $items->sum('jumlah_awal'));
+                                ->map(fn ($items) => $items->sum('jumlah_awal'));
 
                             $sesi = strtoupper($part->sesi ?? '-');
+                            $marketplace = strtoupper($part->marketplace ?? '-');
 
                             $badgeSesi = match($part->sesi) {
                                 'pagi' => 'bg-primary',
@@ -52,20 +56,32 @@
                                 'malam' => 'bg-dark',
                                 default => 'bg-secondary',
                             };
+
+                            $badgeMarketplace = match(strtolower($part->marketplace ?? '')) {
+                                'shopee' => 'bg-danger',
+                                'tiktok' => 'bg-dark',
+                                default => 'bg-secondary',
+                            };
                         @endphp
 
                         <tr>
 
                             <td>
-                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    <div class="fw-bold">
-                                        {{ $part->kode_part }}
-                                    </div>
+                                <div class="fw-bold">
+                                    {{ $part->kode_part }}
+                                </div>
 
+                                <div class="mt-1">
                                     <span class="badge {{ $badgeSesi }}">
                                         {{ $sesi }}
                                     </span>
                                 </div>
+                            </td>
+
+                            <td>
+                                <span class="badge {{ $badgeMarketplace }}">
+                                    {{ $marketplace }}
+                                </span>
                             </td>
 
                             <td>
@@ -85,7 +101,7 @@
                                         </div>
 
                                         <span class="badge bg-light text-dark border">
-                                            {{ $jumlah }} pcs
+                                            {{ number_format($jumlah) }} pcs
                                         </span>
 
                                     </div>
@@ -93,7 +109,7 @@
                                 @empty
 
                                     <span class="text-muted small">
-                                        Tidak ada item produksi
+                                        Tidak ada item pending
                                     </span>
 
                                 @endforelse
@@ -101,13 +117,15 @@
                             </td>
 
                             <td class="text-center">
+
                                 <span class="fw-bold">
-                                    {{ $part->pending_count }}
+                                    {{ number_format($part->pending_count) }}
                                 </span>
 
                                 <div class="small text-muted">
                                     item
                                 </div>
+
                             </td>
 
                             <td>
@@ -158,7 +176,7 @@
 
                             <td class="text-end">
 
-                                <div class="d-flex justify-content-end gap-2">
+                                <div class="d-flex justify-content-end gap-2 flex-wrap">
 
                                     <a href="{{ route('editor.part.download', $part) }}"
                                         class="btn btn-sm btn-success">
@@ -188,7 +206,9 @@
                     @empty
 
                         <tr>
-                            <td colspan="7" class="text-center py-5">
+
+                            <td colspan="8"
+                                class="text-center py-5">
 
                                 <div class="text-muted mb-2">
                                     <i class="fa-solid fa-box-open fa-2x"></i>
@@ -199,10 +219,11 @@
                                 </div>
 
                                 <div class="small text-muted">
-                                    Antrian akan muncul otomatis ketika ada pesanan PLT yang perlu dikerjakan.
+                                    Antrian akan muncul otomatis ketika ada pesanan PLT Shopee atau TikTok yang perlu dikerjakan.
                                 </div>
 
                             </td>
+
                         </tr>
 
                     @endforelse

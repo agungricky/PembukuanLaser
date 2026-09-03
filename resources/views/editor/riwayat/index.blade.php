@@ -11,7 +11,7 @@
         </h4>
 
         <div class="text-muted small">
-            Antrian PAGI, SIANG, dan MALAM yang sudah selesai diproses Editor
+            Riwayat antrian Editor Shopee dan TikTok yang sudah selesai diproses
         </div>
 
     </div>
@@ -27,10 +27,11 @@
                 <thead class="table-light">
                     <tr>
                         <th>Antrian</th>
+                        <th>Marketplace</th>
                         <th>Tanggal</th>
                         <th>Item</th>
                         <th>Locked</th>
-                        <th>Menunggu</th>
+                        <th>Dialihkan</th>
                         <th>Download</th>
                         <th>Upload</th>
                         <th class="text-end">Aksi</th>
@@ -43,11 +44,18 @@
 
                         @php
                             $sesi = strtoupper($part->sesi ?? '-');
+                            $marketplace = strtoupper($part->marketplace ?? '-');
 
                             $badgeSesi = match($part->sesi) {
                                 'pagi' => 'bg-primary',
                                 'siang' => 'bg-warning text-dark',
                                 'malam' => 'bg-dark',
+                                default => 'bg-secondary',
+                            };
+
+                            $badgeMarketplace = match(strtolower($part->marketplace ?? '')) {
+                                'shopee' => 'bg-danger',
+                                'tiktok' => 'bg-dark',
                                 default => 'bg-secondary',
                             };
                         @endphp
@@ -75,19 +83,27 @@
                             </td>
 
                             <td>
+
+                                <span class="badge {{ $badgeMarketplace }}">
+                                    {{ $marketplace }}
+                                </span>
+
+                            </td>
+
+                            <td>
                                 {{ $part->tanggal_part->format('d/m/Y') }}
                             </td>
 
                             <td class="fw-semibold">
-                                {{ $part->jumlah_item }}
+                                {{ number_format($part->jumlah_item) }}
                             </td>
 
                             <td class="text-success fw-bold">
-                                {{ $part->locked_count }}
+                                {{ number_format($part->locked_count) }}
                             </td>
 
-                            <td class="text-danger fw-bold">
-                                {{ $part->skipped_count }}
+                            <td class="text-secondary fw-bold">
+                                {{ number_format($part->skipped_count) }}
                             </td>
 
                             <td>
@@ -136,13 +152,25 @@
 
                             <td class="text-end">
 
-                                <a href="{{ route('editor.part.show', $part) }}"
-                                    class="btn btn-sm btn-outline-primary">
+                                <div class="d-flex justify-content-end gap-2">
 
-                                    <i class="fa-solid fa-eye me-1"></i>
-                                    Detail
+                                    <a href="{{ route('editor.part.show', $part) }}"
+                                        class="btn btn-sm btn-outline-primary">
 
-                                </a>
+                                        <i class="fa-solid fa-eye me-1"></i>
+                                        Detail
+
+                                    </a>
+
+                                    <a href="{{ route('editor.part.qr.pdf', $part) }}"
+                                        class="btn btn-sm btn-dark">
+
+                                        <i class="fa-solid fa-file-pdf me-1"></i>
+                                        QR
+
+                                    </a>
+
+                                </div>
 
                             </td>
 
@@ -152,7 +180,7 @@
 
                         <tr>
 
-                            <td colspan="8"
+                            <td colspan="9"
                                 class="text-center py-5">
 
                                 <div class="text-muted mb-2">
@@ -164,7 +192,7 @@
                                 </div>
 
                                 <div class="small text-muted">
-                                    Antrian yang sudah selesai diproses akan muncul di sini.
+                                    Antrian Shopee atau TikTok yang sudah selesai diproses akan muncul di sini.
                                 </div>
 
                             </td>

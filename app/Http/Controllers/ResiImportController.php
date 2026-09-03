@@ -135,6 +135,30 @@ class ResiImportController extends Controller
             ];
         }
 
+        if (strcasecmp((string) $request->marketplace, 'Tiktok') === 0) {
+            try {
+                $normalizedPath = $this->normalizeTikTokPdf(
+                    $tempPath,
+                    $tempDirectory
+                );
+
+                File::delete($tempPath);
+
+                $tempPath = $normalizedPath;
+                $tempName = basename($normalizedPath);
+            } catch (\Throwable $e) {
+                File::delete($tempPath);
+
+                return back()
+                    ->withInput()
+                    ->with(
+                        'error',
+                        'PDF TikTok gagal dinormalisasi: ' .
+                        $e->getMessage()
+                    );
+            }
+        }
+
         session([
             'resi_preview' => [
                 'temp_name' => $tempName,
@@ -449,6 +473,13 @@ class ResiImportController extends Controller
             }
 
             DB::commit();
+
+            if (strcasecmp((string) $dataPreview['marketplace'], 'Tiktok') === 0) {
+                @file_put_contents(
+                    $fullPath . '.fpdi14',
+                    now()->format('Y-m-d H:i:s')
+                );
+            }
 
             session()->forget(
                 'resi_preview'
@@ -916,6 +947,70 @@ class ResiImportController extends Controller
         ];
     }
 
+    private function normalizeTikTokPdf(
+        string $sourcePath,
+        string $directory
+    ): string {
+        $normalizedPath =
+            $directory .
+            DIRECTORY_SEPARATOR .
+            'normalized_' .
+            Str::uuid() .
+            '.pdf';
+
+        $ghostscript = env(
+            'GHOSTSCRIPT_BIN',
+            '/bin/gs'
+        );
+
+        if (
+            !is_file($ghostscript) ||
+            !is_executable($ghostscript)
+        ) {
+            throw new \Exception(
+                'Ghostscript tidak tersedia di server.'
+            );
+        }
+
+        $command =
+            escapeshellarg($ghostscript) .
+            ' -q' .
+            ' -dNOPAUSE' .
+            ' -dBATCH' .
+            ' -sDEVICE=pdfwrite' .
+            ' -dCompatibilityLevel=1.4' .
+            ' -dAutoRotatePages=/None' .
+            ' -sOutputFile=' .
+            escapeshellarg($normalizedPath) .
+            ' ' .
+            escapeshellarg($sourcePath) .
+            ' 2>&1';
+
+        $output = [];
+        $exitCode = 0;
+
+        exec(
+            $command,
+            $output,
+            $exitCode
+        );
+
+        if (
+            $exitCode !== 0 ||
+            !File::exists($normalizedPath) ||
+            File::size($normalizedPath) <= 0
+        ) {
+            File::delete($normalizedPath);
+
+            throw new \Exception(
+                'Gagal memproses PDF TikTok dengan Ghostscript. ' .
+                implode(' ', $output)
+            );
+        }
+
+        return $normalizedPath;
+    }
+
     private function parseDeadlineValue(
         ?string $value
     ): ?Carbon {
@@ -925,10 +1020,50 @@ class ResiImportController extends Controller
             return null;
         }
 
-        $timezone = config(
-            'app.timezone',
-            'Asia/Jakarta'
-        );
+        $timezone = 'Asia/Jakarta';
+        $value = preg_replace('/\s+/u', ' ', $value);
+
+        $formats = [
+            'd/m/Y H:i:s',
+            'd/m/Y H:i',
+            'd/m/Y',
+            'd-m-Y H:i:s',
+            'd-m-Y H:i',
+            'd-m-Y',
+        ];
+
+        foreach ($formats as $format) {
+            try {
+                $date = Carbon::createFromFormat(
+                    '!' . $format,
+                    $value,
+                    $timezone
+                );
+
+                if ($date === false) {
+                    continue;
+                }
+
+                $errors = Carbon::getLastErrors();
+
+                if (
+                    is_array($errors) &&
+                    (
+                        ($errors['warning_count'] ?? 0) > 0 ||
+                        ($errors['error_count'] ?? 0) > 0
+                    )
+                ) {
+                    continue;
+                }
+
+                if (!preg_match('/\d{1,2}:\d{2}/', $value)) {
+                    $date->endOfDay();
+                }
+
+                return $date;
+            } catch (\Throwable $e) {
+            }
+        }
 
         try {
             $date = Carbon::parse(
