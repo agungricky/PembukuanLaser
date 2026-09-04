@@ -37,7 +37,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::middleware(['role:pegawai'])->group(function () {
         Route::get('/me', [UserController::class, 'me'])->name('users.me');
         Route::resource('/kesalahan', kesalahanController::class);
-        
+
         Route::post('/produk/export', [ProdukController::class, 'export'])->name('produk.export');
         Route::post('/produk/import', [ProdukController::class, 'import'])->name('produk.import');
         Route::post('/produk/import/confirm', [ProdukController::class, 'confirmImport'])->name('produk.import.confirm');
@@ -64,11 +64,8 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/part/{part}/download', [EditorController::class, 'downloadPlat'])
             ->name('part.download');
 
-        Route::get('/menunggu', [EditorController::class, 'menungguIndex'])
-            ->name('menunggu.index');
-
-        Route::post('/menunggu/{partItem}/siap', [EditorController::class, 'menungguSiap'])
-            ->name('menunggu.siap');
+        Route::get('/part/{part}/qr-pdf', [EditorController::class, 'downloadQrPart'])
+            ->name('part.qr.pdf');
 
         Route::get('/import', [EditorController::class, 'importPage'])
             ->name('import.page');
@@ -78,9 +75,6 @@ Route::middleware(['web', 'auth'])->group(function () {
 
         Route::get('/riwayat', [EditorController::class, 'riwayatIndex'])
             ->name('riwayat.index');
-
-        Route::get('/part/{part}/qr-pdf',[EditorController::class, 'downloadQrPart'])
-            ->name('part.qr.pdf');
     });
 
     // ===================== PACKING ===================== //

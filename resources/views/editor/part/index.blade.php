@@ -6,10 +6,12 @@
 
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
         <div>
-            <h4 class="fw-bold mb-1">Part Produksi</h4>
+            <h4 class="fw-bold mb-1">
+                Antrian Editor
+            </h4>
 
             <div class="text-muted small">
-                Daftar Part aktif yang perlu dikerjakan Editor
+                Daftar antrian Editor Shopee dan TikTok berdasarkan sesi PAGI, SIANG, dan MALAM
             </div>
         </div>
     </div>
@@ -24,7 +26,8 @@
 
                 <thead class="table-light">
                     <tr>
-                        <th>Part</th>
+                        <th>Antrian</th>
+                        <th>Marketplace</th>
                         <th>Tanggal</th>
                         <th>Isi Produksi</th>
                         <th class="text-center">Item</th>
@@ -39,12 +42,26 @@
                     @forelse($parts as $part)
 
                         @php
-                            $kapasitas = $part->kapasitas_per_kelompok ?: 52;
-
                             $kelompok = $part->items
-                                ->where('status', '!=', 'skipped')
+                                ->where('status', 'pending')
                                 ->groupBy('kelompok_produksi')
-                                ->map(fn($items) => $items->sum('jumlah_awal'));
+                                ->map(fn ($items) => $items->sum('jumlah_awal'));
+
+                            $sesi = strtoupper($part->sesi ?? '-');
+                            $marketplace = strtoupper($part->marketplace ?? '-');
+
+                            $badgeSesi = match($part->sesi) {
+                                'pagi' => 'bg-primary',
+                                'siang' => 'bg-warning text-dark',
+                                'malam' => 'bg-dark',
+                                default => 'bg-secondary',
+                            };
+
+                            $badgeMarketplace = match(strtolower($part->marketplace ?? '')) {
+                                'shopee' => 'bg-danger',
+                                'tiktok' => 'bg-dark',
+                                default => 'bg-secondary',
+                            };
                         @endphp
 
                         <tr>
@@ -54,22 +71,28 @@
                                     {{ $part->kode_part }}
                                 </div>
 
-                                <div class="small text-muted">
-                                    Part {{ str_pad($part->nomor_part, 3, '0', STR_PAD_LEFT) }}
+                                <div class="mt-1">
+                                    <span class="badge {{ $badgeSesi }}">
+                                        {{ $sesi }}
+                                    </span>
                                 </div>
                             </td>
 
                             <td>
-                                {{ $part->tanggal_part->format('d/m/Y') }}
+                                <span class="badge {{ $badgeMarketplace }}">
+                                    {{ $marketplace }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <div class="fw-semibold">
+                                    {{ $part->tanggal_part->format('d/m/Y') }}
+                                </div>
                             </td>
 
                             <td style="min-width: 330px">
 
                                 @forelse($kelompok as $nama => $jumlah)
-
-                                    @php
-                                        $penuh = $jumlah >= $kapasitas;
-                                    @endphp
 
                                     <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
 
@@ -77,8 +100,8 @@
                                             {{ str_replace('|', ' • ', $nama) }}
                                         </div>
 
-                                        <span class="badge {{ $penuh ? 'bg-success' : 'bg-light text-dark border' }}">
-                                            {{ $jumlah }}/{{ $kapasitas }}
+                                        <span class="badge bg-light text-dark border">
+                                            {{ number_format($jumlah) }} pcs
                                         </span>
 
                                     </div>
@@ -86,7 +109,7 @@
                                 @empty
 
                                     <span class="text-muted small">
-                                        Tidak ada item produksi
+                                        Tidak ada item pending
                                     </span>
 
                                 @endforelse
@@ -94,13 +117,15 @@
                             </td>
 
                             <td class="text-center">
+
                                 <span class="fw-bold">
-                                    {{ $part->pending_count }}
+                                    {{ number_format($part->pending_count) }}
                                 </span>
 
                                 <div class="small text-muted">
                                     item
                                 </div>
+
                             </td>
 
                             <td>
@@ -115,6 +140,12 @@
 
                                     <span class="badge bg-warning text-dark">
                                         SEDANG DIEDIT
+                                    </span>
+
+                                @else
+
+                                    <span class="badge bg-secondary">
+                                        {{ strtoupper($part->status) }}
                                     </span>
 
                                 @endif
@@ -145,7 +176,7 @@
 
                             <td class="text-end">
 
-                                <div class="d-flex justify-content-end gap-2">
+                                <div class="d-flex justify-content-end gap-2 flex-wrap">
 
                                     <a href="{{ route('editor.part.download', $part) }}"
                                         class="btn btn-sm btn-success">
@@ -175,7 +206,8 @@
                     @empty
 
                         <tr>
-                            <td colspan="7"
+
+                            <td colspan="8"
                                 class="text-center py-5">
 
                                 <div class="text-muted mb-2">
@@ -183,14 +215,15 @@
                                 </div>
 
                                 <div class="fw-semibold">
-                                    Tidak ada Part aktif
+                                    Tidak ada antrian aktif
                                 </div>
 
                                 <div class="small text-muted">
-                                    Part akan muncul otomatis ketika ada pesanan PLT yang perlu dikerjakan.
+                                    Antrian akan muncul otomatis ketika ada pesanan PLT Shopee atau TikTok yang perlu dikerjakan.
                                 </div>
 
                             </td>
+
                         </tr>
 
                     @endforelse

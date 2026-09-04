@@ -23,140 +23,179 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class EditorController extends Controller
 {
-    public function index()
-    {
-        $totalPartAktif = EditorPart::whereIn(
-        'status',
-        ['open', 'downloaded']
-    )
-        ->whereHas(
-            'items',
-            function ($q) {
-                $q->where(
-                    'status',
-                    'pending'
-                );
-            }
-        )
-        ->count();
-
-        $totalBelumEditor = EditorPartItem::where(
-            'status',
-            'pending'
-        )
-            ->whereHas('part', function ($q) {
-                $q->whereIn(
-                    'status',
-                    ['open', 'downloaded']
-                );
-            })
-            ->count();
-
-        $totalSelesaiEditor = EditorPartItem::where(
-            'status',
-            'locked'
-        )->count();
-
-        $totalMenunggu = $this
-            ->queryMenunggu()
-            ->count();
-
-        $partsTerbaru = EditorPart::withCount([
-            'items as jumlah_item',
-            'items as pending_count' => fn ($q) =>
-                $q->where('status', 'pending'),
-            'items as locked_count' => fn ($q) =>
-                $q->where('status', 'locked'),
-            'items as skipped_count' => fn ($q) =>
-                $q->where('status', 'skipped'),
-        ])
-            ->orderByDesc('tanggal_part')
-            ->orderByDesc('nomor_part')
-            ->limit(5)
-            ->get();
-
-        return view('editor.index', compact(
-            'totalPartAktif',
-            'totalBelumEditor',
-            'totalSelesaiEditor',
-            'totalMenunggu',
-            'partsTerbaru'
-        ));
-    }
-
-    public function partIndex(
-    EditorPartService $partService
+    public function index(
+        EditorPartService $partService
     ) {
         try {
             $partService->sinkronkanPekerjaanTersedia(
                 Auth::id()
             );
 
-            EditorPart::where(
-                'status',
-                'open'
-            )
+            EditorPart::where('status', 'open')
+                ->whereNotNull('sesi')
+                ->whereNotNull('marketplace')
                 ->whereDoesntHave('items')
                 ->delete();
-
         } catch (\Throwable $e) {
             report($e);
 
             session()->flash(
                 'error',
-                'Sinkronisasi pekerjaan Editor gagal: ' .
+                'Sinkronisasi antrian Editor gagal: ' .
                 $e->getMessage()
             );
         }
 
-        $parts = EditorPart::with([
-            'items' => fn ($q) =>
-                $q->orderBy('urutan'),
-            'items.item.pesanan',
-        ])
-            ->withCount([
-                'items as jumlah_item',
-
-                'items as pending_count' => fn ($q) =>
-                    $q->where(
-                        'status',
-                        'pending'
-                    ),
-
-                'items as locked_count' => fn ($q) =>
-                    $q->where(
-                        'status',
-                        'locked'
-                    ),
-
-                'items as skipped_count' => fn ($q) =>
-                    $q->where(
-                        'status',
-                        'skipped'
-                    ),
-            ])
+        $totalPartAktif = EditorPart::whereNotNull('sesi')
+            ->whereNotNull('marketplace')
             ->whereIn(
                 'status',
-                [
-                    'open',
-                    'downloaded',
-                ]
+                ['open', 'downloaded']
             )
             ->whereHas(
                 'items',
+                fn ($q) => $q->where(
+                    'status',
+                    'pending'
+                )
+            )
+            ->count();
+
+        $totalBelumEditor = EditorPartItem::where(
+            'status',
+            'pending'
+        )
+            ->whereHas(
+                'part',
                 function ($q) {
-                    $q->where(
-                        'status',
-                        'pending'
-                    );
+                    $q->whereNotNull('sesi')
+                        ->whereNotNull('marketplace')
+                        ->whereIn(
+                            'status',
+                            ['open', 'downloaded']
+                        );
                 }
             )
-            ->orderByDesc(
-                'tanggal_part'
+            ->count();
+
+        $totalSelesaiEditor = EditorPartItem::where(
+            'status',
+            'locked'
+        )
+            ->whereHas(
+                'part',
+                fn ($q) => $q->whereNotNull('sesi')
+                    ->whereNotNull('marketplace')
             )
-            ->orderBy(
-                'nomor_part'
+            ->count();
+
+        $totalDialihkan = EditorPartItem::where('status', 'skipped')
+            ->whereHas(
+                'part',
+                fn ($q) => $q->whereNotNull('sesi')
+                    ->whereNotNull('marketplace')
             )
+            ->count();
+
+        $totalMenunggu = $totalDialihkan;
+
+        $partsTerbaru = EditorPart::whereNotNull('sesi')
+            ->whereNotNull('marketplace')
+            ->withCount([
+                'items as jumlah_item',
+                'items as pending_count' => fn ($q) =>
+                    $q->where('status', 'pending'),
+                'items as locked_count' => fn ($q) =>
+                    $q->where('status', 'locked'),
+                'items as skipped_count' => fn ($q) =>
+                    $q->where('status', 'skipped'),
+            ])
+            ->orderByDesc('tanggal_part')
+            ->orderByRaw("
+                CASE sesi
+                    WHEN 'malam' THEN 3
+                    WHEN 'siang' THEN 2
+                    WHEN 'pagi' THEN 1
+                    ELSE 0
+                END DESC
+            ")
+            ->orderBy('marketplace')
+            ->limit(5)
+            ->get();
+
+        return view(
+            'editor.index',
+            compact(
+                'totalPartAktif',
+                'totalBelumEditor',
+                'totalSelesaiEditor',
+                'totalDialihkan',
+                'totalMenunggu',
+                'partsTerbaru'
+            )
+        );
+    }
+
+    public function partIndex(
+        EditorPartService $partService
+    ) {
+        try {
+            $partService->sinkronkanPekerjaanTersedia(
+                Auth::id()
+            );
+
+            EditorPart::where('status', 'open')
+                ->whereNotNull('sesi')
+                ->whereNotNull('marketplace')
+                ->whereDoesntHave('items')
+                ->delete();
+        } catch (\Throwable $e) {
+            report($e);
+
+            session()->flash(
+                'error',
+                'Sinkronisasi antrian Editor gagal: ' .
+                $e->getMessage()
+            );
+        }
+
+        $parts = EditorPart::whereNotNull('sesi')
+            ->whereNotNull('marketplace')
+            ->with([
+                'items' => fn ($q) =>
+                    $q->orderBy('urutan'),
+                'items.item.pesanan',
+            ])
+            ->withCount([
+                'items as jumlah_item',
+                'items as pending_count' => fn ($q) =>
+                    $q->where('status', 'pending'),
+                'items as locked_count' => fn ($q) =>
+                    $q->where('status', 'locked'),
+                'items as skipped_count' => fn ($q) =>
+                    $q->where('status', 'skipped'),
+            ])
+            ->whereIn(
+                'status',
+                ['open', 'downloaded']
+            )
+            ->whereHas(
+                'items',
+                fn ($q) => $q->where(
+                    'status',
+                    'pending'
+                )
+            )
+            ->orderByDesc('tanggal_part')
+            ->orderByRaw("
+                CASE sesi
+                    WHEN 'pagi' THEN 1
+                    WHEN 'siang' THEN 2
+                    WHEN 'malam' THEN 3
+                    ELSE 4
+                END ASC
+            ")
+            ->orderBy('marketplace')
             ->paginate(20);
 
         return view(
@@ -197,9 +236,31 @@ class EditorController extends Controller
     }
 
     public function downloadPlat(
-        EditorPart $part
+        EditorPart $part,
+        EditorPartService $partService
     ) {
         try {
+            $partService->sinkronkanPekerjaanTersedia(
+                Auth::id()
+            );
+
+            $part = EditorPart::find($part->id);
+
+            if (!$part) {
+                return redirect()
+                    ->route('editor.part.index')
+                    ->with(
+                        'error',
+                        'Antrian sudah tidak tersedia.'
+                    );
+            }
+            if (!$part->sesi || !$part->marketplace) {
+                return back()->with(
+                    'error',
+                    'Antrian lama tidak dapat didownload dengan sistem PAGI/SIANG/MALAM dan marketplace terpisah.'
+                );
+            }
+
             if (!in_array(
                 $part->status,
                 ['open', 'downloaded'],
@@ -207,7 +268,7 @@ class EditorController extends Controller
             )) {
                 return back()->with(
                     'error',
-                    'Part ini sudah selesai diproses.'
+                    'Antrian ini sudah selesai diproses.'
                 );
             }
 
@@ -257,7 +318,7 @@ class EditorController extends Controller
                         true
                     )) {
                         throw new \Exception(
-                            'Part ini sudah selesai diproses.'
+                            'Antrian ini sudah selesai diproses.'
                         );
                     }
 
@@ -270,11 +331,12 @@ class EditorController extends Controller
                                 'status',
                                 'pending'
                             )
+                            ->whereRaw("UPPER(TRIM(sku)) <> 'PLT028C'")
                             ->exists();
 
                     if (!$adaPending) {
                         throw new \Exception(
-                            'Tidak ada item pending pada Part ini.'
+                            'Tidak ada item pending pada antrian ini.'
                         );
                     }
 
@@ -304,6 +366,7 @@ class EditorController extends Controller
                         'status',
                         'pending'
                     )
+                        ->whereRaw("UPPER(TRIM(sku)) <> 'PLT028C'")
                         ->orderBy(
                             'urutan'
                         );
@@ -316,7 +379,7 @@ class EditorController extends Controller
 
                 return back()->with(
                     'error',
-                    'Tidak ada item pending pada Part ini.'
+                    'Tidak ada item pending pada antrian ini.'
                 );
             }
 
@@ -542,7 +605,10 @@ class EditorController extends Controller
         );
     }
 
-    public function importEditor(Request $request)
+    public function importEditor(
+        Request $request,
+        EditorPartService $partService
+    )
     {
         $request->validate([
             'file_editor' => [
@@ -580,7 +646,16 @@ class EditorController extends Controller
 
                 return back()->with(
                     'error',
-                    'Informasi Part tidak ditemukan pada file Excel.'
+                    'Informasi antrian tidak ditemukan pada file Excel.'
+                );
+            }
+
+            if (!$part->sesi || !$part->marketplace) {
+                $spreadsheet->disconnectWorksheets();
+
+                return back()->with(
+                    'error',
+                    'File Excel berasal dari antrian lama dan tidak memiliki sesi/marketplace yang valid.'
                 );
             }
 
@@ -591,7 +666,7 @@ class EditorController extends Controller
                     ->route('editor.riwayat.index')
                     ->with(
                         'success',
-                        "Part {$part->kode_part} sudah berhasil diproses."
+                        "Antrian {$part->kode_part} sudah berhasil diproses."
                     );
             }
 
@@ -600,7 +675,7 @@ class EditorController extends Controller
 
                 return back()->with(
                     'error',
-                    "Part {$part->kode_part} belum didownload atau sudah tidak dapat diproses."
+                    "Antrian {$part->kode_part} belum didownload atau sudah tidak dapat diproses."
                 );
             }
 
@@ -633,7 +708,7 @@ class EditorController extends Controller
                     ->route('editor.riwayat.index')
                     ->with(
                         'success',
-                        "Part {$part->kode_part} sudah tidak memiliki item pending."
+                        "Antrian {$part->kode_part} sudah tidak memiliki item pending."
                     );
             }
 
@@ -730,7 +805,7 @@ class EditorController extends Controller
 
                 if (!$partItems->has($idItem)) {
                     $errors[] =
-                        "Baris {$row}: ID ITEM {$idItem} bukan item pending dari {$part->kode_part}.";
+                        "Baris {$row}: ID ITEM {$idItem} bukan item pending dari antrian {$part->kode_part}.";
 
                     continue;
                 }
@@ -920,7 +995,8 @@ class EditorController extends Controller
             $jumlahLocked = 0;
             $jumlahNormal = 0;
             $jumlahRandom = 0;
-            $jumlahMenunggu = 0;
+            $jumlahDialihkan = 0;
+            $jumlahDilewati = 0;
             $jumlahRequest = 0;
 
             foreach (
@@ -946,8 +1022,10 @@ class EditorController extends Controller
                             &$jumlahLocked,
                             &$jumlahNormal,
                             &$jumlahRandom,
-                            &$jumlahMenunggu,
-                            &$jumlahRequest
+                            &$jumlahDialihkan,
+                            &$jumlahDilewati,
+                            &$jumlahRequest,
+                            $partService
                         ) {
                             $lockedPart =
                                 EditorPart::where(
@@ -969,7 +1047,7 @@ class EditorController extends Controller
                                 'downloaded'
                             ) {
                                 throw new \Exception(
-                                    "Part {$lockedPart->kode_part} sudah tidak dapat diproses."
+                                    "Antrian {$lockedPart->kode_part} sudah tidak dapat diproses."
                                 );
                             }
 
@@ -987,7 +1065,7 @@ class EditorController extends Controller
 
                             if (!$partItem) {
                                 throw new \Exception(
-                                    "ID ITEM {$idPerProduk} tidak ditemukan pada Part."
+                                    "ID ITEM {$idPerProduk} tidak ditemukan pada antrian."
                                 );
                             }
 
@@ -995,6 +1073,29 @@ class EditorController extends Controller
                                 $partItem->status !==
                                 'pending'
                             ) {
+                                return;
+                            }
+
+                            $skuItem = mb_strtoupper(
+                                trim((string) $partItem->sku)
+                            );
+
+                            if ($skuItem === 'PLT028C') {
+                                EditorRequest::where(
+                                    'id_per_produk',
+                                    $idPerProduk
+                                )
+                                    ->whereNull('locked_at')
+                                    ->delete();
+
+                                $partItem->update([
+                                    'status' => 'skipped',
+                                    'jumlah_final' => null,
+                                    'processed_at' => now(),
+                                ]);
+
+                                $jumlahDilewati++;
+
                                 return;
                             }
 
@@ -1017,17 +1118,23 @@ class EditorController extends Controller
                                     ->delete();
 
                                 $partItem->update([
-                                    'status' =>
-                                        'skipped',
-
-                                    'jumlah_final' =>
-                                        null,
-
-                                    'processed_at' =>
-                                        now(),
+                                    'status' => 'skipped',
+                                    'jumlah_final' => null,
+                                    'processed_at' => now(),
                                 ]);
 
-                                $jumlahMenunggu++;
+                                $hasilAlih = $partService->alokasikanItemBaru(
+                                    [(int) $idPerProduk],
+                                    Auth::id()
+                                );
+
+                                if (($hasilAlih['items'] ?? 0) < 1) {
+                                    throw new \Exception(
+                                        "ID ITEM {$idPerProduk} gagal dialihkan ke antrian Editor berikutnya."
+                                    );
+                                }
+
+                                $jumlahDialihkan++;
 
                                 return;
                             }
@@ -1169,7 +1276,9 @@ class EditorController extends Controller
             DB::transaction(
                 function () use (
                     $part,
-                    &$jumlahMenunggu,
+                    $partService,
+                    &$jumlahDialihkan,
+                    &$jumlahDilewati,
                     &$sudahDiproses
                 ) {
                     $lockedPart =
@@ -1194,7 +1303,7 @@ class EditorController extends Controller
                         'downloaded'
                     ) {
                         throw new \Exception(
-                            "Part {$lockedPart->kode_part} sudah tidak dapat diselesaikan."
+                            "Antrian {$lockedPart->kode_part} sudah tidak dapat diselesaikan."
                         );
                     }
 
@@ -1224,17 +1333,32 @@ class EditorController extends Controller
                             ->delete();
 
                         $pending->update([
-                            'status' =>
-                                'skipped',
-
-                            'jumlah_final' =>
-                                null,
-
-                            'processed_at' =>
-                                now(),
+                            'status' => 'skipped',
+                            'jumlah_final' => null,
+                            'processed_at' => now(),
                         ]);
 
-                        $jumlahMenunggu++;
+                        $skuPending = mb_strtoupper(
+                            trim((string) $pending->sku)
+                        );
+
+                        if ($skuPending === 'PLT028C') {
+                            $jumlahDilewati++;
+                            continue;
+                        }
+
+                        $hasilAlih = $partService->alokasikanItemBaru(
+                            [(int) $pending->id_per_produk],
+                            Auth::id()
+                        );
+
+                        if (($hasilAlih['items'] ?? 0) < 1) {
+                            throw new \Exception(
+                                "ID ITEM {$pending->id_per_produk} gagal dialihkan ke antrian Editor berikutnya."
+                            );
+                        }
+
+                        $jumlahDialihkan++;
                     }
 
                     $lockedPart->update([
@@ -1262,16 +1386,19 @@ class EditorController extends Controller
                     )
                     ->with(
                         'success',
-                        "Part {$part->kode_part} sudah berhasil diproses."
+                        "Antrian {$part->kode_part} sudah berhasil diproses."
                     );
             }
 
             $message =
-                "Part {$part->kode_part} selesai. " .
+                "Antrian {$part->kode_part} selesai. " .
                 "{$jumlahLocked} item dikunci " .
                 "({$jumlahNormal} normal, {$jumlahRandom} random), " .
                 "{$jumlahRequest} request disimpan, " .
-                "{$jumlahMenunggu} item masuk Menunggu Request.";
+                "{$jumlahDialihkan} item tanpa request dialihkan ke antrian Editor berikutnya" .
+                ($jumlahDilewati > 0
+                    ? ", {$jumlahDilewati} item PLT028C dilewati."
+                    : ".");
 
             $redirect = redirect()
                 ->route(
@@ -1312,180 +1439,59 @@ class EditorController extends Controller
 
     public function menungguIndex()
     {
-        $items = $this
-            ->queryMenunggu()
-            ->with([
-                'part',
-                'item.pesanan',
-            ])
-            ->get()
-            ->sortBy(function ($partItem) {
-                $pesanan = $partItem
-                    ->item
-                    ?->pesanan;
-
-                try {
-                    $deadline = $pesanan?->batas_kirim_at
-                        ? Carbon::parse(
-                            $pesanan->batas_kirim_at
-                        )->format('Y-m-d H:i:s')
-                        : '9999-12-31 23:59:59';
-                } catch (\Throwable $e) {
-                    $deadline = '9999-12-31 23:59:59';
-                }
-
-                try {
-                    $tanggal = $pesanan?->tanggal
-                        ? Carbon::parse(
-                            $pesanan->tanggal
-                        )->format('Y-m-d H:i:s')
-                        : '9999-12-31 23:59:59';
-                } catch (\Throwable $e) {
-                    $tanggal = '9999-12-31 23:59:59';
-                }
-
-                return sprintf(
-                    '%s|%s|%020d',
-                    $deadline,
-                    $tanggal,
-                    (int) $partItem->id
-                );
-            })
-            ->values();
-
-        return view(
-            'editor.menunggu.index',
-            compact('items')
-        );
+        return redirect()
+            ->route('editor.part.index')
+            ->with(
+                'info',
+                'Menu Menunggu Request sudah tidak digunakan. Item tanpa request otomatis dialihkan ke antrian Editor berikutnya.'
+            );
     }
 
     public function menungguSiap(
-        EditorPartItem $partItem,
-        EditorPartService $partService
+        EditorPartItem $partItem
     ) {
-        if (
-            $partItem->status !==
-            'skipped'
-        ) {
-            return back()->with(
-                'error',
-                'Item ini sudah tidak berstatus MENUNGGU.'
+        return redirect()
+            ->route('editor.part.index')
+            ->with(
+                'info',
+                'Proses manual Menunggu Request sudah tidak digunakan.'
             );
-        }
-
-        $adaPartSetelahnya =
-            EditorPartItem::where(
-                'id_per_produk',
-                $partItem
-                    ->id_per_produk
-            )
-                ->where(
-                    'id',
-                    '>',
-                    $partItem->id
-                )
-                ->exists();
-
-        if ($adaPartSetelahnya) {
-            return back()->with(
-                'error',
-                'Item ini sudah masuk ke Part berikutnya.'
-            );
-        }
-
-        try {
-            $hasil =
-                DB::transaction(
-                    function () use (
-                        $partItem,
-                        $partService
-                    ) {
-                        return $partService
-                            ->alokasikanItemBaru(
-                                [
-                                    $partItem
-                                        ->id_per_produk,
-                                ],
-                                Auth::id()
-                            );
-                    }
-                );
-
-            if (
-                ($hasil['items'] ?? 0)
-                < 1
-            ) {
-                $oversize =
-                    $hasil[
-                        'oversize'
-                    ]
-                    ?? [];
-
-                if (
-                    !empty($oversize)
-                ) {
-                    return back()->with(
-                        'error',
-                        'Jumlah item melebihi kapasitas 52 dan harus ditangani manual.'
-                    );
-                }
-
-                return back()->with(
-                    'error',
-                    'Item gagal dimasukkan ke Part Produksi.'
-                );
-            }
-
-            return redirect()
-                ->route(
-                    'editor.part.index'
-                )
-                ->with(
-                    'success',
-                    'Request customer sudah tersedia. Item berhasil dimasukkan ke Part Produksi.'
-                );
-        } catch (\Throwable $e) {
-            report($e);
-
-            return back()->with(
-                'error',
-                'Gagal memasukkan item ke Part: ' .
-                $e->getMessage()
-            );
-        }
     }
 
     public function riwayatIndex()
     {
-        $parts =
-            EditorPart::withCount([
+        $parts = EditorPart::whereNotNull('sesi')
+            ->whereNotNull('marketplace')
+            ->withCount([
                 'items as jumlah_item',
-
-                'items as locked_count' =>
-                    fn ($q) =>
+                'items as locked_count' => fn ($q) =>
                     $q->where(
                         'status',
                         'locked'
                     ),
-
-                'items as skipped_count' =>
-                    fn ($q) =>
+                'items as skipped_count' => fn ($q) =>
                     $q->where(
                         'status',
                         'skipped'
                     ),
             ])
-                ->where(
-                    'status',
-                    'processed'
-                )
-                ->orderByDesc(
-                    'tanggal_part'
-                )
-                ->orderByDesc(
-                    'nomor_part'
-                )
-                ->paginate(30);
+            ->where(
+                'status',
+                'processed'
+            )
+            ->orderByDesc(
+                'tanggal_part'
+            )
+            ->orderByRaw("
+                CASE sesi
+                    WHEN 'malam' THEN 3
+                    WHEN 'siang' THEN 2
+                    WHEN 'pagi' THEN 1
+                    ELSE 0
+                END DESC
+            ")
+            ->orderBy('marketplace')
+            ->paginate(30);
 
         return view(
             'editor.riwayat.index',
@@ -1496,23 +1502,7 @@ class EditorController extends Controller
     private function queryMenunggu()
     {
         return EditorPartItem::query()
-            ->where('editor_part_items.status', 'skipped')
-            ->whereHas('item.pesanan', function ($q) {
-                $q->where('status', 'proses');
-            })
-            ->whereNotExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('editor_part_items as newer')
-                    ->whereColumn(
-                        'newer.id_per_produk',
-                        'editor_part_items.id_per_produk'
-                    )
-                    ->whereColumn(
-                        'newer.id',
-                        '>',
-                        'editor_part_items.id'
-                    );
-            });
+            ->whereRaw('1 = 0');
     }
 
     private function validasiHeader(
@@ -1562,23 +1552,20 @@ class EditorController extends Controller
         Spreadsheet $spreadsheet,
         EditorPart $part
     ): void {
-        $meta =
-            $spreadsheet
-                ->getSheetByName(
-                    'META'
-                );
+        $meta = $spreadsheet
+            ->getSheetByName(
+                'META'
+            );
 
         if (!$meta) {
-            $meta =
-                new Worksheet(
-                    $spreadsheet,
-                    'META'
-                );
+            $meta = new Worksheet(
+                $spreadsheet,
+                'META'
+            );
 
-            $spreadsheet
-                ->addSheet(
-                    $meta
-                );
+            $spreadsheet->addSheet(
+                $meta
+            );
         }
 
         $meta->setCellValue(
@@ -1588,8 +1575,7 @@ class EditorController extends Controller
 
         $meta->setCellValueExplicit(
             'B1',
-            (string)
-            $part->kode_part,
+            (string) $part->kode_part,
             DataType::TYPE_STRING
         );
 
@@ -1615,6 +1601,36 @@ class EditorController extends Controller
             )
         );
 
+        $meta->setCellValue(
+            'A4',
+            'SESI'
+        );
+
+        $meta->setCellValueExplicit(
+            'B4',
+            mb_strtoupper(
+                trim(
+                    (string) $part->sesi
+                )
+            ),
+            DataType::TYPE_STRING
+        );
+
+        $meta->setCellValue(
+            'A5',
+            'MARKETPLACE'
+        );
+
+        $meta->setCellValueExplicit(
+            'B5',
+            mb_strtoupper(
+                trim(
+                    (string) $part->marketplace
+                )
+            ),
+            DataType::TYPE_STRING
+        );
+
         $meta->setSheetState(
             Worksheet::SHEETSTATE_HIDDEN
         );
@@ -1623,56 +1639,73 @@ class EditorController extends Controller
     private function ambilPartDariExcel(
         Spreadsheet $spreadsheet
     ): ?EditorPart {
-        $meta =
-            $spreadsheet
-                ->getSheetByName(
-                    'META'
-                );
+        $meta = $spreadsheet
+            ->getSheetByName(
+                'META'
+            );
 
         if (!$meta) {
             return null;
         }
 
-        $kodePart =
-            trim(
-                (string)
-                $meta
-                    ->getCell(
-                        'B1'
-                    )
-                    ->getFormattedValue()
-            );
+        $kodePart = trim(
+            (string) $meta
+                ->getCell('B1')
+                ->getFormattedValue()
+        );
 
-        $partId =
+        $partId = trim(
+            (string) $meta
+                ->getCell('B2')
+                ->getFormattedValue()
+        );
+
+        $sesi = mb_strtolower(
             trim(
-                (string)
-                $meta
-                    ->getCell(
-                        'B2'
-                    )
+                (string) $meta
+                    ->getCell('B4')
                     ->getFormattedValue()
-            );
+            )
+        );
+
+        $marketplace = mb_strtolower(
+            trim(
+                (string) $meta
+                    ->getCell('B5')
+                    ->getFormattedValue()
+            )
+        );
 
         if (
             $kodePart === '' ||
             $partId === '' ||
-            !ctype_digit(
-                (string)
-                $partId
-            )
+            $sesi === '' ||
+            $marketplace === '' ||
+            !ctype_digit((string) $partId)
         ) {
             return null;
         }
 
-        return EditorPart::where(
+        $query = EditorPart::where(
             'id',
             (int) $partId
         )
             ->where(
                 'kode_part',
                 $kodePart
-            )
-            ->first();
+            );
+
+        $query->where(
+            'sesi',
+            $sesi
+        );
+
+        $query->whereRaw(
+            'LOWER(TRIM(marketplace)) = ?',
+            [$marketplace]
+        );
+
+        return $query->first();
     }
 
     private function normalizeStatusRequest(
@@ -1877,10 +1910,17 @@ class EditorController extends Controller
 
     public function downloadQrPart(EditorPart $part)
     {
+        if (!$part->sesi || !$part->marketplace) {
+            return back()->with(
+                'error',
+                'QR Code hanya tersedia untuk antrian PAGI/SIANG/MALAM dengan marketplace yang valid.'
+            );
+        }
+
         if ($part->status !== 'processed') {
             return back()->with(
                 'error',
-                'QR Code hanya dapat dibuat setelah Part selesai diproses.'
+                'QR Code hanya dapat dibuat setelah antrian selesai diproses.'
             );
         }
 
@@ -1926,6 +1966,7 @@ class EditorController extends Controller
                     'random',
                 ]
             )
+            ->whereRaw("UPPER(TRIM(pp.sku)) <> 'PLT028C'")
             ->select([
                 'er.id',
                 'er.id_per_produk',

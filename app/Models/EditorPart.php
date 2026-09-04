@@ -8,8 +8,14 @@ class EditorPart extends Model
 {
     protected $table = 'editor_parts';
 
+    public const SESI_PAGI = 'pagi';
+    public const SESI_SIANG = 'siang';
+    public const SESI_MALAM = 'malam';
+
     protected $fillable = [
         'tanggal_part',
+        'sesi',
+        'marketplace',
         'nomor_part',
         'kode_part',
         'kapasitas_per_kelompok',

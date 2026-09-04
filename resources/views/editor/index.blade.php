@@ -5,9 +5,12 @@
 <div class="container-fluid">
 
     <div class="mb-4">
-        <h4 class="fw-bold mb-1">Dashboard Editor</h4>
+        <h4 class="fw-bold mb-1">
+            Dashboard Editor
+        </h4>
+
         <div class="text-muted small">
-            Monitoring pekerjaan Editor dan Part Produksi
+            Monitoring pekerjaan dan antrian Editor Shopee / TikTok
         </div>
     </div>
 
@@ -18,8 +21,9 @@
         <div class="col-xl-3 col-md-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body p-4">
+
                     <div class="text-muted small">
-                        Part Aktif
+                        Antrian Aktif
                     </div>
 
                     <div class="fs-2 fw-bold text-primary">
@@ -27,8 +31,9 @@
                     </div>
 
                     <div class="small text-muted">
-                        open / sedang diedit
+                        siap download / sedang diedit
                     </div>
+
                 </div>
             </div>
         </div>
@@ -36,6 +41,7 @@
         <div class="col-xl-3 col-md-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body p-4">
+
                     <div class="text-muted small">
                         Belum Dikerjakan
                     </div>
@@ -45,8 +51,9 @@
                     </div>
 
                     <div class="small text-muted">
-                        item
+                        item pending
                     </div>
+
                 </div>
             </div>
         </div>
@@ -54,6 +61,7 @@
         <div class="col-xl-3 col-md-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body p-4">
+
                     <div class="text-muted small">
                         Sudah Dikunci
                     </div>
@@ -63,8 +71,9 @@
                     </div>
 
                     <div class="small text-muted">
-                        item
+                        item selesai Editor
                     </div>
+
                 </div>
             </div>
         </div>
@@ -72,17 +81,19 @@
         <div class="col-xl-3 col-md-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body p-4">
+
                     <div class="text-muted small">
-                        Menunggu Request
+                        Dialihkan
                     </div>
 
-                    <div class="fs-2 fw-bold text-danger">
-                        {{ number_format($totalMenunggu) }}
+                    <div class="fs-2 fw-bold text-secondary">
+                        {{ number_format($totalDialihkan) }}
                     </div>
 
                     <div class="small text-muted">
-                        item
+                        item dialihkan ke antrian berikutnya
                     </div>
+
                 </div>
             </div>
         </div>
@@ -92,14 +103,22 @@
     <div class="card border-0 shadow-sm">
 
         <div class="card-header bg-white py-3">
+
             <div class="d-flex justify-content-between align-items-center">
-                <strong>Part Terbaru</strong>
+
+                <strong>
+                    Antrian Terbaru
+                </strong>
 
                 <a href="{{ route('editor.part.index') }}"
                     class="btn btn-sm btn-outline-primary">
+
                     Lihat Semua
+
                 </a>
+
             </div>
+
         </div>
 
         <div class="table-responsive">
@@ -108,12 +127,13 @@
 
                 <thead class="table-light">
                     <tr>
-                        <th>Part</th>
+                        <th>Antrian</th>
+                        <th>Marketplace</th>
                         <th>Tanggal</th>
                         <th>Item</th>
                         <th>Pending</th>
                         <th>Locked</th>
-                        <th>Skip</th>
+                        <th>Dialihkan</th>
                         <th>Status</th>
                     </tr>
                 </thead>
@@ -122,58 +142,126 @@
 
                     @forelse($partsTerbaru as $part)
 
+                        @php
+                            $sesi = strtoupper($part->sesi ?? '-');
+                            $marketplace = strtoupper($part->marketplace ?? '-');
+
+                            $badgeSesi = match($part->sesi) {
+                                'pagi' => 'bg-primary',
+                                'siang' => 'bg-warning text-dark',
+                                'malam' => 'bg-dark',
+                                default => 'bg-secondary',
+                            };
+
+                            $badgeMarketplace = match(strtolower($part->marketplace ?? '')) {
+                                'shopee' => 'bg-danger',
+                                'tiktok' => 'bg-dark',
+                                default => 'bg-secondary',
+                            };
+                        @endphp
+
                         <tr>
+
                             <td>
+
                                 <a href="{{ route('editor.part.show', $part) }}"
                                     class="fw-bold text-decoration-none">
+
                                     {{ $part->kode_part }}
+
                                 </a>
+
+                                <div class="mt-1">
+
+                                    <span class="badge {{ $badgeSesi }}">
+                                        {{ $sesi }}
+                                    </span>
+
+                                </div>
+
+                            </td>
+
+                            <td>
+
+                                <span class="badge {{ $badgeMarketplace }}">
+                                    {{ $marketplace }}
+                                </span>
+
                             </td>
 
                             <td>
                                 {{ $part->tanggal_part->format('d/m/Y') }}
                             </td>
 
-                            <td>
-                                {{ $part->jumlah_item }}
+                            <td class="fw-semibold">
+                                {{ number_format($part->jumlah_item) }}
                             </td>
 
-                            <td>
-                                {{ $part->pending_count }}
+                            <td class="text-warning fw-semibold">
+                                {{ number_format($part->pending_count) }}
                             </td>
 
                             <td class="text-success fw-semibold">
-                                {{ $part->locked_count }}
+                                {{ number_format($part->locked_count) }}
                             </td>
 
-                            <td class="text-danger fw-semibold">
-                                {{ $part->skipped_count }}
+                            <td class="text-secondary fw-semibold">
+                                {{ number_format($part->skipped_count) }}
                             </td>
 
                             <td>
+
                                 @if($part->status === 'open')
+
                                     <span class="badge bg-success">
-                                        OPEN
+                                        SIAP DOWNLOAD
                                     </span>
+
                                 @elseif($part->status === 'downloaded')
+
                                     <span class="badge bg-warning text-dark">
-                                        DIEDIT
+                                        SEDANG DIEDIT
                                     </span>
-                                @else
-                                    <span class="badge bg-secondary">
+
+                                @elseif($part->status === 'processed')
+
+                                    <span class="badge bg-primary">
                                         SELESAI
                                     </span>
+
+                                @else
+
+                                    <span class="badge bg-secondary">
+                                        {{ strtoupper($part->status) }}
+                                    </span>
+
                                 @endif
+
                             </td>
+
                         </tr>
 
                     @empty
 
                         <tr>
-                            <td colspan="7"
-                                class="text-center text-muted py-5">
-                                Belum ada Part Produksi.
+
+                            <td colspan="8"
+                                class="text-center py-5">
+
+                                <div class="text-muted mb-2">
+                                    <i class="fa-solid fa-box-open fa-2x"></i>
+                                </div>
+
+                                <div class="fw-semibold">
+                                    Belum Ada Antrian Editor
+                                </div>
+
+                                <div class="small text-muted">
+                                    Antrian akan muncul otomatis ketika ada pesanan PLT Shopee atau TikTok yang perlu dikerjakan.
+                                </div>
+
                             </td>
+
                         </tr>
 
                     @endforelse

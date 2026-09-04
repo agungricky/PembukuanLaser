@@ -4,6 +4,29 @@
 
 <div class="container-fluid">
 
+    @php
+        $sesi = strtoupper($part->sesi ?? '-');
+        $marketplace = strtoupper($part->marketplace ?? '-');
+
+        $badgeSesi = match($part->sesi) {
+            'pagi' => 'bg-primary',
+            'siang' => 'bg-warning text-dark',
+            'malam' => 'bg-dark',
+            default => 'bg-secondary',
+        };
+
+        $badgeMarketplace = match(strtolower($part->marketplace ?? '')) {
+            'shopee' => 'bg-danger',
+            'tiktok' => 'bg-dark',
+            default => 'bg-secondary',
+        };
+
+        $totalItem = $part->items->count();
+        $totalPending = $part->items->where('status', 'pending')->count();
+        $totalLocked = $part->items->where('status', 'locked')->count();
+        $totalDialihkan = $part->items->where('status', 'skipped')->count();
+    @endphp
+
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
 
         <div>
@@ -24,17 +47,29 @@
                     class="text-decoration-none small">
 
                     <i class="fa-solid fa-arrow-left me-1"></i>
-                    Kembali ke Part Produksi
+                    Kembali ke Antrian Editor
 
                 </a>
 
             @endif
 
-            <h4 class="fw-bold mb-1 mt-2">
-                {{ $part->kode_part }}
-            </h4>
+            <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
 
-            <div class="text-muted small">
+                <h4 class="fw-bold mb-0">
+                    {{ $part->kode_part }}
+                </h4>
+
+                <span class="badge {{ $badgeSesi }}">
+                    {{ $sesi }}
+                </span>
+
+                <span class="badge {{ $badgeMarketplace }}">
+                    {{ $marketplace }}
+                </span>
+
+            </div>
+
+            <div class="text-muted small mt-1">
                 {{ $part->tanggal_part->translatedFormat('d F Y') }}
             </div>
 
@@ -77,14 +112,14 @@
 
     <div class="row g-3 mb-4">
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl col-md-6">
 
             <div class="card border-0 shadow-sm h-100">
 
                 <div class="card-body">
 
                     <div class="small text-muted mb-2">
-                        Status Part
+                        Status Antrian
                     </div>
 
                     @if($part->status === 'open')
@@ -119,7 +154,27 @@
 
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl col-md-6">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <div class="small text-muted mb-2">
+                        Marketplace
+                    </div>
+
+                    <span class="badge {{ $badgeMarketplace }} fs-6">
+                        {{ $marketplace }}
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl col-md-6">
 
             <div class="card border-0 shadow-sm h-100">
 
@@ -130,7 +185,7 @@
                     </div>
 
                     <div class="fs-4 fw-bold">
-                        {{ $part->items->count() }}
+                        {{ number_format($totalItem) }}
                     </div>
 
                 </div>
@@ -139,7 +194,27 @@
 
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        <div class="col-xl col-md-6">
+
+            <div class="card border-0 shadow-sm h-100">
+
+                <div class="card-body">
+
+                    <div class="small text-muted mb-1">
+                        Pending
+                    </div>
+
+                    <div class="fs-4 fw-bold text-warning">
+                        {{ number_format($totalPending) }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col-xl col-md-6">
 
             <div class="card border-0 shadow-sm h-100">
 
@@ -150,7 +225,7 @@
                     </div>
 
                     <div class="fs-4 fw-bold text-success">
-                        {{ $part->items->where('status', 'locked')->count() }}
+                        {{ number_format($totalLocked) }}
                     </div>
 
                 </div>
@@ -159,25 +234,29 @@
 
         </div>
 
-        <div class="col-xl-3 col-md-6">
+        @if($totalDialihkan > 0)
 
-            <div class="card border-0 shadow-sm h-100">
+            <div class="col-xl col-md-6">
 
-                <div class="card-body">
+                <div class="card border-0 shadow-sm h-100">
 
-                    <div class="small text-muted mb-1">
-                        Menunggu Request
-                    </div>
+                    <div class="card-body">
 
-                    <div class="fs-4 fw-bold text-danger">
-                        {{ $part->items->where('status', 'skipped')->count() }}
+                        <div class="small text-muted mb-1">
+                            Dialihkan
+                        </div>
+
+                        <div class="fs-4 fw-bold text-secondary">
+                            {{ number_format($totalDialihkan) }}
+                        </div>
+
                     </div>
 
                 </div>
 
             </div>
 
-        </div>
+        @endif
 
     </div>
 
@@ -186,15 +265,6 @@
         <div class="row g-3 mb-4">
 
             @foreach($kelompok as $nama => $data)
-
-                @php
-                    $kapasitas = $part->kapasitas_per_kelompok ?: 52;
-
-                    $persen = min(
-                        100,
-                        ($data['jumlah'] / $kapasitas) * 100
-                    );
-                @endphp
 
                 <div class="col-xl-4 col-md-6">
 
@@ -210,30 +280,32 @@
                                 {{ str_replace('|', ' • ', $nama) }}
                             </div>
 
-                            <div class="d-flex justify-content-between mb-2">
+                            <div class="d-flex justify-content-between align-items-center">
 
-                                <span class="text-muted small">
-                                    Kapasitas
-                                </span>
+                                <div>
 
-                                <strong>
-                                    {{ $data['jumlah'] }}/{{ $kapasitas }}
-                                </strong>
+                                    <div class="small text-muted">
+                                        Total Qty
+                                    </div>
 
-                            </div>
+                                    <div class="fs-5 fw-bold">
+                                        {{ number_format($data['jumlah']) }} pcs
+                                    </div>
 
-                            <div class="progress"
-                                style="height: 7px">
-
-                                <div class="progress-bar"
-                                    role="progressbar"
-                                    style="width: {{ $persen }}%">
                                 </div>
 
-                            </div>
+                                <div class="text-end">
 
-                            <div class="small text-muted mt-2">
-                                {{ $data['item'] }} item pesanan
+                                    <div class="small text-muted">
+                                        Item Pesanan
+                                    </div>
+
+                                    <div class="fs-5 fw-bold">
+                                        {{ number_format($data['item']) }}
+                                    </div>
+
+                                </div>
+
                             </div>
 
                         </div>
@@ -259,7 +331,7 @@
                 </strong>
 
                 <span class="text-muted small">
-                    {{ $part->items->count() }} item
+                    {{ number_format($part->items->count()) }} item
                 </span>
 
             </div>
@@ -271,6 +343,7 @@
             <table class="table align-middle mb-0">
 
                 <thead class="table-light">
+
                     <tr>
                         <th>#</th>
                         <th>ID Item</th>
@@ -286,6 +359,7 @@
                         <th>Batas Kirim</th>
                         <th>Status</th>
                     </tr>
+
                 </thead>
 
                 <tbody>
@@ -305,9 +379,11 @@
                             </td>
 
                             <td>
+
                                 <span class="small fw-semibold">
                                     {{ $partItem->id_per_produk }}
                                 </span>
+
                             </td>
 
                             <td>
@@ -351,7 +427,7 @@
                             </td>
 
                             <td class="text-center fw-bold">
-                                {{ $partItem->jumlah_awal }}
+                                {{ number_format($partItem->jumlah_awal) }}
                             </td>
 
                             @if($part->status === 'processed')
@@ -361,7 +437,7 @@
                                     @if($partItem->status === 'locked')
 
                                         <strong>
-                                            {{ $partItem->jumlah_final ?? 0 }}
+                                            {{ number_format($partItem->jumlah_final ?? 0) }}
                                         </strong>
 
                                     @else
@@ -414,8 +490,8 @@
 
                                 @elseif($partItem->status === 'skipped')
 
-                                    <span class="badge bg-danger">
-                                        MENUNGGU
+                                    <span class="badge bg-secondary">
+                                        DIALIHKAN
                                     </span>
 
                                 @else
@@ -437,7 +513,7 @@
                             <td colspan="{{ $part->status === 'processed' ? 9 : 8 }}"
                                 class="text-center py-5 text-muted">
 
-                                Tidak ada item dalam Part ini.
+                                Tidak ada item dalam antrian ini.
 
                             </td>
 

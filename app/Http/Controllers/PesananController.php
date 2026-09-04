@@ -491,6 +491,7 @@ class PesananController extends Controller
         $tanggal = Carbon::parse($request->input('tanggal_import'))->startOfDay();
         $idUser = auth()->id();
         $idToko = (int) $request->input('id_toko');
+        $inputAt = Carbon::now('Asia/Jakarta');
 
         $toko = Toko::select(
             'id_toko',
@@ -503,6 +504,15 @@ class PesananController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Data toko tidak ditemukan.',
+            ], 422);
+        }
+
+        $marketplaceToko = Str::lower(trim((string) $toko->marketplace));
+
+        if (! in_array($marketplaceToko, ['shopee', 'tiktok'], true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Marketplace toko harus Shopee atau TikTok.',
             ], 422);
         }
 
@@ -581,21 +591,6 @@ class PesananController extends Controller
                     fn ($row) => Str::upper(trim((string) $row->sku))
                 );
 
-            $skuTidakAda = array_values(
-                array_diff(
-                    $skuList,
-                    $produkMaster->keys()->all()
-                )
-            );
-
-            if (! empty($skuTidakAda)) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' =>
-                        'Terdapat PRODUK dengan SKU yang tidak terdaftar: '.
-                        implode(', ', $skuTidakAda),
-                ], 422);
-            }
         }
 
         DB::beginTransaction();
@@ -631,6 +626,7 @@ class PesananController extends Controller
                 DB::table('pesanan')->insert([
                     'no_pesanan' => $noPesanan,
                     'tanggal' => $tanggal,
+                    'input_at' => $inputAt,
                     'no_resi' => ! empty($item['no_resi'])
                         ? trim((string) $item['no_resi'])
                         : null,
@@ -768,13 +764,9 @@ class PesananController extends Controller
                         $keySku = Str::upper(trim($sku));
                         $master = $produkMaster->get($keySku);
 
-                        if (! $master) {
-                            throw new \Exception(
-                                "SKU '{$sku}' tidak ditemukan di tabel produk."
-                            );
+                        if ($master) {
+                            $hpp = (float) ($master->hpp ?? 0);
                         }
-
-                        $hpp = (float) ($master->hpp ?? 0);
                     }
 
                     $idPerProduk = DB::table('pesanan_per_produk')
@@ -791,7 +783,13 @@ class PesananController extends Controller
                             'updated_at' => now(),
                         ], 'id_per_produk');
 
-                    if ($sku && str_starts_with($sku, 'PLT')) {
+                    $skuEditor = Str::upper(trim((string) $sku));
+
+                    if (
+                        $skuEditor !== '' &&
+                        str_starts_with($skuEditor, 'PLT') &&
+                        $skuEditor !== 'PLT028C'
+                    ) {
                         $platItemIds[] = (int) $idPerProduk;
                     }
 

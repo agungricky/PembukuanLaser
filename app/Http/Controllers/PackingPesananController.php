@@ -741,8 +741,6 @@ class PackingPesananController extends Controller
             uniqid() .
             '.pdf';
 
-        $preparedSources = [];
-
         try {
             $pdf = new Fpdi();
 
@@ -771,22 +769,8 @@ class PackingPesananController extends Controller
                     );
                 }
 
-                if (!isset(
-                    $preparedSources[$sourcePath]
-                )) {
-                    $preparedSources[$sourcePath] =
-                        $this->preparePdfForFpdi(
-                            $sourcePath,
-                            $marketplace,
-                            $tempDirectory
-                        );
-                }
-
-                $preparedPdf =
-                    $preparedSources[$sourcePath];
-
                 $pdf->setSourceFile(
-                    $preparedPdf['path']
+                    $sourcePath
                 );
 
                 $template =
@@ -824,10 +808,6 @@ class PackingPesananController extends Controller
             $pdf->Output(
                 'F',
                 $tempPath
-            );
-
-            $this->cleanupPreparedPdfs(
-                $preparedSources
             );
 
             DB::transaction(
@@ -899,10 +879,6 @@ class PackingPesananController extends Controller
         } catch (\Throwable $e) {
             File::delete(
                 $tempPath
-            );
-
-            $this->cleanupPreparedPdfs(
-                $preparedSources
             );
 
             Log::error(
@@ -1206,100 +1182,6 @@ class PackingPesananController extends Controller
             $startY =
                 $pdf->GetY() +
                 $marginPerRequest;
-        }
-    }
-
-    private function preparePdfForFpdi(
-        string $sourcePath,
-        string $marketplace,
-        string $tempDirectory
-    ): array {
-
-        if (strcasecmp($marketplace, 'Tiktok') !== 0) {
-            return [
-                'path' => $sourcePath,
-                'temporary' => false,
-            ];
-        }
-
-        $normalizedPath =
-            $tempDirectory .
-            DIRECTORY_SEPARATOR .
-            'normalized_' .
-            uniqid('', true) .
-            '.pdf';
-
-        $ghostscript = '/bin/gs';
-
-        if (
-            !is_file($ghostscript) ||
-            !is_executable($ghostscript)
-        ) {
-            throw new \Exception(
-                'Ghostscript tidak tersedia di server.'
-            );
-        }
-
-        $command =
-            escapeshellarg($ghostscript) .
-            ' -q' .
-            ' -dNOPAUSE' .
-            ' -dBATCH' .
-            ' -sDEVICE=pdfwrite' .
-            ' -dCompatibilityLevel=1.4' .
-            ' -dAutoRotatePages=/None' .
-            ' -sOutputFile=' .
-            escapeshellarg($normalizedPath) .
-            ' ' .
-            escapeshellarg($sourcePath) .
-            ' 2>&1';
-
-        $output = [];
-        $exitCode = 0;
-
-        exec(
-            $command,
-            $output,
-            $exitCode
-        );
-
-        if (
-            $exitCode !== 0 ||
-            !File::exists($normalizedPath) ||
-            File::size($normalizedPath) <= 0
-        ) {
-            File::delete($normalizedPath);
-
-            throw new \Exception(
-                'Gagal memproses PDF TikTok dengan Ghostscript. ' .
-                implode(' ', $output)
-            );
-        }
-
-        return [
-            'path' => $normalizedPath,
-            'temporary' => true,
-        ];
-    }
-
-    private function cleanupPreparedPdfs(
-        array $preparedSources
-    ): void {
-        foreach (
-            $preparedSources
-            as $preparedPdf
-        ) {
-            if (
-                ($preparedPdf['temporary'] ?? false) &&
-                !empty($preparedPdf['path']) &&
-                File::exists(
-                    $preparedPdf['path']
-                )
-            ) {
-                File::delete(
-                    $preparedPdf['path']
-                );
-            }
         }
     }
 

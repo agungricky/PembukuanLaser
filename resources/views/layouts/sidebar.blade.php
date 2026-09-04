@@ -218,16 +218,7 @@
 
                         <div class="d-flex align-items-center gap-3">
                             <i class="fa-solid fa-layer-group"></i>
-                            <span>Part Produksi</span>
-                        </div>
-                    </a>
-
-                    <a href="{{ route('editor.menunggu.index') }}"
-                        class="sidebar-link {{ request()->routeIs('editor.menunggu.*') ? 'active' : '' }}">
-
-                        <div class="d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-comments"></i>
-                            <span>Menunggu Request</span>
+                            <span>Antrian Editor</span>
                         </div>
                     </a>
 
@@ -251,7 +242,7 @@
 
                         <div class="d-flex align-items-center gap-3">
                             <i class="fa-solid fa-clock-rotate-left"></i>
-                            <span>Riwayat Part</span>
+                            <span>Riwayat Antrian</span>
                         </div>
                     </a>
                 </div>

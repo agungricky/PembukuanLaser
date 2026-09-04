@@ -19,6 +19,7 @@ class Pesanan extends Model
     protected $fillable = [
         'no_pesanan',
         'tanggal',
+        'input_at',
         'no_resi',
 
         'resi_printed_at',
@@ -28,34 +29,45 @@ class Pesanan extends Model
 
         'id_toko',
         'id_user',
+        'id_user_kirim',
+        'tanggal_kirim',
+
         'nama_pembeli',
         'username',
         'kurir',
         'status',
+        'status_cek',
+
         'total_hpp',
         'total_harga',
         'total_admin',
         'pencairan',
+
         'notes',
-        'status_cek',
-        'id_user_kirim',
-        'tanggal_kirim',
         'tag',
+
+        'batas_kirim_at',
+        'batas_kirim_source',
+        'batas_kirim_raw',
     ];
 
     protected $casts = [
-        'tanggal'              => 'date',
-        'tanggal_kirim'        => 'datetime',
+        'tanggal' => 'date',
+        'input_at' => 'datetime',
+        'tanggal_kirim' => 'datetime',
 
-        'resi_printed_at'      => 'datetime',
+        'resi_printed_at' => 'datetime',
         'resi_last_printed_at' => 'datetime',
-        'resi_print_count'     => 'integer',
+        'resi_print_count' => 'integer',
+
         'batas_kirim_at' => 'datetime',
 
-        'total_hpp'            => 'decimal:2',
-        'total_harga'          => 'decimal:2',
-        'total_admin'          => 'decimal:2',
-        'pencairan'            => 'decimal:2',
+        'status_cek' => 'boolean',
+
+        'total_hpp' => 'decimal:2',
+        'total_harga' => 'decimal:2',
+        'total_admin' => 'decimal:2',
+        'pencairan' => 'decimal:2',
     ];
 
     public function produk()
@@ -94,12 +106,22 @@ class Pesanan extends Model
         )->withTrashed();
     }
 
-    public function kesalahan(){
-        return $this->belongsTo(kesalahan::class, 'no_pesanan', 'no_pesanan');
+    public function kesalahan()
+    {
+        return $this->belongsTo(
+            kesalahan::class,
+            'no_pesanan',
+            'no_pesanan'
+        );
     }
 
-    public function pesanan_per_produk(){
-        return $this->hasMany(PesananPerProduk::class, 'no_pesanan', 'no_pesanan');
+    public function pesanan_per_produk()
+    {
+        return $this->hasMany(
+            PesananPerProduk::class,
+            'no_pesanan',
+            'no_pesanan'
+        );
     }
 
     public function resiPages()
@@ -109,8 +131,8 @@ class Pesanan extends Model
             'no_pesanan',
             'no_pesanan'
         )
-        ->orderBy('urutan')
-        ->orderBy('halaman');
+            ->orderBy('urutan')
+            ->orderBy('halaman');
     }
 
     public function resiPrinter()

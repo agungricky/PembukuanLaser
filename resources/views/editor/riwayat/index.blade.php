@@ -5,13 +5,15 @@
 <div class="container-fluid">
 
     <div class="mb-4">
+
         <h4 class="fw-bold mb-1">
-            Riwayat Part
+            Riwayat Antrian Editor
         </h4>
 
         <div class="text-muted small">
-            Part Produksi yang sudah selesai diproses Editor
+            Riwayat antrian Editor Shopee dan TikTok yang sudah selesai diproses
         </div>
+
     </div>
 
     @include('editor.partials.alert')
@@ -24,14 +26,15 @@
 
                 <thead class="table-light">
                     <tr>
-                        <th>Part</th>
-                        <th>Tanggal Part</th>
+                        <th>Antrian</th>
+                        <th>Marketplace</th>
+                        <th>Tanggal</th>
                         <th>Item</th>
                         <th>Locked</th>
-                        <th>Menunggu</th>
+                        <th>Dialihkan</th>
                         <th>Download</th>
                         <th>Upload</th>
-                        <th></th>
+                        <th class="text-end">Aksi</th>
                     </tr>
                 </thead>
 
@@ -39,67 +42,136 @@
 
                     @forelse($parts as $part)
 
+                        @php
+                            $sesi = strtoupper($part->sesi ?? '-');
+                            $marketplace = strtoupper($part->marketplace ?? '-');
+
+                            $badgeSesi = match($part->sesi) {
+                                'pagi' => 'bg-primary',
+                                'siang' => 'bg-warning text-dark',
+                                'malam' => 'bg-dark',
+                                default => 'bg-secondary',
+                            };
+
+                            $badgeMarketplace = match(strtolower($part->marketplace ?? '')) {
+                                'shopee' => 'bg-danger',
+                                'tiktok' => 'bg-dark',
+                                default => 'bg-secondary',
+                            };
+                        @endphp
+
                         <tr>
 
                             <td>
+
                                 <div class="fw-bold">
                                     {{ $part->kode_part }}
                                 </div>
 
-                                <span class="badge bg-success">
-                                    SELESAI
+                                <div class="d-flex gap-1 flex-wrap mt-1">
+
+                                    <span class="badge {{ $badgeSesi }}">
+                                        {{ $sesi }}
+                                    </span>
+
+                                    <span class="badge bg-success">
+                                        SELESAI
+                                    </span>
+
+                                </div>
+
+                            </td>
+
+                            <td>
+
+                                <span class="badge {{ $badgeMarketplace }}">
+                                    {{ $marketplace }}
                                 </span>
+
                             </td>
 
                             <td>
                                 {{ $part->tanggal_part->format('d/m/Y') }}
                             </td>
 
-                            <td>
-                                {{ $part->jumlah_item }}
+                            <td class="fw-semibold">
+                                {{ number_format($part->jumlah_item) }}
                             </td>
 
                             <td class="text-success fw-bold">
-                                {{ $part->locked_count }}
+                                {{ number_format($part->locked_count) }}
                             </td>
 
-                            <td class="text-danger fw-bold">
-                                {{ $part->skipped_count }}
+                            <td class="text-secondary fw-bold">
+                                {{ number_format($part->skipped_count) }}
                             </td>
 
                             <td>
+
                                 @if($part->downloaded_at)
-                                    <div>
+
+                                    <div class="fw-semibold">
                                         {{ $part->downloaded_at->format('d/m/Y') }}
                                     </div>
 
                                     <div class="small text-muted">
                                         {{ $part->downloaded_at->format('H:i') }}
                                     </div>
+
                                 @else
-                                    -
+
+                                    <span class="text-muted">
+                                        -
+                                    </span>
+
                                 @endif
+
                             </td>
 
                             <td>
+
                                 @if($part->uploaded_at)
-                                    <div>
+
+                                    <div class="fw-semibold">
                                         {{ $part->uploaded_at->format('d/m/Y') }}
                                     </div>
 
                                     <div class="small text-muted">
                                         {{ $part->uploaded_at->format('H:i') }}
                                     </div>
+
                                 @else
-                                    -
+
+                                    <span class="text-muted">
+                                        -
+                                    </span>
+
                                 @endif
+
                             </td>
 
                             <td class="text-end">
-                                <a href="{{ route('editor.part.show', $part) }}"
-                                    class="btn btn-sm btn-outline-primary">
-                                    Detail
-                                </a>
+
+                                <div class="d-flex justify-content-end gap-2">
+
+                                    <a href="{{ route('editor.part.show', $part) }}"
+                                        class="btn btn-sm btn-outline-primary">
+
+                                        <i class="fa-solid fa-eye me-1"></i>
+                                        Detail
+
+                                    </a>
+
+                                    <a href="{{ route('editor.part.qr.pdf', $part) }}"
+                                        class="btn btn-sm btn-dark">
+
+                                        <i class="fa-solid fa-file-pdf me-1"></i>
+                                        QR
+
+                                    </a>
+
+                                </div>
+
                             </td>
 
                         </tr>
@@ -107,10 +179,24 @@
                     @empty
 
                         <tr>
-                            <td colspan="8"
-                                class="text-center py-5 text-muted">
-                                Belum ada riwayat Part.
+
+                            <td colspan="9"
+                                class="text-center py-5">
+
+                                <div class="text-muted mb-2">
+                                    <i class="fa-solid fa-clock-rotate-left fa-2x"></i>
+                                </div>
+
+                                <div class="fw-semibold">
+                                    Belum Ada Riwayat Antrian
+                                </div>
+
+                                <div class="small text-muted">
+                                    Antrian Shopee atau TikTok yang sudah selesai diproses akan muncul di sini.
+                                </div>
+
                             </td>
+
                         </tr>
 
                     @endforelse
@@ -123,9 +209,13 @@
 
     </div>
 
-    <div class="mt-3">
-        {{ $parts->links() }}
-    </div>
+    @if($parts->hasPages())
+
+        <div class="mt-3">
+            {{ $parts->links() }}
+        </div>
+
+    @endif
 
 </div>
 

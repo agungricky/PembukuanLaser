@@ -138,19 +138,19 @@
         .product-name {
             margin: 0;
             padding: 0;
-            font-size: 8pt;
-            line-height: 1;
+            font-size: 11pt;
+            line-height: .95;
             font-weight: 900;
             text-align: center;
             word-wrap: break-word;
         }
 
         .variation {
-            margin: .4mm 0 0;
+            margin: .5mm 0 0;
             padding: 0;
-            font-size: 7pt;
-            line-height: 1;
-            font-weight: 800;
+            font-size: 10pt;
+            line-height: .95;
+            font-weight: 900;
             text-align: center;
             word-wrap: break-word;
         }
