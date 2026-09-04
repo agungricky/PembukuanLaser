@@ -220,6 +220,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::patch('/update-stok/{sku}', [GudangController::class, 'updatestok'])->name('updatestok.json');
         Route::get('/stok/export', [GudangController::class, 'stokExport'])->name('gudang.stok.export');
         Route::post('/stok/import', [GudangController::class, 'stokImport'])->name('gudang.stok.import');
+        Route::post('/stok/import/update', [GudangController::class, 'importUpdate'])->name('gudang.import.update');
 
         // Sampel
         Route::get('/sampel', [GudangController::class, 'barangsampel'])->name('gudang.sampel');

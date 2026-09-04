@@ -213,6 +213,7 @@
         </div>
     </div>
 
+    {{-- Modal import --}}
     <div class="modal fade" id="importExcelModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
@@ -247,8 +248,15 @@
                         <div id="hasilImport" style="display:none;">
                             <hr>
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div class="fw-semibold">
-                                    Data Stok Berubah
+                                <div class="d-flex gap-3 justify-content-between align-items-center">
+                                    <div class="fw-semibold pe-3 border-end">
+                                        Data Stok Berubah
+                                    </div>
+
+                                    <button type="button" class="btn btn-primary btn-sm px-2 py-1" id="btnSimpanData"
+                                        style="font-size: 11px;">
+                                        <i class="bi bi-save"></i> Simpan data
+                                    </button>
                                 </div>
 
                                 <span class="badge bg-primary" id="jumlahBerubah">
@@ -273,7 +281,7 @@
                             <div id="sectionSkuTidakDitemukan">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <div class="fw-semibold text-danger">
-                                        SKU Tidak Ditemukan
+                                        Stok Belum Pernah di Simpan
                                     </div>
 
                                     <span class="badge bg-danger" id="jumlahTidakDitemukan">
@@ -503,6 +511,10 @@
                 });
             });
 
+            let dataBerubah = [];
+            let skuTidakDitemukan = [];
+
+            // Baca Excell
             $('#formImportStok').on('submit', function(e) {
                 e.preventDefault();
                 const formData = new FormData(this);
@@ -524,8 +536,8 @@
                                 `);
                     },
                     success: function(response) {
-                        const dataBerubah = response.data ?? [];
-                        const skuTidakDitemukan = response.sku_tidak_ditemukan ?? [];
+                        dataBerubah = response.data ?? [];
+                        skuTidakDitemukan = response.sku_tidak_ditemukan ?? [];
 
                         let htmlBerubah = '';
                         if (dataBerubah.length > 0) {
@@ -619,6 +631,7 @@
                 });
             });
 
+            // Reteset Modal
             $('#importExcelModal').on('hidden.bs.modal', function() {
                 $('#formImportStok')[0].reset();
                 $('#hasilImport').hide();
@@ -636,6 +649,62 @@
                 `);
 
             });
+
+            // Simpan Data Import
+            $(document).on('click', '#btnSimpanData', function(e) {
+                e.preventDefault();
+
+                const $btn = $(this);
+                const textAwal = $btn.html();
+
+                const data = {
+                    dataBerubah: dataBerubah,
+                    skuBaru: skuTidakDitemukan
+                };
+
+                $.ajax({
+                    type: "POST",
+                    url: "{{ route('gudang.import.update') }}",
+
+                    data: JSON.stringify(data),
+                    contentType: "application/json",
+                    dataType: "json",
+
+                    headers: {
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                    },
+                    beforeSend: function() {
+                        $btn.prop('disabled', true).html(`
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Menyimpan...
+                        `);
+                    },
+                    success: function(response) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: response.message ?? 'Data berhasil disimpan',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            $('#formImportStok')[0].reset();
+                            location.reload();
+                        });
+                    },
+                    error: function(xhr) {
+                        console.log(xhr.responseJSON);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: xhr.responseJSON?.message ??
+                                'Terjadi kesalahan saat menyimpan data'
+                        });
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false).html(textAwal);
+                    }
+                });
+            });
+
         });
     </script>
 @endpush

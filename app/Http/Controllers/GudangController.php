@@ -13,12 +13,13 @@ use App\Models\retur;
 use App\Models\stok_produk;
 use App\Models\User;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 
 class GudangController extends Controller
 {
@@ -386,7 +387,7 @@ class GudangController extends Controller
                 'message' => 'Barang berhasil disiapkan',
                 'data' => $kebutuhan,
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
 
             return response()->json([
@@ -424,7 +425,7 @@ class GudangController extends Controller
                 'message' => 'Status berhasil diperbarui.',
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
 
             return response()->json([
@@ -495,7 +496,7 @@ class GudangController extends Controller
                 'message' => 'Permintaan sampel berhasil dibuat.',
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollBack();
 
             return response()->json([
@@ -785,7 +786,7 @@ class GudangController extends Controller
                 'message' => 'Stok berhasil di Update.',
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
 
             DB::rollBack();
 
@@ -860,6 +861,58 @@ class GudangController extends Controller
             if ($fullPath && file_exists($fullPath)) {
                 unlink($fullPath);
             }
+        }
+    }
+
+    public function importUpdate(Request $request)
+    {
+        $request->validate([
+            'dataBerubah.*.stok_produk_id' => ['required', 'integer', 'exists:stok_produks,id'],
+            'dataBerubah.*.sku' => ['required', 'string', 'max:100'],
+            'dataBerubah.*.stok_lama' => ['required', 'integer', 'min:0'],
+            'dataBerubah.*.stok_baru' => ['required', 'integer', 'min:0'],
+            'dataBerubah.*.selisih' => ['required', 'integer'],
+
+            'skuBaru.*.sku' => ['required', 'string', 'max:100'],
+            'skuBaru.*.stok_excel' => ['required', 'integer', 'min:0'],
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $dataBerubah = collect($request->input('dataBerubah', []))
+                ->map(fn ($item) => (object) $item);
+
+            $skuBaru = collect($request->input('skuBaru', []))
+                ->map(fn ($item) => (object) $item);
+
+            foreach ($dataBerubah as $value) {
+                stok_produk::where('sku_id', $value->sku)->update([
+                    'jumlah_tersedia' => $value->stok_baru,
+                ]);
+            }
+
+            foreach ($skuBaru as $value) {
+                stok_produk::create([
+                    'sku_id' => $value->sku,
+                    'jumlah_tersedia' => $value->stok_excel,
+                    'min_stok' => 5,
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Semua Data Berhasil di Simpan',
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses barang',
+                'error' => $e->getMessage(),
+            ], 500);
         }
     }
 
