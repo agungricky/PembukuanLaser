@@ -889,6 +889,17 @@ class GudangController extends Controller
                 stok_produk::where('sku_id', $value->sku)->update([
                     'jumlah_tersedia' => $value->stok_baru,
                 ]);
+
+                $data = stok_produk::where('sku_id', $value->sku)->first();
+                mutasi_stok::create([
+                    'stok_produk_id' => $data->id,
+                    'gudang_id' => Auth::user()->id,
+                    'produksi_id' => null,
+                    'adm_penjualan_id' => null,
+                    'jenis_mutasi' => 'edit',
+                    'jumlah' => $value->stok_baru,
+                    'keterangan' => 'Penyesuai produk (stok awal '.$value->stok_lama.', stok akhir '.$value->stok_baru.')',
+                ]);
             }
 
             foreach ($skuBaru as $value) {
@@ -896,6 +907,17 @@ class GudangController extends Controller
                     'sku_id' => $value->sku,
                     'jumlah_tersedia' => $value->stok_excel,
                     'min_stok' => 5,
+                ]);
+
+                $data = stok_produk::where('sku_id', $value->sku)->first();
+                mutasi_stok::create([
+                    'stok_produk_id' => $data->id,
+                    'gudang_id' => Auth::user()->id,
+                    'produksi_id' => null,
+                    'adm_penjualan_id' => null,
+                    'jenis_mutasi' => 'masuk',
+                    'jumlah' => $value->stok_excel,
+                    'keterangan' => null,
                 ]);
             }
 
