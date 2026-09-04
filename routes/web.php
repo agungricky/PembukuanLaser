@@ -201,27 +201,46 @@ Route::middleware(['web', 'auth'])->group(function () {
     });
 
     Route::middleware(['role:gudang'])->group(function () {
+        // Dashboard
         Route::get('/gudang', [GudangController::class, 'gudang'])->name('gudang.index');
         Route::get('/gudang/pesanan', [GudangController::class, 'gudanginventory'])->name('pesanan.json');
         Route::get('/semua-pesanan', [GudangController::class, 'allindex'])->name('allpesanan.index');
         Route::get('/semua-pesanan/{filter}', [GudangController::class, 'allpesanan'])->name('allpesanan.json');
+        Route::get('/card-detail/{card}', [GudangController::class, 'detailcard'])->name('gudang.detailcard.json');
+        Route::get('/kebutuhan/detail-pesanan/{filter}/{sku}', [GudangController::class, 'detailpesanan'])->name('kebutuhan.detailpesanan');
+
+        // Transaksi
         Route::resource('/transaksi', GudangController::class);
         Route::get('/show/{filter}', [GudangController::class, 'showdata'])->name('showdata.json');
         Route::post('/transaksi/update-status', [GudangController::class, 'updateStatus'])->name('transaksi.updatestatus');
+
+        // Produk
         Route::get('/semua-produk', [GudangController::class, 'produk'])->name('gudang.produk');
         Route::get('/semua-produk/{sku}', [GudangController::class, 'produkShow'])->name('produkshow.json');
         Route::patch('/update-stok/{sku}', [GudangController::class, 'updatestok'])->name('updatestok.json');
-        Route::get('/kategori-produk', [GudangController::class, 'kategori'])->name('gudang.kategori');
-        Route::get('/riwayat-aktivitas/gudang', [GudangController::class, 'riwayataktivitas'])->name('gudang.aktivitas');
-        Route::get('/riwayat-aktivitas/data', [GudangController::class, 'riwayatAktivitasData'])->name('gudang.riwayataktivitas.data');
-        Route::get('/card-detail/{card}', [GudangController::class, 'detailcard'])->name('gudang.detailcard.json');
-        Route::get('/kebutuhan/detail-pesanan/{filter}/{sku}', [GudangController::class, 'detailpesanan'])->name('kebutuhan.detailpesanan');
+        Route::get('/stok/export', [GudangController::class, 'stokExport'])->name('gudang.stok.export');
+        Route::post('/stok/import', [GudangController::class, 'stokImport'])->name('gudang.stok.import');
+        Route::post('/stok/import/update', [GudangController::class, 'importUpdate'])->name('gudang.import.update');
+
+        // Sampel
         Route::get('/sampel', [GudangController::class, 'barangsampel'])->name('gudang.sampel');
         Route::post('/sampel/create', [GudangController::class, 'sampelcreate'])->name('gudang.sampel.create');
+
+        // Retur
         Route::get('/retur', [GudangController::class, 'barangretur'])->name('gudang.retur');
         Route::get('/retur/perpesanan/{no_pesanan}', [GudangController::class, 'detailRetur'])->name('gudang.retur.json');
         Route::post('/gudang/retur/create', [GudangController::class, 'returCreate'])->name('gudang.retur.create');
+
+        // Produk Custom
         Route::get('/produk-custom', [GudangController::class, 'produkcustom'])->name('produk-custom.index');
+
+        // Kategori
+        Route::get('/kategori-produk', [GudangController::class, 'kategori'])->name('gudang.kategori');
+
+        // Riwayat Aktifitas
+        Route::get('/riwayat-aktivitas/gudang', [GudangController::class, 'riwayataktivitas'])->name('gudang.aktivitas');
+        Route::get('/riwayat-aktivitas/data', [GudangController::class, 'riwayatAktivitasData'])->name('gudang.riwayataktivitas.data');
+        
     });
 
     Route::middleware(['role:produksi'])->group(function () {

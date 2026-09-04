@@ -52,6 +52,17 @@
                         <option value="100">100</option>
                     </select>
 
+                    <button type="button" class="btn btn-light border text-success btn-sm text-nowrap"
+                        data-bs-toggle="modal" data-bs-target="#importExcelModal">
+                        <i class="fa-solid fa-file-arrow-up me-1"></i>
+                        Import Excel
+                    </button>
+
+                    <a href="{{ route('gudang.stok.export') }}"
+                        class="btn btn-light border text-success btn-sm text-nowrap">
+                        <i class="fa-solid fa-file-excel me-1"></i>
+                        Export Excel
+                    </a>
                 </div>
             </div>
 
@@ -195,6 +206,114 @@
                         <button type="button" class="btn btn-primary btn-sm rounded-3 fw-semibold px-4 btnSimpan">
                             <i class="fa-solid fa-floppy-disk me-1"></i>
                             Simpan Produk
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal import --}}
+    <div class="modal fade" id="importExcelModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fa-solid fa-file-excel text-success me-2"></i>
+                        Import Stok Excel
+                    </h5>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <form id="formImportStok" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                File Excel
+                            </label>
+                            <input type="file" name="file" id="fileImportStok" class="form-control"
+                                accept=".xlsx,.xls" required>
+                        </div>
+
+                        <div id="loadingImport" class="text-center py-4" style="display:none;">
+                            <div class="spinner-border spinner-border-sm text-success"></div>
+                            <span class="ms-2 text-muted">
+                                Membaca data Excel...
+                            </span>
+                        </div>
+
+                        <div id="hasilImport" style="display:none;">
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div class="d-flex gap-3 justify-content-between align-items-center">
+                                    <div class="fw-semibold pe-3 border-end">
+                                        Data Stok Berubah
+                                    </div>
+
+                                    <button type="button" class="btn btn-primary btn-sm px-2 py-1" id="btnSimpanData"
+                                        style="font-size: 11px;">
+                                        <i class="bi bi-save"></i> Simpan data
+                                    </button>
+                                </div>
+
+                                <span class="badge bg-primary" id="jumlahBerubah">
+                                    0
+                                </span>
+                            </div>
+                            <div class="table-responsive mb-4">
+                                <table class="table table-sm table-bordered align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>SKU</th>
+                                            <th class="text-center">Stok Lama</th>
+                                            <th class="text-center">Stok Baru</th>
+                                            <th class="text-center">Selisih</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody id="dataBerubahBody"></tbody>
+                                </table>
+                            </div>
+
+                            <div id="sectionSkuTidakDitemukan">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="fw-semibold text-danger">
+                                        Stok Belum Pernah di Simpan
+                                    </div>
+
+                                    <span class="badge bg-danger" id="jumlahTidakDitemukan">
+                                        0
+                                    </span>
+                                </div>
+
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered align-middle">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>SKU</th>
+                                                <th class="text-center">
+                                                    Stok Excel
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="skuTidakDitemukanBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light border" data-bs-dismiss="modal">
+                            Tutup
+                        </button>
+
+                        <button type="submit" id="btnImportStok" class="btn btn-success">
+                            <i class="fa-solid fa-file-arrow-up me-1"></i>
+                            Baca Excel
                         </button>
                     </div>
                 </form>
@@ -388,6 +507,200 @@
                                 'Terjadi kesalahan saat menambahkan stok.'
                         });
 
+                    }
+                });
+            });
+
+            let dataBerubah = [];
+            let skuTidakDitemukan = [];
+
+            // Baca Excell
+            $('#formImportStok').on('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+
+                $.ajax({
+                    url: "{{ route('gudang.stok.import') }}",
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    beforeSend: function() {
+                        $('#loadingImport').show();
+                        $('#hasilImport').hide();
+                        $('#btnImportStok')
+                            .prop('disabled', true)
+                            .html(`
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                    Membaca...
+                                `);
+                    },
+                    success: function(response) {
+                        dataBerubah = response.data ?? [];
+                        skuTidakDitemukan = response.sku_tidak_ditemukan ?? [];
+
+                        let htmlBerubah = '';
+                        if (dataBerubah.length > 0) {
+                            $.each(dataBerubah, function(index, item) {
+                                const selisih = parseInt(item.selisih ?? 0);
+                                let badgeSelisih = '';
+
+                                if (selisih > 0) {
+                                    badgeSelisih = `
+                                        <span class="badge bg-success">
+                                            +${selisih}
+                                        </span>
+                                    `;
+                                } else {
+                                    badgeSelisih = `
+                                        <span class="badge bg-danger">
+                                            ${selisih}
+                                        </span>
+                                    `;
+                                }
+
+                                htmlBerubah += `
+                                    <tr>
+                                        <td class="fw-semibold">
+                                            ${item.sku}
+                                        </td>
+                                        <td class="text-center">
+                                            ${item.stok_lama}
+                                        </td>
+                                        <td class="text-center fw-bold text-primary">
+                                            ${item.stok_baru}
+                                        </td>
+                                        <td class="text-center">
+                                            ${badgeSelisih}
+                                        </td>
+                                    </tr>
+                                `;
+                            });
+                        } else {
+                            htmlBerubah = `
+                                <tr>
+                                    <td colspan="4"
+                                        class="text-center text-muted py-3">
+                                        Tidak ada perubahan stok
+                                    </td>
+                                </tr>
+                            `;
+                        }
+
+                        $('#dataBerubahBody').html(htmlBerubah);
+                        $('#jumlahBerubah').text(dataBerubah.length);
+
+                        let htmlTidakDitemukan = '';
+                        if (skuTidakDitemukan.length > 0) {
+                            $.each(skuTidakDitemukan, function(index, item) {
+                                htmlTidakDitemukan += `
+                                    <tr>
+                                        <td class="fw-semibold text-danger">
+                                            ${item.sku}
+                                        </td>
+                                        <td class="text-center">
+                                            ${item.stok_excel}
+                                        </td>
+                                    </tr>
+                                `;
+                            });
+
+                            $('#sectionSkuTidakDitemukan').show();
+                        } else {
+                            $('#sectionSkuTidakDitemukan').hide();
+                        }
+
+                        $('#skuTidakDitemukanBody').html(htmlTidakDitemukan);
+                        $('#jumlahTidakDitemukan').text(skuTidakDitemukan.length);
+                        $('#hasilImport').show();
+                    },
+                    error: function(xhr) {
+                        console.log(xhr.responseText);
+                        alert('Gagal membaca file Excel.');
+                    },
+                    complete: function() {
+                        $('#loadingImport').hide();
+                        $('#btnImportStok')
+                            .prop('disabled', false)
+                            .html(`
+                                <i class="fa-solid fa-file-arrow-up me-1"></i>
+                                Baca Excel
+                            `);
+                    }
+
+                });
+            });
+
+            // Reteset Modal
+            $('#importExcelModal').on('hidden.bs.modal', function() {
+                $('#formImportStok')[0].reset();
+                $('#hasilImport').hide();
+                $('#loadingImport').hide();
+                $('#dataBerubahBody').html('');
+                $('#skuTidakDitemukanBody').html('');
+                $('#jumlahBerubah').text('0');
+                $('#jumlahTidakDitemukan').text('0');
+                $('#sectionSkuTidakDitemukan').hide();
+                $('#btnImportStok')
+                    .prop('disabled', false)
+                    .html(`
+                    <i class="fa-solid fa-file-arrow-up me-1"></i>
+                    Baca Excel
+                `);
+
+            });
+
+            // Simpan Data Import
+            $(document).on('click', '#btnSimpanData', function(e) {
+                e.preventDefault();
+
+                const $btn = $(this);
+                const textAwal = $btn.html();
+
+                const data = {
+                    dataBerubah: dataBerubah,
+                    skuBaru: skuTidakDitemukan
+                };
+
+                $.ajax({
+                    type: "POST",
+                    url: "{{ route('gudang.import.update') }}",
+
+                    data: JSON.stringify(data),
+                    contentType: "application/json",
+                    dataType: "json",
+
+                    headers: {
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                    },
+                    beforeSend: function() {
+                        $btn.prop('disabled', true).html(`
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            Menyimpan...
+                        `);
+                    },
+                    success: function(response) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: response.message ?? 'Data berhasil disimpan',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            $('#formImportStok')[0].reset();
+                            location.reload();
+                        });
+                    },
+                    error: function(xhr) {
+                        console.log(xhr.responseJSON);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: xhr.responseJSON?.message ??
+                                'Terjadi kesalahan saat menyimpan data'
+                        });
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false).html(textAwal);
                     }
                 });
             });

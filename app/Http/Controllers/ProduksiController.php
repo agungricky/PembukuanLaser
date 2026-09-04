@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Exports\indexRegulerExport;
-use App\Exports\produkRegulerExport;
 use App\Models\mutasi_stok;
 use App\Models\PesananPerProduk;
 use App\Models\Produk;
@@ -50,7 +49,7 @@ class ProduksiController extends Controller
                     'jumlah' => $items->sum('jumlah'),
                 ];
             })
-            ->where('jumlah', '>=', 1000)
+            ->where('jumlah', '>=', 100)
             ->values();
 
         $terlaris = $terlaris->count();
@@ -115,24 +114,26 @@ class ProduksiController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 1. AMBIL DATA 3 BULAN TERAKHIR SEKALI SAJA
+        | 1. AMBIL DATA 3 BULAN TERAKHIR
         |--------------------------------------------------------------------------
         */
         $dataAwal = PesananPerProduk::with([
             'pesanan',
         ])
-            ->where('created_at', '>=', now()->subMonths(3))
+            ->whereBetween('created_at', [
+                now()->subMonths(3),
+                now(),
+            ])
             ->get();
 
         /*
         |--------------------------------------------------------------------------
-        | 2. FILTER DI MEMORY / COLLECTION
+        | 2. FILTER DATA
         |--------------------------------------------------------------------------
         */
         $dataFilter = $dataAwal
             ->where('custom', 0)
             ->where('status_pesanan', '0')
-            ->where('status_produksi', false)
             ->whereNull('mutasi_stok_id')
             ->filter(function ($item) {
                 return $item->pesanan?->status === 'proses';
@@ -140,55 +141,12 @@ class ProduksiController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | TOTAL SKU
-        |--------------------------------------------------------------------------
-        */
-        $recordsTotal = $dataFilter
-            ->pluck('sku')
-            ->unique()
-            ->count();
-
-        /*
-        |--------------------------------------------------------------------------
-        | SEARCH
-        |--------------------------------------------------------------------------
-        */
-        if ($search !== '') {
-
-            $produkSearch = Produk::where('nama_produk', 'like', "%{$search}%")
-                ->pluck('sku');
-
-            $dataFilter = $dataFilter->filter(function ($item) use (
-                $search,
-                $produkSearch
-            ) {
-                return str_contains(
-                    strtolower($item->sku ?? ''),
-                    strtolower($search)
-                )
-                || $produkSearch->contains($item->sku);
-            });
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | TOTAL SETELAH SEARCH
-        |--------------------------------------------------------------------------
-        */
-        $recordsFiltered = $dataFilter
-            ->pluck('sku')
-            ->unique()
-            ->count();
-
-        /*
-        |--------------------------------------------------------------------------
-        | GROUP BERDASARKAN SKU
+        | 3. GROUP BERDASARKAN SKU
         |--------------------------------------------------------------------------
         */
         $grouped = $dataFilter
             ->groupBy('sku')
             ->map(function ($items, $sku) {
-
                 return [
                     'sku' => $sku,
                     'jumlah_pesanan' => $items->count(),
@@ -199,20 +157,10 @@ class ProduksiController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | PAGINATION SETELAH DATA SUDAH DIFILTER
+        | 4. AMBIL SEMUA PRODUK YANG DIPERLUKAN
         |--------------------------------------------------------------------------
         */
-        $items = $grouped
-            ->slice($start, $length)
-            ->values();
-
-        $skuList = $items->pluck('sku');
-
-        /*
-        |--------------------------------------------------------------------------
-        | PRODUK
-        |--------------------------------------------------------------------------
-        */
+        $skuList = $grouped->pluck('sku');
         $produk = Produk::with('stok_produk')
             ->whereIn('sku', $skuList)
             ->get()
@@ -220,78 +168,102 @@ class ProduksiController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | ID STOK
+        | 5. HITUNG KEBUTUHAN PRODUKSI
         |--------------------------------------------------------------------------
         */
-        $stokProdukIds = $produk
-            ->pluck('stok_produk.id')
-            ->filter();
+        $data = $grouped
+            ->map(function ($item) use ($produk) {
+                $sku = $item['sku'];
+                $produkData = $produk->get($sku);
+                $stokProduk = $produkData?->stok_produk;
+                $pesananMasuk = (int) $item['total_pesanan'];
+
+                $stok = (int) (
+                    $stokProduk?->jumlah_tersedia ?? 0
+                );
+
+                $kebutuhanProduksi = max(
+                    $pesananMasuk - $stok,
+                    0
+                );
+
+                return [
+                    'sku' => $sku,
+                    'nama_produk' => $produkData?->nama_produk ?? '-',
+                    'variasi' => $produkData?->variasi ?? '-',
+                    'banyak_orderan' => $item['jumlah_pesanan'],
+                    'pesanan_items' => $pesananMasuk,
+                    'stok' => $stok,
+                    'kebutuhan_produksi' => $kebutuhanProduksi,
+                ];
+            })
+
+            /*
+            |--------------------------------------------------------------------------
+            | 6. BUANG YANG KEBUTUHAN PRODUKSINYA 0
+            |--------------------------------------------------------------------------
+            */
+            ->filter(function ($item) {
+                return $item['kebutuhan_produksi'] > 0;
+            })
+            ->values();
 
         /*
         |--------------------------------------------------------------------------
-        | MUTASI 7 HARI
+        | 7. TOTAL DATA SEBENARNYA
         |--------------------------------------------------------------------------
         */
-        $mutasiKeluar = mutasi_stok::whereIn(
-            'stok_produk_id',
-            $stokProdukIds
-        )
-            ->where('jenis_mutasi', 'keluar')
-            ->where('created_at', '>=', now()->subDays(7))
-            ->select('stok_produk_id')
-            ->selectRaw('SUM(jumlah) AS total')
-            ->groupBy('stok_produk_id')
-            ->pluck('total', 'stok_produk_id');
+        $recordsTotal = $data->count();
+
+        /*
+        |--------------------------------------------------------------------------
+        | 8. SEARCH
+        |--------------------------------------------------------------------------
+        */
+        if ($search !== '') {
+
+            $keyword = strtolower($search);
+
+            $data = $data->filter(function ($item) use ($keyword) {
+
+                return str_contains(
+                    strtolower($item['sku'] ?? ''),
+                    $keyword
+                )
+                ||
+                str_contains(
+                    strtolower($item['nama_produk'] ?? ''),
+                    $keyword
+                )
+                ||
+                str_contains(
+                    strtolower($item['variasi'] ?? ''),
+                    $keyword
+                );
+            })->values();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 9. TOTAL SETELAH SEARCH
+        |--------------------------------------------------------------------------
+        */
+        $recordsFiltered = $data->count();
+
+        /*
+        |--------------------------------------------------------------------------
+        | 10. PAGINATION PALING AKHIR
+        |--------------------------------------------------------------------------
+        */
+        $data = $data
+            ->slice($start, $length)
+            ->values();
 
         /*
         |--------------------------------------------------------------------------
         | RESPONSE
         |--------------------------------------------------------------------------
         */
-        $data = $items->map(function ($item) use (
-            $produk,
-            $mutasiKeluar
-        ) {
-
-            $sku = $item['sku'];
-            $produkData = $produk->get($sku);
-            $stokProduk = $produkData?->stok_produk;
-            $pesananMasuk = (int) $item['total_pesanan'];
-            $stok = (int) ($stokProduk?->jumlah_tersedia ?? 0);
-            $mutasi7Hari = $stokProduk
-                ? (int) ($mutasiKeluar->get($stokProduk->id) ?? 0)
-                : 0;
-            $kekuranganStok = max(
-                $pesananMasuk - $stok,
-                0
-            );
-
-            $kebutuhanProduksi =
-                $mutasi7Hari +
-                $kekuranganStok;
-
-            return [
-                'sku' => $sku,
-                'nama_produk' => $produkData?->nama_produk ?? '-',
-                'variasi' => $produkData?->variasi ?? '-',
-                'jumlah_pesanan' => $item['jumlah_pesanan'],
-                'pesanan_masuk' => $pesananMasuk,
-                'stok' => $stok,
-                'mutasi_terakhir' => $mutasi7Hari,
-                'kekurangan_stok' => $kekuranganStok,
-                'kebutuhan_produksi' => $kebutuhanProduksi,
-            ];
-        });
-
-        $data = $data
-            ->filter(function ($item) {
-                return ($item['kebutuhan_produksi'] ?? 0) > 0;
-            })
-            ->sortByDesc(function ($item) {
-                return $item['kebutuhan_produksi'] ?? 0;
-            })
-            ->values();
-
         return response()->json([
             'draw' => $draw,
             'recordsTotal' => $recordsTotal,
@@ -303,8 +275,7 @@ class ProduksiController extends Controller
     public function exportreguler()
     {
         return Excel::download(
-            new indexRegulerExport(),
-        new indexRegulerExport,
+            new indexRegulerExport,
             'produk-reguler-'.now()->format('Y-m-d').'.xlsx'
         );
     }
@@ -325,7 +296,6 @@ class ProduksiController extends Controller
 
     public function stokdata()
     {
-
         $data = Produk::with([
             'stok_produk.mutasi_stok' => function ($query) {
                 $query->where('jenis_mutasi', 'keluar')
