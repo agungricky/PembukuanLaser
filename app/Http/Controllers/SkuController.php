@@ -57,7 +57,7 @@ class SkuController extends Controller
         if ($data === null) {
             if ($request->custom === 'Y') {
                 $view = [
-                    'sku' => $request->sku. 1 .'C',
+                    'sku' => $request->sku. '001C',
                     'nama_produk' => $request->nama_produk,
                     'variasi' => $request->variasi,
                     'hpp' => $request->hpp,
@@ -66,7 +66,7 @@ class SkuController extends Controller
                 ];
             } elseif ($request->custom === 'T') {
                 $view = [
-                    'sku' => $request->sku. 1,
+                    'sku' => $request->sku. '001',
                     'nama_produk' => $request->nama_produk,
                     'variasi' => $request->variasi,
                     'hpp' => $request->hpp,
