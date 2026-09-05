@@ -508,17 +508,40 @@
                     </div>
                     <a href="{{ route('produksi.stokmenipis') }}"
                         class="sidebar-link {{ Request::is('kategori-produk') ? 'active' : '' }}">
-                        <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-2">
                             <i class="fa-solid fa-tags"></i>
-                            <span>Stok Menipis</span>
+                            <span style="font-size: 13px;">Stok Menipis</span>
                         </div>
 
-                        <span class="badge rounded-pill bg-success">
+                        <span class="badge rounded-pill bg-success text-nowrap">
                             {{ $produksiMenipis ?? 0 }}
                         </span>
                     </a>
                 </div>
 
+                <div>
+                    <div class="sidebar-heading border-bottom mt-3">
+                        # PENUGASAN
+                    </div>
+
+                    <a href=""
+                        class="sidebar-link mt-1 {{ Request::is('penugasan/noncustom*') ? 'active' : '' }}">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-box"></i>
+                            <span>Reguler</span>
+                        </div>
+                    </a>
+
+                    <a href=""
+                        class="sidebar-link mt-1 {{ Request::is('penugasan/custom*') ? 'active' : '' }}">
+
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fa-solid fa-pen-ruler"></i>
+                            <span>Custom</span>
+                        </div>
+                    </a>
+                </div>
             </nav>
         </aside>
     @endif

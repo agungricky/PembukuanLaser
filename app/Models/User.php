@@ -84,4 +84,8 @@ class User extends Authenticatable
             'id'
         );
     }
+
+    public function exporter(){
+       return $this->hasMany(Exporter::class, 'user_id', 'id');
+    }
 }

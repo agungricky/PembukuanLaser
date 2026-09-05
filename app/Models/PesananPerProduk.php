@@ -70,4 +70,8 @@ class PesananPerProduk extends Model
     public function retur(){
         return $this->hasOne(retur::class, 'per_produk_id', 'id_per_produk');
     }
+
+    public function exporter(){
+        return $this->belongsTo(Exporter::class, 'tracking', 'id');
+    }
 }

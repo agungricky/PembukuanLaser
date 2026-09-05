@@ -247,6 +247,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::resource('/produksi', ProduksiController::class);
         Route::get('/produksi/reguler/json', [ProduksiController::class, 'showreguler'])->name('produksi.pesanan.json');
         Route::get('/produksi/reguler/export', [ProduksiController::class, 'exportreguler'])->name('produksi.export');
+        Route::post('/produksi/ambil-tugas', [ProduksiController::class, 'ambiltugas'])->name('produksi.ambiltugas');
 
         Route::get('/stok_menipis', [ProduksiController::class, 'stokmenipis'])->name('produksi.stokmenipis');
         Route::get('/stok_menipis/json', [ProduksiController::class, 'stokdata'])->name('stokmenipis.json');

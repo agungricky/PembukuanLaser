@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Exports\indexRegulerExport;
+use App\Models\Exporter;
 use App\Models\mutasi_stok;
 use App\Models\PesananPerProduk;
 use App\Models\Produk;
 use App\Models\stok_produk;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ProduksiController extends Controller
@@ -118,13 +120,15 @@ class ProduksiController extends Controller
         |--------------------------------------------------------------------------
         */
         $dataAwal = PesananPerProduk::with([
-            'pesanan',
+            'pesanan', 'exporter',
         ])
             ->whereBetween('created_at', [
                 now()->subMonths(3),
                 now(),
             ])
             ->get();
+
+        // dd($dataAwal->take(30)->toArray());
 
         /*
         |--------------------------------------------------------------------------
@@ -134,6 +138,7 @@ class ProduksiController extends Controller
         $dataFilter = $dataAwal
             ->where('custom', 0)
             ->where('status_pesanan', '0')
+            ->where('tracking', null)
             ->whereNull('mutasi_stok_id')
             ->filter(function ($item) {
                 return $item->pesanan?->status === 'proses';
@@ -278,6 +283,62 @@ class ProduksiController extends Controller
             new indexRegulerExport,
             'produk-reguler-'.now()->format('Y-m-d').'.xlsx'
         );
+    }
+
+    public function ambiltugas(Request $request)
+    {
+        $request->validate([
+            'sku' => ['required', 'array', 'min:1'],
+            'sku.*' => ['required', 'string'],
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $user = Auth::user();
+            $pesananPerProduk = PesananPerProduk::whereHas('pesanan', function ($query) {
+                $query->where('status', 'proses');
+            })
+                ->whereBetween('created_at', [
+                now()->subMonths(3),
+                now(),
+            ])
+                ->whereIn('sku', $request->sku)
+                ->get();
+
+            if ($pesananPerProduk->isEmpty()) {
+                throw new \Exception('Tidak ada pesanan yang dapat diambil.');
+            }
+
+            $exporter = Exporter::firstOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'status' => 'proses',
+                ],
+                [
+                    'role' => $user->role,
+                ]
+            );
+
+            $idPesananPerProduk = $pesananPerProduk->pluck('id_per_produk');
+            PesananPerProduk::whereIn('id_per_produk', $idPesananPerProduk)->update(['tracking' => $exporter->id]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tugas berhasil diambil.',
+                'exporter_id' => $exporter->id,
+                'jumlah_data' => $idPesananPerProduk->count(),
+            ]);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     //                                  //
