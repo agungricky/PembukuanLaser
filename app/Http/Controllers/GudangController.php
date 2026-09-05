@@ -290,7 +290,9 @@ class GudangController extends Controller
             }
 
             $kebutuhanProduk = collect($kebutuhanProduk)
-                ->sortByDesc('stok')
+                ->sortByDesc(function ($item) {
+                    return $item['stok'] >= $item['kebutuhan'];
+                })
                 ->values();
 
             return response()->json($kebutuhanProduk);
@@ -519,7 +521,7 @@ class GudangController extends Controller
             'toko',
         ])->whereIn('status', [
             'pengembalian',
-            'pengiriman_gagal',
+            'pengiriman gagal',
         ])->whereHas('pesanan_per_produk.retur')
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($q) use ($search) {
@@ -554,6 +556,7 @@ class GudangController extends Controller
         return view('gudang.retur', compact('pesanan'));
     }
 
+    // Data Retur View Modal
     public function detailRetur($no_pesanan)
     {
         $pesanan = PesananPerProduk::with('pesanan.toko')
@@ -566,16 +569,16 @@ class GudangController extends Controller
         if ($pesanan->isEmpty()) {
             return response()->json([
                 'status' => false,
-                'message' => 'Pesanan tidak ditemukan atau pesanan sudah lebih dari 6 Bulan.',
+                'message' => 'pesanan sudah lebih dari 6 Bulan atau Pesanan tidak ditemukan.',
             ], 404);
         }
 
-        $status = $pesanan->first()->pesanan->status;
-        if (! in_array($status, ['pengembalian', 'pengiriman_gagal'])) {
+        $status = retur::where('per_produk_id', $pesanan[0]->id_per_produk)->first();
+        if ($status) {
             return response()->json([
                 'status' => false,
-                'message' => 'Pesanan masih dalam proses pengiriman, minta admin penjualan melakukan update pesanan.',
-            ], 422);
+                'message' => 'Data sudah pernah di input.',
+            ], 404);
         }
 
         return response()->json([
@@ -590,35 +593,73 @@ class GudangController extends Controller
             'produk' => ['required', 'array', 'min:1'],
             'produk.*.per_produk_id' => ['required', 'integer', 'exists:pesanan_per_produk,id_per_produk'],
             'produk.*.diterima' => ['required', 'integer', 'min:0'],
+            'status' => ['required', 'in:pengembalian,pengiriman gagal'],
         ]);
 
         DB::beginTransaction();
         try {
+            // Mencari Nomor Pesanan
+            $produkPertama = collect($request->produk)->first();
+            $noPesanan = PesananPerProduk::where('id_per_produk', $produkPertama['per_produk_id'])->firstOrFail();
+
+            $hppPesanan = [];
+
+            // Looping Perproduk
             foreach ($request->produk as $produk) {
-                if ($produk['diterima'] <= 0) {
-                    continue;
+                $data = PesananPerProduk::where('id_per_produk', $produk['per_produk_id'])->firstOrFail();
+                $jumlahItem = $data->jumlah;
+                $diTerima = $produk['diterima'];
+
+                if ($diTerima > $jumlahItem) {
+                    throw new Exception(
+                        "Jumlah barang diterima SKU {$data->sku} melebihi jumlah pesanan."
+                    );
+                }
+
+                if ($diTerima < $jumlahItem) {
+                    $hppPerItem = $data->hpp / $jumlahItem;
+                    $itemRusak = $jumlahItem - $diTerima;
+                    $totalHppRugi = $hppPerItem * $itemRusak;
+                } else {
+                    $totalHppRugi = 0;
+                }
+
+                PesananPerProduk::where('id_per_produk', $produk['per_produk_id'])->update([
+                    'hpp' => $totalHppRugi,
+                ]);
+
+                $hppPesanan[] = $totalHppRugi;
+                if ($diTerima > 0) {
+                    $stok = stok_produk::where('sku_id', $data->sku)->first();
+                    if (! $stok) {
+                        throw new Exception(
+                            "Stok untuk SKU {$data->sku} tidak ditemukan."
+                        );
+                    }
+
+                    stok_produk::where('id', $stok->id)->increment('jumlah_tersedia', $diTerima);
+
+                    mutasi_stok::create([
+                        'stok_produk_id' => $stok->id,
+                        'gudang_id' => Auth::id(),
+                        'adm_penjualan_id' => null,
+                        'jenis_mutasi' => 'masuk',
+                        'jumlah' => $diTerima,
+                        'keterangan' => 'Barang masuk dari retur',
+                    ]);
                 }
 
                 retur::create([
                     'per_produk_id' => $produk['per_produk_id'],
-                    'diterima' => $produk['diterima'],
+                    'diterima' => $diTerima,
                 ]);
-
-                $perProduk = PesananPerProduk::where('id_per_produk', $produk['per_produk_id'])->first();
-                stok_produk::where('sku_id', $perProduk->sku)
-                    ->increment('jumlah_tersedia', $produk['diterima']);
-
-                $stok_id = stok_produk::where('sku_id', $perProduk->sku)->first();
-                mutasi_stok::create([
-                    'stok_produk_id' => $stok_id->id,
-                    'gudang_id' => Auth::id(),
-                    'adm_penjualan_id' => null,
-                    'jenis_mutasi' => 'masuk',
-                    'jumlah' => $produk['diterima'],
-                    'keterangan' => 'Barang masuk dari retur',
-                ]);
-
             }
+
+            $totalHppPesanan = array_sum($hppPesanan);
+            Pesanan::where('no_pesanan', $noPesanan->no_pesanan)->update([
+                'status' => $request->status,
+                'total_hpp' => $totalHppPesanan,
+            ]);
 
             DB::commit();
 
@@ -629,13 +670,11 @@ class GudangController extends Controller
 
         } catch (\Throwable $e) {
             DB::rollBack();
-
             return response()->json([
                 'status' => false,
                 'message' => $e->getMessage(),
             ], 500);
         }
-
     }
 
     // ==================================================//

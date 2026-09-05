@@ -107,15 +107,27 @@
                         data: 'sku',
                         orderable: false,
                         render: function(data, type, row) {
-                            return `
-                            <div class="fw-semibold text-dark">
-                                ${row.produk ?? '-'}
-                            </div>
 
-                            <div class="text-muted" style="font-size: 11px;">
-                                SKU: ${row.sku ?? '-'}
-                            </div>
-                        `;
+                            const produk = row.produk ?? '-';
+
+                            const produkFormat = produk
+                                .trim()
+                                .split(/\s+/)
+                                .reduce((hasil, kata, index) => {
+                                    return hasil + kata + ((index + 1) % 3 === 0 ? '<br>' :
+                                    ' ');
+                                }, '')
+                                .trim();
+
+                            return `
+                                <div class="fw-semibold text-dark">
+                                    ${produkFormat}
+                                </div>
+
+                                <div class="text-muted" style="font-size: 11px;">
+                                    SKU: ${row.sku ?? '-'}
+                                </div>
+                            `;
                         }
                     },
 
@@ -127,15 +139,17 @@
                         orderable: false,
                         render: function(data, type, row) {
 
-                            return `
-                            <div class="fw-semibold text-start">
-                                ${row.variasi ?? '-'}
-                            </div>
+                            const variasi = (row.variasi ?? '-').replace(/,/g, ',<br>');
 
-                            <div class="text-muted text-start" style="font-size: 11px;">
-                                Kategori : ${row.kategori ?? '-'}
-                            </div>
-                        `;
+                            return `
+                                <div class="fw-semibold text-start">
+                                    ${variasi}
+                                </div>
+
+                                <div class="text-muted text-start" style="font-size: 11px;">
+                                    Kategori : ${row.kategori ?? '-'}
+                                </div>
+                            `;
                         }
                     },
 

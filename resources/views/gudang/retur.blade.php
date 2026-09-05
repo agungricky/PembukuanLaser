@@ -43,6 +43,9 @@
                             </span>
                             <input type="text" id="searchTable" value="{{ request('search') }}" placeholder="Cari data"
                                 class="form-control form-control-sm border-start-0 bg-light" />
+                            <button type="button" class="btn btn-primary btn-sm" id="btnSearch">
+                                Cari
+                            </button>
                         </div>
 
                         <select id="per_page" class="form-select form-select-sm" style="width: auto;">
@@ -54,7 +57,7 @@
 
                     </div>
 
-                    <button type="button" class="btn btn-primary text-nowrap" data-bs-toggle="modal"
+                    <button type="button" class="btn btn-primary text-nowrap btn-sm" data-bs-toggle="modal"
                         data-bs-target="#modalRetur">
                         <i class="fa-solid fa-rotate-left me-1"></i>
                         Tambah Stok Barang Retur
@@ -88,7 +91,7 @@
                                     @if ($loop->first)
                                         <!-- PESANAN -->
                                         <td rowspan="{{ $perproduk }}" class="px-3">
-                                            <div class="fw-semibold text-dark">
+                                            <div class="fw-semibold text-dark" style="font-size: 12px;">
                                                 {{ $item->no_pesanan ?? '-' }}
                                             </div>
 
@@ -187,7 +190,7 @@
                         @endforeach
                     </tbody>
                 </table>
-                
+
                 <div class="d-flex justify-content-between align-items-center w-100 py-2">
                     <div class="text-muted small ms-3">
                         Menampilkan
@@ -249,23 +252,18 @@
                             Masukkan nomor pesanan untuk mencari produk retur.
                         </small>
                     </div>
-
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
 
                 <div class="modal-body">
-
-                    <!-- NOMOR PESANAN -->
                     <div class="mb-3">
                         <label class="form-label fw-semibold mb-1">
                             Nomor Pesanan
                         </label>
-
                         <div class="input-group">
                             <span class="input-group-text bg-light">
                                 <i class="fa-solid fa-receipt text-muted"></i>
                             </span>
-
                             <input type="text" id="no_pesanan_retur" class="form-control"
                                 placeholder="Masukkan nomor pesanan...">
 
@@ -286,42 +284,61 @@
 
                     <!-- DATA PESANAN -->
                     <div id="detailPesananRetur" class="d-none">
-
-                        <div class="bg-light rounded-3 px-3 py-2 mb-3">
-                            <div class="row g-2">
-
-                                <div class="col-md-3 border-end">
-                                    <small class="text-muted">
-                                        Nomor Pesanan
-                                    </small>
-                                    <div class="fw-semibold" id="detailNoPesanan">
-                                        -
-                                    </div>
-                                </div>
-
-                                <div class="col-md-6 border-end">
-                                    <small class="text-muted">
-                                        Pembeli
-                                    </small>
-                                    <div class="fw-semibold" id="detailPembeli">
-                                        -
-                                    </div>
-                                </div>
-
-                                <div class="col-md-3">
-                                    <small class="text-muted">
-                                        Toko
-                                    </small>
-                                    <div class="fw-semibold" id="detailToko">
-                                        -
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-
                         <form id="FormRetur">
                             @csrf
+                            <div class="bg-light rounded-3 px-2 py-2 mb-3">
+                                <div class="card border-0 shadow-sm">
+                                    <div class="card-body py-3">
+
+                                        <div class="row g-3 align-items-end">
+                                            <div class="col-md-3 border-end">
+                                                <small class="text-muted d-block mb-1">
+                                                    Nomor Pesanan
+                                                </small>
+                                                <div class="fw-semibold text-dark" id="detailNoPesanan"
+                                                    style="font-size: 13px;">
+                                                    -
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-3 border-end">
+                                                <small class="text-muted d-block mb-1">
+                                                    Pembeli
+                                                </small>
+                                                <div class="fw-semibold text-dark" id="detailPembeli"
+                                                    style="font-size: 13px;">
+                                                    -
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2 border-end">
+                                                <small class="text-muted d-block mb-1">
+                                                    Toko
+                                                </small>
+                                                <div class="fw-semibold text-dark" id="detailToko"
+                                                    style="font-size: 13px;">
+                                                    -
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small class="text-muted d-block mb-1">
+                                                    Status Pesanan
+                                                </small>
+                                                <div class="input-group input-group-sm">
+                                                    <span class="input-group-text bg-light">
+                                                        <i class="fa-solid fa-rotate-left text-muted"></i>
+                                                    </span>
+                                                    <select id="statusPesanan" name="status"
+                                                        class="form-select form-select-sm" required>
+                                                        <option value="">Pilih Status</option>
+                                                        <option value="pengembalian">Pengembalian</option>
+                                                        <option value="pengiriman gagal">Pengiriman Gagal</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle mb-0">
@@ -344,18 +361,14 @@
                             </div>
 
                         </form>
-
                     </div>
 
                     <!-- PESAN TIDAK DITEMUKAN -->
                     <div id="returNotFound" class="text-center py-4 d-none">
-
                         <i class="fa-solid fa-circle-exclamation text-warning fs-3"></i>
-
                         <div class="fw-semibold mt-2" id="message">
                             Pesanan tidak ditemukan
                         </div>
-
                         <small class="text-muted">
                             Periksa kembali nomor pesanan.
                         </small>
@@ -391,6 +404,7 @@
                 $('#btnSimpanRetur').prop('disabled', true);
             });
 
+            // View Hasil Pencarian
             $('#btnCariPesanan').on('click', function() {
                 const noPesanan = $('#no_pesanan_retur').val().trim();
 
@@ -426,16 +440,12 @@
                         pesanan.forEach(function(item) {
                             html += `
                             <tr class="align-middle">
-
-                                <!-- PRODUK -->
                                 <td class="py-2 px-3">
                                     <div class="fw-semibold text-dark"
                                         style="font-size: 12px; line-height: 1.25;">
                                         ${item.nama_produk ?? '-'}
                                     </div>
                                 </td>
-
-                                <!-- VARIASI + SKU -->
                                 <td class="py-2 px-3">
                                     <div class="fw-semibold text-dark"
                                         style="font-size: 12px;">
@@ -448,17 +458,12 @@
                                         ${item.sku ?? '-'}
                                     </div>
                                 </td>
-
-                                <!-- JUMLAH PESANAN -->
                                 <td class="py-2 px-3 text-center">
                                     <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2">
                                         ${item.jumlah ?? 0}
                                     </span>
                                 </td>
-
-                                <!-- DITERIMA -->
                                 <td class="py-2 px-3" style="width: 130px;">
-
                                     <input type="hidden"
                                         name="produk[${item.id_per_produk}][per_produk_id]"
                                         value="${item.id_per_produk}">
@@ -475,16 +480,13 @@
                                             max="${item.jumlah ?? 0}"
                                             value="0">
                                     </div>
-
                                 </td>
-
                             </tr>
                         `;
                         });
 
                         $('#tableProdukRetur').html(html);
                         $('#detailPesananRetur').removeClass('d-none');
-                        $('#btnSimpanRetur').prop('disabled', false);
                     },
 
                     error: function(xhr) {
@@ -500,6 +502,47 @@
                 });
             });
 
+            // Logic input form
+            $(document).on('keydown', '.input-diterima', function(e) {
+                // izinkan tombol kontrol
+                const allowedKeys = [
+                    'Backspace',
+                    'Delete',
+                    'Tab',
+                    'ArrowLeft',
+                    'ArrowRight',
+                    'Home',
+                    'End'
+                ];
+
+                if (allowedKeys.includes(e.key)) {
+                    return;
+                }
+
+                // hanya angka 0-9
+                if (!/^[0-9]$/.test(e.key)) {
+                    e.preventDefault();
+                }
+            });
+
+            // aturan pengisian form
+            $(document).on('input', '.input-diterima', function() {
+                let value = $(this).val().replace(/\D/g, '');
+
+                let nilai = parseInt(value) || 0;
+                let maksimal = parseInt($(this).attr('max')) || 0;
+
+                if (nilai > maksimal) {
+                    nilai = maksimal;
+                }
+
+                if (nilai < 0) {
+                    nilai = 0;
+                }
+
+                $(this).val(nilai);
+            });
+
             // Tekan enter cari pesanan
             $('#no_pesanan_retur').on('keydown', function(e) {
                 if (e.key === 'Enter') {
@@ -509,6 +552,20 @@
                 }
             });
 
+            // Button disable sebelum submit
+            $(document).on('click', '#statusPesanan', function(e) {
+                e.preventDefault();
+
+                const button = $('#statusPesanan').val();
+                if (!button) {
+                    $('#btnSimpanRetur').prop('disabled', true);
+                } else {
+                    $('#btnSimpanRetur').prop('disabled', false);
+                }
+
+            });
+
+            // Submit Form
             $('#FormRetur').on('submit', function(e) {
                 e.preventDefault();
 
@@ -523,11 +580,10 @@
                         $('#btnSimpanRetur')
                             .prop('disabled', true)
                             .html(`
-                    <span class="spinner-border spinner-border-sm me-1"></span>
-                    Menyimpan...
-                `);
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                Menyimpan...
+                            `);
                     },
-
                     success: function(response) {
                         Swal.fire({
                             icon: 'success',
@@ -544,7 +600,6 @@
                         $('#modalRetur').modal('hide');
                         location.reload();
                     },
-
                     error: function(xhr) {
                         let message = xhr.responseJSON?.message ??
                             'Terjadi kesalahan. Silakan coba kembali.';
@@ -562,32 +617,34 @@
                             confirmButtonText: 'OK'
                         });
                     },
-
                     complete: function() {
                         $('#btnSimpanRetur')
                             .prop('disabled', false)
                             .html(`
-                    <i class="fa-solid fa-box-open me-1"></i>
-                    Simpan Retur
-                `);
+                                <i class="fa-solid fa-box-open me-1"></i>
+                                Simpan Retur
+                            `);
                     }
                 });
             });
 
-            let searchTimer;
-            $('#searchTable').on('input', function() {
-                clearTimeout(searchTimer);
-                let search = $(this).val();
-                searchTimer = setTimeout(function() {
-                    const url = new URL(window.location.href);
-                    if (search) {
-                        url.searchParams.set('search', search);
-                    } else {
-                        url.searchParams.delete('search');
-                    }
-                    url.searchParams.delete('page');
-                    window.location.href = url.toString();
-                }, 500);
+            // Search Pesanan
+            $(document).on('click', '#btnSearch', function() {
+                let search = $('#searchTable').val();
+                const url = new URL(window.location.href);
+                if (search) {
+                    url.searchParams.set('search', search);
+                } else {
+                    url.searchParams.delete('search');
+                }
+                url.searchParams.delete('page');
+                window.location.href = url.toString();
+            });
+
+            $('#searchTable').on('keypress', function(e) {
+                if (e.which === 13) {
+                    $('#btnSearch').click();
+                }
             });
 
             $('#per_page').on('change', function() {
