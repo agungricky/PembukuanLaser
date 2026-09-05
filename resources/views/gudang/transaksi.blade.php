@@ -159,7 +159,6 @@
                 </div>
 
                 <div class="modal-body">
-
                     <div class="mb-3">
                         <label for="pengambil_id" class="form-label fw-semibold">
                             Nama Pengambil
@@ -168,6 +167,10 @@
                         <select class="form-select" id="pengambil_id" name="pengambil_id" required>
                             <option>-- Pilih Pengambil --</option>
                         </select>
+                        <span id="userpengambilbarang"
+                            class="text-danger"
+                            style="font-size: 11px; font-weight: 400;">
+                        </span>
                     </div>
 
                 </div>
@@ -318,7 +321,8 @@
                                         </td>
                                         <td class="py-3 px-4 text-start">
                                             <div class="d-flex flex-column">
-                                                <span class="fw-semibold text-dark">
+                                                <span class="fw-semibold text-dark d-inline-block"
+                                                    style="max-width: 180px; white-space: normal; word-break: break-word;">
                                                     ${item.produk?.nama_produk ?? '-'}
                                                 </span>
 
@@ -372,14 +376,14 @@
                                                 (item.produk?.stok_produk?.jumlah_tersedia ?? 0) >= (item.kebutuhan ?? 0)
                                                 ? 
                                                 `
-                                                                                                            <span class="badge bg-success">Tersedia</span>
-                                                                                                        `
+                                                                                                                <span class="badge bg-success">Tersedia</span>
+                                                                                                            `
                                                 : 
                                                 
                                                 `
-                                                                                                            <span class="badge bg-danger">Kurang</span>
-                                                                                                            <input type="hidden" class="status-stok" value="kurang">
-                                                                                                        `
+                                                                                                                <span class="badge bg-danger">Kurang</span>
+                                                                                                                <input type="hidden" class="status-stok" value="kurang">
+                                                                                                            `
                                             }
                                         </td>
                                         <td class="py-3 px-4 text-center">
@@ -418,7 +422,8 @@
 
                                 <td class="py-3 px-4 text-start">
                                     <div class="d-flex flex-column">
-                                        <span class="fw-semibold text-dark sku">
+                                        <span class="fw-semibold text-dark d-inline-block sku"
+                                        style="max-width: 180px; white-space: normal; word-break: break-word;">
                                             ${item.stok_produk?.produk?.nama_produk ?? '-'}
                                         </span>
 
@@ -517,40 +522,40 @@
 
                                 ${filter === 'diambil' ? 
                                     `
-                                                    <td class="py-0 px-4 text-center">
-                                                        <div class="text-muted text-uppercase fw-semibold"
-                                                            style="font-size: 9px; line-height: 1.1;">
-                                                            Diambil Oleh
-                                                        </div>
+                                                        <td class="py-0 px-4 text-center">
+                                                            <div class="text-muted text-uppercase fw-semibold"
+                                                                style="font-size: 9px; line-height: 1.1;">
+                                                                Diambil Oleh
+                                                            </div>
 
-                                                        <div class="fw-bold text-dark py-1"
-                                                            style="font-size: 16px; line-height: 1.1;">
-                                                            ${item.admin_penjualan?.name ?? '-'}
-                                                        </div>
+                                                            <div class="fw-bold text-dark py-1"
+                                                                style="font-size: 16px; line-height: 1.1;">
+                                                                ${item.admin_penjualan?.name ?? '-'}
+                                                            </div>
 
-                                                        <div class="text-muted d-flex align-items-center justify-content-center gap-2"
-                                                            style="font-size: 10px; line-height: 1.1;">
-                                                            <span>
-                                                                <i class="fa-regular fa-calendar"></i>
-                                                                ${ item.updated_at
-                                                                        ? new Date(item.updated_at).toLocaleDateString('id-ID')
-                                                                        : '-'
-                                                                }
-                                                            </span>
-                                                            <span>
-                                                                <i class="fa-regular fa-clock"></i>
-                                                                ${
-                                                                    item.updated_at
-                                                                        ? new Date(item.updated_at).toLocaleTimeString('id-ID', {
-                                                                            hour: '2-digit',
-                                                                            minute: '2-digit'
-                                                                        })
-                                                                        : '-'
-                                                                }
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                `
+                                                            <div class="text-muted d-flex align-items-center justify-content-center gap-2"
+                                                                style="font-size: 10px; line-height: 1.1;">
+                                                                <span>
+                                                                    <i class="fa-regular fa-calendar"></i>
+                                                                    ${ item.updated_at
+                                                                            ? new Date(item.updated_at).toLocaleDateString('id-ID')
+                                                                            : '-'
+                                                                    }
+                                                                </span>
+                                                                <span>
+                                                                    <i class="fa-regular fa-clock"></i>
+                                                                    ${
+                                                                        item.updated_at
+                                                                            ? new Date(item.updated_at).toLocaleTimeString('id-ID', {
+                                                                                hour: '2-digit',
+                                                                                minute: '2-digit'
+                                                                            })
+                                                                            : '-'
+                                                                    }
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                    `
                                     : '-'
                                 }
 
@@ -846,47 +851,53 @@
                     return $(this).val();
                 }).get();
 
-                $.ajax({
-                    type: "POST",
-                    url: "{{ route('transaksi.updatestatus') }}",
-                    data: {
-                        _token: "{{ csrf_token() }}",
-                        sku: selectedSku,
-                        pengambil_barang: pengambilbarang
-                    },
-                    dataType: "JSON",
-                    success: function(response) {
-                        if (response.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Berhasil',
-                                text: response.message,
-                                timer: 1800,
-                                showConfirmButton: false
-                            }).then(() => {
-                                location.reload();
-                            });
+                if (pengambilbarang == null) {
+                    $('#userpengambilbarang').html('Pengambil barang tidak boleh kosong');
+                } else {
+                    $.ajax({
+                        type: "POST",
+                        url: "{{ route('transaksi.updatestatus') }}",
+                        data: {
+                            _token: "{{ csrf_token() }}",
+                            sku: selectedSku,
+                            pengambil_barang: pengambilbarang
+                        },
+                        dataType: "JSON",
+                        success: function(response) {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Berhasil',
+                                    text: response.message,
+                                    timer: 1800,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
 
-                        } else {
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Gagal',
+                                    text: response.message ??
+                                        'Terjadi kesalahan.'
+                                });
+                            }
+                        },
+
+                        error: function(xhr) {
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Gagal',
-                                text: response.message ??
-                                    'Terjadi kesalahan.'
+                                text: xhr.responseJSON?.message ??
+                                    'Terjadi kesalahan saat memproses data.'
                             });
+
                         }
-                    },
+                    });
+                }
 
-                    error: function(xhr) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal',
-                            text: xhr.responseJSON?.message ??
-                                'Terjadi kesalahan saat memproses data.'
-                        });
 
-                    }
-                });
 
             });
 
