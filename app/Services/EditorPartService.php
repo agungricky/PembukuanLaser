@@ -123,7 +123,7 @@ class EditorPartService
             $hasil = $this->prosesAlokasi(
                 $idPerProduk,
                 $userId,
-                false,
+                true,
                 $partsBaru
             );
 
@@ -134,11 +134,89 @@ class EditorPartService
         });
     }
 
+    public function alokasikanKeAntrianBerikutnya(
+        array $idPerProduk,
+        EditorPart $partAsal,
+        ?int $userId = null
+    ): array {
+        $idPerProduk = collect($idPerProduk)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($idPerProduk)) {
+            return $this->hasilKosong();
+        }
+
+        return DB::transaction(function () use (
+            $idPerProduk,
+            $partAsal,
+            $userId
+        ) {
+            $partAsal = EditorPart::where('id', $partAsal->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $marketplace = $this->normalizeMarketplace(
+                $partAsal->marketplace
+            );
+
+            if (
+                $marketplace === null ||
+                !in_array(
+                    $partAsal->sesi,
+                    [
+                        self::SESI_PAGI,
+                        self::SESI_SIANG,
+                        self::SESI_MALAM,
+                    ],
+                    true
+                )
+            ) {
+                throw new \RuntimeException(
+                    'Antrian asal tidak memiliki sesi/marketplace yang valid.'
+                );
+            }
+
+            $tanggalAsal = Carbon::parse(
+                $partAsal->tanggal_part,
+                $this->timezone()
+            )->toDateString();
+
+            [$tanggalTujuan, $sesiTujuan] = $this->antrianBerikutnya(
+                $tanggalAsal,
+                $partAsal->sesi
+            );
+
+            $partsBaru = 0;
+
+            $hasil = $this->prosesAlokasi(
+                $idPerProduk,
+                $userId,
+                false,
+                $partsBaru,
+                $tanggalTujuan,
+                $sesiTujuan,
+                $marketplace
+            );
+
+            $hasil['dipindah_malam'] = 0;
+            $hasil['sku_dilewati'] = 0;
+
+            return $hasil;
+        });
+    }
+
     private function prosesAlokasi(
         array $idPerProduk,
         ?int $userId,
         bool $gunakanWaktuMasuk,
-        int &$partsBaru
+        int &$partsBaru,
+        ?string $tanggalPaksa = null,
+        ?string $sesiPaksa = null,
+        ?string $marketplacePaksa = null
     ): array {
         if (empty($idPerProduk)) {
             $hasil = $this->hasilKosong();
@@ -228,13 +306,22 @@ class EditorPartService
             $idItem = (int) $item->id_per_produk;
             $jumlah = (int) $item->jumlah;
             $sku = mb_strtoupper(trim((string) $item->sku));
-            $marketplace = $this->normalizeMarketplace(
+            $marketplaceItem = $this->normalizeMarketplace(
                 $item->marketplace ?? null
             );
+
+            $marketplace = $marketplacePaksa
+                ? $this->normalizeMarketplace($marketplacePaksa)
+                : $marketplaceItem;
 
             if (
                 $jumlah < 1 ||
                 $marketplace === null ||
+                $marketplaceItem === null ||
+                (
+                    $marketplacePaksa !== null &&
+                    $marketplaceItem !== $marketplace
+                ) ||
                 in_array($sku, self::SKU_DILEWATI, true)
             ) {
                 $ignored[] = $idItem;
@@ -277,23 +364,31 @@ class EditorPartService
                 $variasi
             );
 
-            $waktuDasar = $gunakanWaktuMasuk
-                ? $this->waktuMasukItem($item)
-                : $this->sekarangWib();
-
-            [$tanggalPart, $sesi] = $this->tentukanAntrianDariWaktu(
-                $waktuDasar
-            );
-
             if (
-                $gunakanWaktuMasuk &&
-                $sesi === self::SESI_MALAM &&
-                $tanggalPart < $this->sekarangWib()->toDateString()
+                $tanggalPaksa !== null &&
+                $sesiPaksa !== null
             ) {
-                [$tanggalPart, $sesi] = $this->antrianBerikutnya(
-                    $tanggalPart,
-                    $sesi
+                $tanggalPart = $tanggalPaksa;
+                $sesi = $sesiPaksa;
+            } else {
+                $waktuDasar = $gunakanWaktuMasuk
+                    ? $this->waktuMasukItem($item)
+                    : $this->sekarangWib();
+
+                [$tanggalPart, $sesi] = $this->tentukanAntrianDariWaktu(
+                    $waktuDasar
                 );
+
+                if (
+                    $gunakanWaktuMasuk &&
+                    $sesi === self::SESI_MALAM &&
+                    $tanggalPart < $this->sekarangWib()->toDateString()
+                ) {
+                    [$tanggalPart, $sesi] = $this->antrianBerikutnya(
+                        $tanggalPart,
+                        $sesi
+                    );
+                }
             }
 
             $part = $this->cariAntrianTersedia(

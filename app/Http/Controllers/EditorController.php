@@ -23,6 +23,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class EditorController extends Controller
 {
+    private const TIMEZONE = 'Asia/Jakarta';
+
     public function index(
         EditorPartService $partService
     ) {
@@ -97,7 +99,6 @@ class EditorController extends Controller
             )
             ->count();
 
-        $totalMenunggu = $totalDialihkan;
 
         $partsTerbaru = EditorPart::whereNotNull('sesi')
             ->whereNotNull('marketplace')
@@ -130,7 +131,6 @@ class EditorController extends Controller
                 'totalBelumEditor',
                 'totalSelesaiEditor',
                 'totalDialihkan',
-                'totalMenunggu',
                 'partsTerbaru'
             )
         );
@@ -344,6 +344,10 @@ class EditorController extends Controller
                         $lockedPart->status ===
                         'open'
                     ) {
+                        $this->validasiWaktuDownload(
+                            $lockedPart
+                        );
+
                         $lockedPart->update([
                             'status' =>
                                 'downloaded',
@@ -1123,8 +1127,9 @@ class EditorController extends Controller
                                     'processed_at' => now(),
                                 ]);
 
-                                $hasilAlih = $partService->alokasikanItemBaru(
+                                $hasilAlih = $partService->alokasikanKeAntrianBerikutnya(
                                     [(int) $idPerProduk],
+                                    $lockedPart,
                                     Auth::id()
                                 );
 
@@ -1347,8 +1352,9 @@ class EditorController extends Controller
                             continue;
                         }
 
-                        $hasilAlih = $partService->alokasikanItemBaru(
+                        $hasilAlih = $partService->alokasikanKeAntrianBerikutnya(
                             [(int) $pending->id_per_produk],
+                            $lockedPart,
                             Auth::id()
                         );
 
@@ -1435,27 +1441,6 @@ class EditorController extends Controller
                 $e->getMessage()
             );
         }
-    }
-
-    public function menungguIndex()
-    {
-        return redirect()
-            ->route('editor.part.index')
-            ->with(
-                'info',
-                'Menu Menunggu Request sudah tidak digunakan. Item tanpa request otomatis dialihkan ke antrian Editor berikutnya.'
-            );
-    }
-
-    public function menungguSiap(
-        EditorPartItem $partItem
-    ) {
-        return redirect()
-            ->route('editor.part.index')
-            ->with(
-                'info',
-                'Proses manual Menunggu Request sudah tidak digunakan.'
-            );
     }
 
     public function riwayatIndex()
@@ -1868,6 +1853,68 @@ class EditorController extends Controller
             ],
             true
         );
+    }
+
+    private function validasiWaktuDownload(
+        EditorPart $part
+    ): void {
+        if (!in_array(
+            $part->sesi,
+            ['pagi', 'siang', 'malam'],
+            true
+        )) {
+            throw new \Exception(
+                'Sesi antrian tidak valid.'
+            );
+        }
+
+        $sekarang = Carbon::now(
+            self::TIMEZONE
+        );
+
+        $tanggalPart = Carbon::parse(
+            $part->tanggal_part,
+            self::TIMEZONE
+        )->toDateString();
+
+        $hariIni = $sekarang->toDateString();
+
+        if ($tanggalPart > $hariIni) {
+            throw new \Exception(
+                'Antrian ' .
+                strtoupper($part->sesi) .
+                ' tanggal ' .
+                Carbon::parse(
+                    $tanggalPart,
+                    self::TIMEZONE
+                )->format('d/m/Y') .
+                ' belum dapat didownload.'
+            );
+        }
+
+        if ($tanggalPart < $hariIni) {
+            return;
+        }
+
+        $jam = $sekarang->format('H:i');
+
+        if (
+            $part->sesi === 'siang' &&
+            $jam <= '10:00'
+        ) {
+            throw new \Exception(
+                'Antrian SIANG baru dapat didownload setelah pukul 10:00 WIB.'
+            );
+        }
+
+        if (
+            $part->sesi === 'malam' &&
+            $jam <= '15:00'
+        ) {
+            throw new \Exception(
+                'Antrian MALAM baru dapat didownload setelah pukul 15:00 WIB.'
+            );
+        }
     }
 
     private function formatBatasKirim(
