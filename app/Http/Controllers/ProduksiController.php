@@ -136,7 +136,7 @@ class ProduksiController extends Controller
         $dataFilter = $dataAwal
             ->where('custom', 0)
             ->where('status_pesanan', '0')
-            ->where('tracking', null)
+            ->where('exporter_id', null)
             ->whereNull('mutasi_stok_id')
             ->filter(function ($item) {
                 return $item->pesanan?->status === 'proses';
@@ -278,15 +278,31 @@ class ProduksiController extends Controller
     public function ambiltugas(Request $request)
     {
         $request->validate([
-            'kebutuhan' => ['required', 'array', 'min:1'],
             'source_type' => ['required', 'in:reguler,stok'],
+            'sku' => ['nullable', 'array'],
+            'kebutuhan' => ['nullable', 'array'],
         ]);
 
         DB::beginTransaction();
 
         try {
+
             $user = Auth::user();
-            if ($request->source_type == 'reguler') {
+
+            // ambil exporter aktif
+            $exporter = Exporter::firstOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'status' => 'proses',
+                    'source_type' => $request->source_type,
+                ],
+                [
+                    'role' => $user->role,
+                ]
+            );
+
+            // TUGAS REGULER
+            if ($request->source_type === 'reguler') {
                 $tugas = PesananPerProduk::whereHas('pesanan', function ($query) {
                     $query->where('status', 'proses');
                 })
@@ -296,38 +312,45 @@ class ProduksiController extends Controller
                     ])
                     ->whereIn('sku', $request->sku)
                     ->get();
-            } elseif ($request->source_type == 'stok') {
-                $tugas = collect($request->kebutuhan)->map(function ($value) {
-                    return [
-                        'sku_id' => $value['sku'],
-                        'processing' => (int) $value['jumlah'],
-                    ];
-                })->toArray();
 
+                if ($tugas->isEmpty()) {
+                    throw new \Exception('Tidak ada tugas reguler yang dapat diambil.');
+                }
+
+                $idPesananPerProduk = $tugas->pluck('id_per_produk');
+
+                PesananPerProduk::whereIn(
+                    'id_per_produk',
+                    $idPesananPerProduk
+                )->update([
+                    'exporter_id' => $exporter->id,
+                ]);
+            }
+
+            // TUGAS STOK
+            elseif ($request->source_type === 'stok') {
+                $tugas = collect($request->kebutuhan)
+                    ->map(function ($value) {
+                        return [
+                            'sku_id' => $value['sku'],
+                            'processing' => (int) $value['jumlah'],
+                        ];
+                    })
+                    ->toArray();
+
+                if (empty($tugas)) {
+                    throw new \Exception('Tidak ada tugas stok yang dapat diambil.');
+                }
                 stok_produk::upsert(
                     $tugas,
                     ['sku_id'],
                     ['processing']
                 );
-            }
-
-            if ($tugas->isEmpty() && (($request->source_type != 'reguler') || ($request->source_type != 'stok'))) {
-                throw new \Exception('Tidak ada pesanan yang dapat diambil.');
-            }
-
-            $exporter = Exporter::firstOrCreate(
-                [
-                    'user_id' => $user->id,
-                    'status' => 'proses',
-                ],
-                [
-                    'role' => $user->role,
-                ]
-            );
-
-            if ($request->source_type == 'reguler') {
-                $idPesananPerProduk = $tugas->pluck('id_per_produk');
-                PesananPerProduk::whereIn('id_per_produk', $idPesananPerProduk)->update(['exporter_id' => $exporter->id]);
+                $stokId = collect($tugas)->pluck('sku_id');
+                stok_produk::whereIn('sku_id', $stokId)
+                    ->update([
+                        'exporter_id' => $exporter->id,
+                    ]);
             }
 
             DB::commit();
@@ -336,7 +359,6 @@ class ProduksiController extends Controller
                 'success' => true,
                 'message' => 'Tugas berhasil diambil.',
                 'exporter_id' => $exporter->id,
-                'jumlah_data' => $idPesananPerProduk->count(),
             ]);
 
         } catch (\Throwable $e) {
@@ -355,7 +377,7 @@ class ProduksiController extends Controller
     //                                  //
     //                                  //
     // ================================ //
-    // ======== PRODUK REGULER ======== //
+    // ======== PRODUK MENIPIS ======== //
     // ================================ //
     public function stokmenipis()
     {
@@ -373,16 +395,19 @@ class ProduksiController extends Controller
             ->where(function ($query) {
                 $query->whereDoesntHave('stok_produk')
                     ->orWhereHas('stok_produk', function ($query) {
-                        $query->where('jumlah_tersedia', '<', 5);
+                        $query->whereNull('exporter_id')
+                            ->where('jumlah_tersedia', '<', 5);
                     });
             })
             ->get()
             ->map(function ($produk) {
+
                 $totalKeluar = $produk->stok_produk
                     ? $produk->stok_produk->mutasi_stok->sum('jumlah')
                     : 0;
 
                 $produk->total_keluar = (int) $totalKeluar;
+
                 if ($produk->stok_produk) {
                     unset($produk->stok_produk->mutasi_stok);
                 }
@@ -424,6 +449,16 @@ class ProduksiController extends Controller
                 ->where('source_type', 'reguler')
                 ->where('status', 'proses')
                 ->first();
+        } elseif ($page === 'stok') {
+            $exporter = Exporter::where('role', 'produksi')
+                ->whereBetween('created_at', [
+                    now()->subMonth(),
+                    now(),
+                ])
+                ->where('user_id', Auth::id())
+                ->where('source_type', 'stok')
+                ->where('status', 'proses')
+                ->first();
         }
 
         if (! $exporter) {
@@ -434,25 +469,43 @@ class ProduksiController extends Controller
             ]);
         }
 
-        $data = PesananPerProduk::with('produk.stok_produk')
-            ->where('exporter_id', $exporter->id)
-            ->get()
-            ->groupBy('sku')
-            ->map(function ($items, $sku) {
-                $first = $items->first();
-                $jumlahPesanan = $items->sum('jumlah');
-                $stok = $first->produk?->stok_produk?->jumlah_tersedia ?? 0;
+        if ($page === 'reguler') {
+            $data = PesananPerProduk::with('produk.stok_produk')
+                ->where('exporter_id', $exporter->id)
+                ->get()
+                ->groupBy('sku')
+                ->map(function ($items, $sku) {
+                    $first = $items->first();
+                    $jumlahPesanan = $items->sum('jumlah');
+                    $stok = $first->produk?->stok_produk?->jumlah_tersedia ?? 0;
 
-                return [
-                    'sku' => $sku,
-                    'nama_produk' => $first->produk?->nama_produk ?? '-',
-                    'variasi' => $first->produk?->variasi ?? '-',
-                    'jumlah_pesanan' => $jumlahPesanan,
-                    'stok' => $stok,
-                    'kebutuhan_produksi' => max(0, $jumlahPesanan - $stok),
-                ];
-            })
-            ->values();
+                    return [
+                        'sku' => $sku,
+                        'nama_produk' => $first->produk?->nama_produk ?? '-',
+                        'variasi' => $first->produk?->variasi ?? '-',
+                        'jumlah_pesanan' => $jumlahPesanan,
+                        'stok' => $stok,
+                        'kebutuhan_produksi' => max(0, $jumlahPesanan - $stok),
+                    ];
+                })
+                ->values();
+        } elseif ($page === 'stok') {
+            $data = stok_produk::with('produk')
+                ->where('exporter_id', $exporter->id)
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'sku' => $item->sku_id,
+                        'nama_produk' => $item->produk?->nama_produk,
+                        'variasi' => $item->produk?->variasi,
+                        'jumlah_pesanan' => null,
+                        'stok' => null,
+                        'jumlah_produksi' => $item->processing,
+                        'exporter_id' => $item->exporter_id,
+                    ];
+                });
+
+        }
 
         return response()->json([
             'success' => true,

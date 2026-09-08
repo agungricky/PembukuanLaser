@@ -245,17 +245,17 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     Route::middleware(['role:produksi'])->group(function () {
         Route::resource('/produksi', ProduksiController::class)->only(['index', 'show']);
-        // Route::get('/produksi/reguler/json', [ProduksiController::class, 'showreguler'])->name('produksi.pesanan.json');
-        // Route::post('/produksi/ambil-tugas', [ProduksiController::class, 'ambiltugas'])->name('produksi.ambiltugas');
+        Route::get('/produksi/reguler/json', [ProduksiController::class, 'showreguler'])->name('produksi.pesanan.json');
+        Route::post('/produksi/ambil-tugas', [ProduksiController::class, 'ambiltugas'])->name('produksi.ambiltugas');
 
-        // Route::get('/stok_menipis', [ProduksiController::class, 'stokmenipis'])->name('produksi.stokmenipis');
-        // Route::get('/stok_menipis/json', [ProduksiController::class, 'stokdata'])->name('stokmenipis.json');
+        Route::get('/stok_menipis', [ProduksiController::class, 'stokmenipis'])->name('produksi.stokmenipis');
+        Route::get('/stok_menipis/json', [ProduksiController::class, 'stokdata'])->name('stokmenipis.json');
         
-        // Route::get('/tasks/{page}', [ProduksiController::class, 'task'])->name('penugasan.task');
-        // Route::get('/tasks/{page}/json', [ProduksiController::class, 'taskdata'])->name('penugasan.task.json');
-        // Route::post('/tasks/cancel', [ProduksiController::class, 'taskcancel'])->name('penugasan.task.cancel');
-        // Route::get('/tasks/{page}/export', [ProduksiController::class, 'export'])->name('penugasan.export');
-        // Route::post('/tasks/{id}/selesai', [ProduksiController::class, 'taskdone'])->name('penugasan.done');
+        Route::get('/tasks/{page}', [ProduksiController::class, 'task'])->name('penugasan.task');
+        Route::get('/tasks/{page}/json', [ProduksiController::class, 'taskdata'])->name('penugasan.task.json');
+        Route::post('/tasks/cancel', [ProduksiController::class, 'taskcancel'])->name('penugasan.task.cancel');
+        Route::get('/tasks/{page}/export', [ProduksiController::class, 'export'])->name('penugasan.export');
+        Route::post('/tasks/{id}/selesai', [ProduksiController::class, 'taskdone'])->name('penugasan.done');
     });
 
 });

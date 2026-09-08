@@ -6,6 +6,7 @@ use App\Models\Exporter;
 use App\Models\kategori;
 use App\Models\PesananPerProduk;
 use App\Models\Produk;
+use App\Models\stok_produk;
 use Carbon\Carbon;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
@@ -40,13 +41,24 @@ class AppServiceProvider extends ServiceProvider
                 ->first();
 
             $jumlahReguler = $reguler
-                ? PesananPerProduk::where('tracking', $reguler->id)
+                ? PesananPerProduk::where('exporter_id', $reguler->id)
                     ->distinct()
                     ->count('sku')
                 : 0;
-                
+
+            $stok = Exporter::where('user_id', Auth::id())
+                ->where('status', 'proses')
+                ->where('source_type', 'stok')
+                ->first();
+
+            $jumlahStok = $stok ? stok_produk::where('exporter_id', $stok->id)
+                    ->distinct()
+                    ->count('sku_id')
+                : 0;
+
             $produksi = [
                 'reguler' => $jumlahReguler,
+                'stok' => $jumlahStok
             ];
 
             $view->with([

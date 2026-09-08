@@ -34,7 +34,7 @@
                 <div>
                     <h2 class="h5 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                         <i class="fa-solid fa-boxes-stacked text-primary"></i>
-                        Daftar Pesanan 
+                        Daftar Pesanan
                     </h2>
                     <p class="text-muted small mb-0">
                         Menampilkan semua pesanan masuk.
@@ -351,6 +351,18 @@
 
             $('#ambilTugas').on('click', function(e) {
                 e.preventDefault();
+
+                if (!skuDipilih || skuDipilih.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Belum Ada SKU Dipilih',
+                        text: 'Silakan pilih minimal satu produk terlebih dahulu.',
+                        confirmButtonText: 'OK'
+                    });
+
+                    return;
+                }
+
                 $.ajax({
                     type: "POST",
                     url: "{{ route('produksi.ambiltugas') }}",
@@ -360,6 +372,7 @@
                         source_type: 'reguler'
                     },
                     dataType: "json",
+
                     success: function(response) {
                         Swal.fire({
                             icon: 'success',
@@ -370,10 +383,19 @@
                         }).then(() => {
                             location.reload();
                         });
+                    },
+
+                    error: function(xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: xhr.responseJSON?.message ??
+                                'Terjadi kesalahan saat mengambil tugas.'
+                        });
                     }
                 });
             });
-          
-        });    
+
+        });
     </script>
 @endpush

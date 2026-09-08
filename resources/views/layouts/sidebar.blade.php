@@ -570,7 +570,7 @@
                                 <small>Menipis</small>
 
                                 <span class="badge rounded-pill bg-danger text-nowrap">
-                                    0
+                                    {{ $produksi['stok'] }}
                                 </span>
                             </a>
 
