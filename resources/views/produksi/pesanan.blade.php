@@ -34,7 +34,7 @@
                 <div>
                     <h2 class="h5 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                         <i class="fa-solid fa-boxes-stacked text-primary"></i>
-                        Daftar Pesanan {{ Str::ucfirst($produksi) }}
+                        Daftar Pesanan 
                     </h2>
                     <p class="text-muted small mb-0">
                         Menampilkan semua pesanan masuk.
@@ -57,16 +57,6 @@
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
-
-                    {{-- <button type="button" class="btn btn-primary btn-sm text-nowrap" data-bs-toggle="modal"
-                        data-bs-target="#pengambilModal" data-role="pegawai" id="btnPengambilModal">
-                        <i class="fa-solid fa-file-import me-1"></i>
-                        Import Excell
-                    </button>
-                    <button type="button" class="btn btn-success btn-sm text-nowrap" id="exportExcel">
-                        <i class="fa-solid fa-file-excel me-1"></i>
-                        Export Excel
-                    </button> --}}
                     <button type="button" class="btn btn-primary btn-sm text-nowrap" id="ambilTugas">
                         <i class="fa-solid fa-user-check me-1"></i>
                         Ambil Tugas
@@ -130,6 +120,39 @@
             let searchTimer = null;
             let skuDipilih = [];
 
+            // Perpage Halaman
+            $(document)
+                .off('change.orderlist', '#per_page')
+                .on('change.orderlist', '#per_page', function() {
+                    if (!table) {
+                        return;
+                    }
+                    const length = parseInt(this.value, 10);
+                    table
+                        .page
+                        .len(length)
+                        .draw();
+
+                });
+
+            // Search
+            $(document)
+                .off('input.orderlist', '#searchTable')
+                .on('input.orderlist', '#searchTable', function() {
+                    if (!table) {
+                        return;
+                    }
+
+                    const keyword = this.value;
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(function() {
+                        table
+                            .search(keyword)
+                            .draw();
+
+                    }, 350);
+                });
+
             // Data Table
             table = $('#orderlist').DataTable({
                 processing: true,
@@ -138,6 +161,7 @@
                     url: "{{ route('produksi.pesanan.json') }}",
                     type: 'GET'
                 },
+                order: [],
                 searching: true,
                 lengthChange: false,
                 pageLength: 10,
@@ -332,7 +356,8 @@
                     url: "{{ route('produksi.ambiltugas') }}",
                     data: {
                         _token: "{{ csrf_token() }}",
-                        sku: skuDipilih
+                        sku: skuDipilih,
+                        source_type: 'reguler'
                     },
                     dataType: "json",
                     success: function(response) {
@@ -348,54 +373,7 @@
                     }
                 });
             });
-
-            // Perpage Halaman
-            $(document)
-                .off('change.orderlist', '#per_page')
-                .on('change.orderlist', '#per_page', function() {
-                    if (!table) {
-                        return;
-                    }
-                    const length = parseInt(this.value, 10);
-                    table
-                        .page
-                        .len(length)
-                        .draw();
-
-                });
-
-            // Search
-            $(document)
-                .off('input.orderlist', '#searchTable')
-                .on('input.orderlist', '#searchTable', function() {
-                    if (!table) {
-                        return;
-                    }
-
-                    const keyword = this.value;
-                    clearTimeout(searchTimer);
-                    searchTimer = setTimeout(function() {
-                        table
-                            .search(keyword)
-                            .draw();
-
-                    }, 350);
-                });
-
-            // Export Excell
-            $('#exportExcel').on('click', function() {
-                if (skuDipilih.length === 0) {
-                    alert('Pilih data terlebih dahulu');
-                    return;
-                }
-
-                const params = new URLSearchParams();
-                skuDipilih.forEach(function(sku) {
-                    params.append('sku[]', sku);
-                });
-
-                window.location.href = '{{ route('produksi.export') }}?' + params.toString();
-            });
-        });
+          
+        });    
     </script>
 @endpush

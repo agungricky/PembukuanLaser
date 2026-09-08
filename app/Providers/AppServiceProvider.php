@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Exporter;
 use App\Models\kategori;
+use App\Models\PesananPerProduk;
 use App\Models\Produk;
 use Carbon\Carbon;
 use Illuminate\Pagination\Paginator;
@@ -31,20 +33,27 @@ class AppServiceProvider extends ServiceProvider
             $dataLogin = Auth::user();
             $countProduk = Produk::count();
             $countKategori = kategori::count();
-            $produksiMenipis = Produk::with('stok_produk')
-            ->whereNotNull('nama_produk')
-            ->where(function ($query) {
-                $query->whereDoesntHave('stok_produk')
-                    ->orWhereHas('stok_produk', function ($query) {
-                        $query->where('jumlah_tersedia', '<', 5);
-                    });
-            })->count();
+
+            $reguler = Exporter::where('user_id', Auth::id())
+                ->where('status', 'proses')
+                ->where('source_type', 'reguler')
+                ->first();
+
+            $jumlahReguler = $reguler
+                ? PesananPerProduk::where('tracking', $reguler->id)
+                    ->distinct()
+                    ->count('sku')
+                : 0;
+                
+            $produksi = [
+                'reguler' => $jumlahReguler,
+            ];
 
             $view->with([
                 'dataLogin' => $dataLogin,
                 'countProduk' => $countProduk,
                 'countKategori' => $countKategori,
-                'produksiMenipis' => $produksiMenipis
+                'produksi' => $produksi,
             ]);
         });
     }

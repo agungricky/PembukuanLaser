@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\indexRegulerExport;
+use App\Exports\produksiExport;
 use App\Models\Exporter;
 use App\Models\mutasi_stok;
 use App\Models\PesananPerProduk;
@@ -127,8 +127,6 @@ class ProduksiController extends Controller
                 now(),
             ])
             ->get();
-
-        // dd($dataAwal->take(30)->toArray());
 
         /*
         |--------------------------------------------------------------------------
@@ -277,36 +275,43 @@ class ProduksiController extends Controller
         ]);
     }
 
-    public function exportreguler()
-    {
-        return Excel::download(
-            new indexRegulerExport,
-            'produk-reguler-'.now()->format('Y-m-d').'.xlsx'
-        );
-    }
-
     public function ambiltugas(Request $request)
     {
         $request->validate([
-            'sku' => ['required', 'array', 'min:1'],
-            'sku.*' => ['required', 'string'],
+            'kebutuhan' => ['required', 'array', 'min:1'],
+            'source_type' => ['required', 'in:reguler,stok'],
         ]);
 
         DB::beginTransaction();
 
         try {
             $user = Auth::user();
-            $pesananPerProduk = PesananPerProduk::whereHas('pesanan', function ($query) {
-                $query->where('status', 'proses');
-            })
-                ->whereBetween('created_at', [
-                now()->subMonths(3),
-                now(),
-            ])
-                ->whereIn('sku', $request->sku)
-                ->get();
+            if ($request->source_type == 'reguler') {
+                $tugas = PesananPerProduk::whereHas('pesanan', function ($query) {
+                    $query->where('status', 'proses');
+                })
+                    ->whereBetween('created_at', [
+                        now()->subMonths(3),
+                        now(),
+                    ])
+                    ->whereIn('sku', $request->sku)
+                    ->get();
+            } elseif ($request->source_type == 'stok') {
+                $tugas = collect($request->kebutuhan)->map(function ($value) {
+                    return [
+                        'sku_id' => $value['sku'],
+                        'processing' => (int) $value['jumlah'],
+                    ];
+                })->toArray();
 
-            if ($pesananPerProduk->isEmpty()) {
+                stok_produk::upsert(
+                    $tugas,
+                    ['sku_id'],
+                    ['processing']
+                );
+            }
+
+            if ($tugas->isEmpty() && (($request->source_type != 'reguler') || ($request->source_type != 'stok'))) {
                 throw new \Exception('Tidak ada pesanan yang dapat diambil.');
             }
 
@@ -320,8 +325,10 @@ class ProduksiController extends Controller
                 ]
             );
 
-            $idPesananPerProduk = $pesananPerProduk->pluck('id_per_produk');
-            PesananPerProduk::whereIn('id_per_produk', $idPesananPerProduk)->update(['tracking' => $exporter->id]);
+            if ($request->source_type == 'reguler') {
+                $idPesananPerProduk = $tugas->pluck('id_per_produk');
+                PesananPerProduk::whereIn('id_per_produk', $idPesananPerProduk)->update(['exporter_id' => $exporter->id]);
+            }
 
             DB::commit();
 
@@ -334,6 +341,7 @@ class ProduksiController extends Controller
 
         } catch (\Throwable $e) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -349,7 +357,6 @@ class ProduksiController extends Controller
     // ================================ //
     // ======== PRODUK REGULER ======== //
     // ================================ //
-
     public function stokmenipis()
     {
         return view('produksi.stok_menipis');
@@ -390,44 +397,122 @@ class ProduksiController extends Controller
         ]);
     }
 
-    public function create()
+    //                                  //
+    //                                  //
+    //                                  //
+    //                                  //
+    //                                  //
+    // ================================ //
+    // ============== TASK ============ //
+    // ================================ //
+    public function task($page)
     {
-        //
+        return view('produksi.tugas', compact('page'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function taskdata($page)
     {
-        //
+        $exporter = null;
+
+        if ($page === 'reguler') {
+            $exporter = Exporter::where('role', 'produksi')
+                ->whereBetween('created_at', [
+                    now()->subMonth(),
+                    now(),
+                ])
+                ->where('user_id', Auth::id())
+                ->where('source_type', 'reguler')
+                ->where('status', 'proses')
+                ->first();
+        }
+
+        if (! $exporter) {
+            return response()->json([
+                'success' => true,
+                'exporter' => null,
+                'data' => [],
+            ]);
+        }
+
+        $data = PesananPerProduk::with('produk.stok_produk')
+            ->where('exporter_id', $exporter->id)
+            ->get()
+            ->groupBy('sku')
+            ->map(function ($items, $sku) {
+                $first = $items->first();
+                $jumlahPesanan = $items->sum('jumlah');
+                $stok = $first->produk?->stok_produk?->jumlah_tersedia ?? 0;
+
+                return [
+                    'sku' => $sku,
+                    'nama_produk' => $first->produk?->nama_produk ?? '-',
+                    'variasi' => $first->produk?->variasi ?? '-',
+                    'jumlah_pesanan' => $jumlahPesanan,
+                    'stok' => $stok,
+                    'kebutuhan_produksi' => max(0, $jumlahPesanan - $stok),
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'exporter' => $exporter->id,
+            'data' => $data,
+        ]);
     }
 
-    /**
-     * Display the specified resource.
-     */
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function taskcancel(Request $request)
     {
-        //
+        $request->validate([
+            'sku' => 'required',
+            'exporter_id' => 'required',
+        ]);
+
+        PesananPerProduk::where('exporter_id', $request->exporter_id)
+            ->where('sku', $request->sku)
+            ->update([
+                'exporter_id' => null,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data Berhasil di keluarkan dari antrian produksi',
+        ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function export($page)
     {
-        //
+        $exporter_id = Exporter::where('user_id', Auth::user()->id)
+            ->where('status', 'proses')
+            ->where('source_type', $page)
+            ->first();
+
+        $data = PesananPerProduk::where('exporter_id', $exporter_id->id)
+            ->where('created_at', '>=', now()->subMonth())
+            ->get();
+
+        if ($data->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak terdapat tugas aktif yang dapat di export.',
+            ], 422);
+        }
+
+        return Excel::download(
+            new produksiExport($page, $exporter_id),
+            'produk-'.$page.'-'.now()->format('Y-m-d').'.xlsx'
+        );
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
+    public function taskdone(Request $request, $id)
     {
-        //
+        Exporter::where('id', $id)->update([
+            'status' => 'selesai',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data berhasil diperbarui',
+        ]);
     }
 }
