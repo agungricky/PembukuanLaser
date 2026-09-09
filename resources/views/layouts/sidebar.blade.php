@@ -23,14 +23,6 @@
                     </li>
 
                     <li>
-                        <a href="{{ route('pesanan.perludikirim') }}"
-                            class="{{ Request::is('perlu-dikirim') ? 'active' : '' }}">
-                            <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>
-                            Perlu Dikirim
-                        </a>
-                    </li>
-
-                    <li>
                         <a href="{{ route('pesanan.proses') }}"
                             class="{{ Request::is('proses') ? 'active' : '' }}">
                             <i class="bi bi-gear me-2"></i>
@@ -71,6 +63,14 @@
                         <a href="{{ route('pesanan.cek') }}" class="{{ Request::is('cek') ? 'active' : '' }}">
                             <i class="bi bi-exclamation-triangle me-2"></i>
                             Pesanan Cek
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ route('pesanan.perludikirim') }}"
+                            class="bg-danger {{ Request::is('perlu-dikirim') ? 'active' : '' }}">
+                            <i class="bi bi-exclamation-triangle-fill me-2 text-light"></i>
+                            <span class="text-light">URGENT</span>
                         </a>
                     </li>
                 </ul>
