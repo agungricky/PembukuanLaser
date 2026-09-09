@@ -224,8 +224,8 @@
                     },
                     {
                         data: 'toko',
-                        orderable: false,
-                        searchable: false,
+                        orderable: true,
+                        searchable: true,
                         className: 'text-center',
                         render: function(data, type, row) {
 
