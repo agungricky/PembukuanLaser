@@ -2,27 +2,56 @@
 
 namespace App\Exports;
 
+use App\Models\PesananPerProduk;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Color;
 use PhpOffice\PhpSpreadsheet\Style\Conditional;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-class produkRegulerExport implements FromArray, WithEvents, WithTitle
+class produksiExport implements FromArray, WithEvents, WithTitle
 {
-    private $data;
+    protected $data;
+    protected $page;
+    protected $exporter_id;
+    protected $jumlahData;
 
-    private $jumlahdata;
-
-    public function __construct($tabone)
+    public function __construct($page, $exporter_id)
     {
-        $this->data = $tabone;
-        $this->jumlahdata = count($tabone);
+        $this->data = PesananPerProduk::with('produk.stok_produk')
+            ->where('exporter_id', $exporter_id->id)
+            ->get()
+            ->groupBy('sku')
+            ->map(function ($items, $sku) {
+                $first = $items->first();
+                $jumlahPesanan = $items->sum('jumlah');
+                $stok = $first->produk?->stok_produk?->jumlah_tersedia ?? 0;
+
+                return [
+                    'sku' => $sku,
+                    'nama_produk' => $first->produk?->nama_produk ?? '-',
+                    'variasi' => $first->produk?->variasi ?? '-',
+                    'jumlah_pesanan' => $jumlahPesanan,
+                    'stok' => $stok,
+                    'kebutuhan_produksi' => max(0, $jumlahPesanan - $stok),
+                ];
+            })
+            ->values();
+            
+        $this->exporter_id = $exporter_id;
+
+        if ($page == 'reguler') {
+            $this->page = "DAFTAR ANTRIAN PRODUKSI PRODUK REGULER";
+        }elseif ($page == 'stok') {
+            $this->page = "DAFTAR ANTRIAN PRODUKSI PRODUK STOK MENIPIS";
+        }
+
+        $this->jumlahData = $this->data->count();
+
     }
 
     public function array(): array
@@ -33,6 +62,7 @@ class produkRegulerExport implements FromArray, WithEvents, WithTitle
             ['Tanggal Export : '.now()->format('d/m/Y H:i'), 'Export By : '.(Auth::user()?->name ?? '-'), '', '', ''],
             ['SKU', 'Nama Produk', 'Variasi', 'Kebutuhan Produksi', 'Status Produksi'],
         ];
+
         foreach ($this->data as $item) {
             $row[] = [
                 'SKU' => $item['sku'] ?? '-',
@@ -53,23 +83,16 @@ class produkRegulerExport implements FromArray, WithEvents, WithTitle
                 $sheet = $event->sheet->getDelegate();
 
                 // Header formatting A1:E1
-                $sheet->mergeCells('A1:E1');
-                $sheet->setCellValue('A1', "DAFTAR PESANAN PRODUK NON CUSTOM");
+                $sheet->mergeCells('A1:E2');
+                $sheet->setCellValue('A1', $this->page);
                 $sheet->getStyle('A1')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 14],
                     'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
                 ]);
                 $sheet->getRowDimension(1)->setRowHeight(50);
 
-                // Header formatting A3:B3
-                $sheet->mergeCells('A2:E2');
-                $sheet->setCellValue('A2', "Jangan berikan file export ini kepada operator produksi lain. 1 file export hanya untuk 1 operator produksi.");
-                $sheet->getStyle('A2')->applyFromArray([
-                    'font' => ['bold' => false, 'size' => 12],
-                    'alignment' => ['horizontal' => 'center', 'vertical' => 'center', 'wrapText' => true],
-                ]);
-                
-                $sheet->getStyle('A3:B3')->applyFromArray([
+                $sheet->mergeCells('B3:E3');
+                $sheet->getStyle('A3:E3')->applyFromArray([
                     'font' => [
                         'bold' => true,
                         'color' => ['rgb' => 'FFFFFF'],
@@ -98,12 +121,9 @@ class produkRegulerExport implements FromArray, WithEvents, WithTitle
                     ],
                 ]);
 
-                $sheet->mergeCells('C3:C4');
-                $sheet->setCellValue('C3', 'Variasi');
-                $sheet->mergeCells('D3:D4');
-                $sheet->setCellValue('D3', 'Kebutuhan Produksi');
-                $sheet->mergeCells('E3:E4');
-                $sheet->setCellValue('E3', 'Status Produksi');
+                $sheet->setCellValue('C4', 'Variasi');
+                $sheet->setCellValue('D4', 'Kebutuhan Produksi');
+                $sheet->setCellValue('E4', 'Status Produksi');
 
                 $sheet->getStyle('C3:E4')->applyFromArray([
                     'font' => [
@@ -122,7 +142,7 @@ class produkRegulerExport implements FromArray, WithEvents, WithTitle
                 ]);
 
                 $awal = 4;
-                $akhir = $awal + $this->jumlahdata;
+                $akhir = $awal + $this->jumlahData;
                 // Pengaturan posisi A
                 $sheet->getStyle("A{$awal}:A{$akhir}")->applyFromArray([
                     'alignment' => [
@@ -170,19 +190,6 @@ class produkRegulerExport implements FromArray, WithEvents, WithTitle
                         ],
                     ],
                 ]);
-
-                // Logic Kolom E jadi select dan warna
-                for ($row = $awal; $row <= $akhir; $row++) {
-                    $validation = $sheet->getCell("E{$row}")->getDataValidation();
-                    $validation->setType(DataValidation::TYPE_LIST);
-                    $validation->setErrorStyle(DataValidation::STYLE_STOP);
-                    $validation->setAllowBlank(false);
-                    $validation->setShowDropDown(true);
-                    $validation->setShowErrorMessage(true);
-                    $validation->setErrorTitle('Status Tidak Valid');
-                    $validation->setError('Status hanya boleh BELUM atau SELESAI.');
-                    $validation->setFormula1('"BELUM,SELESAI"');
-                }
 
                 // BELUM = MERAH + PUTIH
                 $belum = new Conditional;
