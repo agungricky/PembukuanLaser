@@ -152,7 +152,10 @@ class PesananProsesController extends Controller
     public function perludikirim()
     {
         $today = now()->toDateString();
-        $data = Pesanan::with('toko')->whereDate('batas_kirim_at', $today)->get();
+        $data = Pesanan::with('toko')
+                ->whereDate('batas_kirim_at', $today)
+                ->where('status', 'proses')
+                ->get();
         return response()->json([
             'success' => true,
             'data' => $data,
