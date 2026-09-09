@@ -330,10 +330,11 @@ class ProduksiController extends Controller
             // TUGAS STOK
             elseif ($request->source_type === 'stok') {
                 $tugas = collect($request->kebutuhan)
-                    ->map(function ($value) {
+                    ->map(function ($value) use ($exporter) {
                         return [
                             'sku_id' => $value['sku'],
                             'processing' => (int) $value['jumlah'],
+                            'exporter_id' => $exporter->id,
                         ];
                     })
                     ->toArray();
@@ -341,16 +342,12 @@ class ProduksiController extends Controller
                 if (empty($tugas)) {
                     throw new \Exception('Tidak ada tugas stok yang dapat diambil.');
                 }
+
                 stok_produk::upsert(
                     $tugas,
                     ['sku_id'],
-                    ['processing']
+                    ['processing', 'exporter_id']
                 );
-                $stokId = collect($tugas)->pluck('sku_id');
-                stok_produk::whereIn('sku_id', $stokId)
-                    ->update([
-                        'exporter_id' => $exporter->id,
-                    ]);
             }
 
             DB::commit();
@@ -435,97 +432,136 @@ class ProduksiController extends Controller
         return view('produksi.tugas', compact('page'));
     }
 
-    public function taskdata($page)
+    public function pageReguler()
     {
-        $exporter = null;
-
-        if ($page === 'reguler') {
-            $exporter = Exporter::where('role', 'produksi')
-                ->whereBetween('created_at', [
-                    now()->subMonth(),
-                    now(),
-                ])
-                ->where('user_id', Auth::id())
-                ->where('source_type', 'reguler')
-                ->where('status', 'proses')
-                ->first();
-        } elseif ($page === 'stok') {
-            $exporter = Exporter::where('role', 'produksi')
-                ->whereBetween('created_at', [
-                    now()->subMonth(),
-                    now(),
-                ])
-                ->where('user_id', Auth::id())
-                ->where('source_type', 'stok')
-                ->where('status', 'proses')
-                ->first();
-        }
+        $exporter = Exporter::where('role', 'produksi')
+            ->whereBetween('created_at', [
+                now()->subMonth(),
+                now(),
+            ])
+            ->where('user_id', Auth::id())
+            ->where('source_type', 'reguler')
+            ->where('status', 'proses')
+            ->first();
 
         if (! $exporter) {
-            return response()->json([
-                'success' => true,
+            return [
                 'exporter' => null,
                 'data' => [],
-            ]);
+            ];
         }
 
+        $data = PesananPerProduk::with('produk.stok_produk')
+            ->where('exporter_id', $exporter->id)
+            ->get()
+            ->groupBy('sku')
+            ->map(function ($items, $sku) {
+                $first = $items->first();
+                $jumlahPesanan = $items->sum('jumlah');
+                $stok = $first->produk?->stok_produk?->jumlah_tersedia ?? 0;
+
+                return [
+                    'sku' => $sku,
+                    'nama_produk' => $first->produk?->nama_produk ?? '-',
+                    'variasi' => $first->produk?->variasi ?? '-',
+                    'jumlah_pesanan' => $jumlahPesanan,
+                    'stok' => $stok,
+                    'kebutuhan_produksi' => max(0, $jumlahPesanan - $stok),
+                ];
+            })
+            ->values();
+
+        return [
+            'exporter' => $exporter->id,
+            'data' => $data,
+        ];
+    }
+
+    public function pageStok()
+    {
+        $exporter = Exporter::where('role', 'produksi')
+            ->whereBetween('created_at', [
+                now()->subMonth(),
+                now(),
+            ])
+            ->where('user_id', Auth::id())
+            ->where('source_type', 'stok')
+            ->where('status', 'proses')
+            ->first();
+
+        if (! $exporter) {
+            return [
+                'exporter' => null,
+                'data' => [],
+            ];
+        }
+
+        $data = stok_produk::with('produk')
+            ->where('exporter_id', $exporter->id)
+            ->get();
+            // ->map(function ($item) {
+            //     return [
+            //         'sku' => $item->sku_id,
+            //         'nama_produk' => $item->produk?->nama_produk,
+            //         'variasi' => $item->produk?->variasi,
+            //         'jumlah_pesanan' => null,
+            //         'stok' => null,
+            //         'jumlah_produksi' => $item->processing,
+            //         'exporter_id' => $item->exporter_id,
+            //     ];
+            // });
+
+        dd($data->toArray());
+
+        return [
+            'exporter' => $exporter->id,
+            'data' => $data,
+        ];
+    }
+
+    public function taskdata($page)
+    {
         if ($page === 'reguler') {
-            $data = PesananPerProduk::with('produk.stok_produk')
-                ->where('exporter_id', $exporter->id)
-                ->get()
-                ->groupBy('sku')
-                ->map(function ($items, $sku) {
-                    $first = $items->first();
-                    $jumlahPesanan = $items->sum('jumlah');
-                    $stok = $first->produk?->stok_produk?->jumlah_tersedia ?? 0;
-
-                    return [
-                        'sku' => $sku,
-                        'nama_produk' => $first->produk?->nama_produk ?? '-',
-                        'variasi' => $first->produk?->variasi ?? '-',
-                        'jumlah_pesanan' => $jumlahPesanan,
-                        'stok' => $stok,
-                        'kebutuhan_produksi' => max(0, $jumlahPesanan - $stok),
-                    ];
-                })
-                ->values();
+            $result = $this->pageReguler();
         } elseif ($page === 'stok') {
-            $data = stok_produk::with('produk')
-                ->where('exporter_id', $exporter->id)
-                ->get()
-                ->map(function ($item) {
-                    return [
-                        'sku' => $item->sku_id,
-                        'nama_produk' => $item->produk?->nama_produk,
-                        'variasi' => $item->produk?->variasi,
-                        'jumlah_pesanan' => null,
-                        'stok' => null,
-                        'jumlah_produksi' => $item->processing,
-                        'exporter_id' => $item->exporter_id,
-                    ];
-                });
-
+            $result = $this->pageStok();
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Page tidak valid',
+            ], 404);
         }
 
         return response()->json([
             'success' => true,
-            'exporter' => $exporter->id,
-            'data' => $data,
+            'exporter' => $result['exporter'],
+            'data' => $result['data'],
         ]);
     }
 
-    public function taskcancel(Request $request)
+    public function taskcancel(Request $request, $page)
     {
         $request->validate([
             'sku' => 'required',
             'exporter_id' => 'required',
         ]);
 
-        PesananPerProduk::where('exporter_id', $request->exporter_id)
-            ->where('sku', $request->sku)
-            ->update([
-                'exporter_id' => null,
-            ]);
+        if ($page == 'reguler') {
+            PesananPerProduk::where('exporter_id', $request->exporter_id)
+                ->where('sku', $request->sku)
+                ->update([
+                    'exporter_id' => null,
+                ]);
+        }if ($page == 'stok') {
+            stok_produk::where('exporter_id', $request->exporter_id)
+                ->where('sku_id', $request->sku)
+                ->update([
+                    'processing' => null,
+                    'exporter_id' => null,
+                ]);
+        } else {
+            // code...
+        }
 
         return response()->json([
             'success' => true,

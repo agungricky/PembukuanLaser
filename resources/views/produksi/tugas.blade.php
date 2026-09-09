@@ -247,6 +247,10 @@
                         orderable: false,
                         searchable: false,
                         render: function(data, type, row) {
+                            console.log(row)
+                            if (row.source_type === 'stok') {
+                                return '';
+                            }
                             return `
                                 <div class="small">
                                     <div class="d-flex justify-content-between gap-3 mb-1">
@@ -410,7 +414,7 @@
                     if (result.isConfirmed) {
                         $.ajax({
                             type: "POST",
-                            url: "{{ route('penugasan.task.cancel') }}",
+                            url: "{{ route('penugasan.task.cancel', ['page' => $page]) }}",
                             data: {
                                 _token: "{{ csrf_token() }}",
                                 sku: sku,
@@ -455,7 +459,8 @@
 
                         $.ajax({
                             type: "POST",
-                            url: "{{ route('penugasan.done', ':id')}}".replace(':id', exporter_id),
+                            url: "{{ route('penugasan.done', ':id') }}".replace(':id',
+                                exporter_id),
                             data: {
                                 _token: "{{ csrf_token() }}"
                             },

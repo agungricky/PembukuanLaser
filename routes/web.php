@@ -20,11 +20,9 @@ use App\Http\Controllers\PesananDiterimaController;
 use App\Http\Controllers\PesananKirimController;
 use App\Http\Controllers\PesananProsesController;
 use App\Http\Controllers\ProdukController;
-use App\Http\Controllers\produkcustomController;
 use App\Http\Controllers\ProduksiController;
 use App\Http\Controllers\ResiImportController;
 use App\Http\Controllers\SkuController;
-use App\Http\Controllers\stokProdukController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -51,7 +49,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     });
 
     // ===================== EDITOR ===================== //
-    Route::prefix('editor') ->name('editor.')->middleware('auth')->group(function () {
+    Route::prefix('editor')->name('editor.')->middleware('auth')->group(function () {
         Route::get('/', [EditorController::class, 'index'])
             ->name('index');
 
@@ -143,6 +141,11 @@ Route::middleware(['web', 'auth'])->group(function () {
             ->except([
                 'show',
             ]);
+
+        // Perlu Dikirim
+        Route::view('/perlu-dikirim', 'pesanan.perlu_dikirim')->name('pesanan.perludikirim');
+        Route::get('/perlu-dikirim/json', [PesananProsesController::class, 'perludikirim'])->name('pesanan.perludikirim.json');
+
 
         // Pesanan Proses
         Route::get('/proses', [PesananProsesController::class, 'index'])->name('pesanan.proses');
@@ -240,7 +243,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         // Riwayat Aktifitas
         Route::get('/riwayat-aktivitas/gudang', [GudangController::class, 'riwayataktivitas'])->name('gudang.aktivitas');
         Route::get('/riwayat-aktivitas/data', [GudangController::class, 'riwayatAktivitasData'])->name('gudang.riwayataktivitas.data');
-        
+
     });
 
     Route::middleware(['role:produksi'])->group(function () {
@@ -250,10 +253,10 @@ Route::middleware(['web', 'auth'])->group(function () {
 
         Route::get('/stok_menipis', [ProduksiController::class, 'stokmenipis'])->name('produksi.stokmenipis');
         Route::get('/stok_menipis/json', [ProduksiController::class, 'stokdata'])->name('stokmenipis.json');
-        
+
         Route::get('/tasks/{page}', [ProduksiController::class, 'task'])->name('penugasan.task');
         Route::get('/tasks/{page}/json', [ProduksiController::class, 'taskdata'])->name('penugasan.task.json');
-        Route::post('/tasks/cancel', [ProduksiController::class, 'taskcancel'])->name('penugasan.task.cancel');
+        Route::post('/tasks/{page}/cancel', [ProduksiController::class, 'taskcancel'])->name('penugasan.task.cancel');
         Route::get('/tasks/{page}/export', [ProduksiController::class, 'export'])->name('penugasan.export');
         Route::post('/tasks/{id}/selesai', [ProduksiController::class, 'taskdone'])->name('penugasan.done');
     });
