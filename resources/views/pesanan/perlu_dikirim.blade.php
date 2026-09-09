@@ -115,7 +115,8 @@
                                 no_resi: items.no_resi ?? '-',
                                 total_pesanan: items.total_harga ?? 0,
                                 toko: items.toko?.nama_toko ?? '-',
-                                pengiriman: items.kurir ?? '-'
+                                pengiriman: items.kurir ?? '-',
+                                status_kirim: items.status_kirim ?? '-'
                             };
                         });
                     }
@@ -137,11 +138,13 @@
                         searchable: true,
                         className: 'text-center',
                         render: function(data, type, row, meta) {
+                            console.log(row);
                             if (!data) {
                                 return '<span class="text-muted">-</span>';
                             }
 
                             const tanggal = new Date(data);
+                            let statusBadge = '';
 
                             // Supaya sorting DataTables tetap berdasarkan tanggal asli
                             if (type === 'sort' || type === 'type') {
@@ -162,15 +165,38 @@
                                 hour12: false
                             }).format(tanggal);
 
+                            if (row.status_kirim === 'terlambat') {
+                                statusBadge = `
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1 mt-1">
+                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                        Terlambat
+                                    </span>
+                                `;
+                            } else {
+                                statusBadge = `
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 mt-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i>
+                                        Aman
+                                    </span>
+                                `;
+                            }
+
                             return `
                                 <div class="d-flex flex-column align-items-center">
-                                    <span class="fw-semibold text-dark">
-                                        ${tanggalFormat}
-                                    </span>
-                                    <small class="text-muted mt-1">
-                                        <i class="fa-regular fa-clock me-1"></i>
-                                        ${jamFormat} WIB
-                                    </small>
+
+                                    <div class="text-center">
+                                        <div class="text-dark fw-bold" style="font-size: 13px;">
+                                            ${tanggalFormat}
+                                        </div>
+
+                                        <small class="text-muted" style="font-size: 12px;">
+                                            <i class="fa-regular fa-clock me-1"></i>
+                                            ${jamFormat} WIB
+                                        </small>
+                                    </div>
+
+                                    ${statusBadge}
+
                                 </div>
                             `;
                         }
@@ -249,7 +275,7 @@
                     {
                         data: 'pengiriman',
                         orderable: true,
-                        searchable: false,
+                        searchable: true,
                         className: 'text-center',
                         render: function(data, type, row) {
 
