@@ -31,6 +31,14 @@
                     </li>
 
                     <li>
+                        <a href="{{ route('pesanan.proses') }}"
+                            class="{{ Request::is('proses') ? 'active' : '' }}">
+                            <i class="bi bi-gear me-2"></i>
+                            Pesanan Diproses
+                        </a>
+                    </li>
+
+                    <li>
                         <a href="{{ route('pesanan.kirim') }}" class="{{ Request::is('kirim') ? 'active' : '' }}">
                             <i class="bi bi-truck me-2"></i>
                             Pesanan Dikirim
