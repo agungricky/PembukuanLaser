@@ -232,48 +232,52 @@
                                             {{ $pesanan->userKirim?->name ?? '-' }}
                                         </td>
                                     </tr>
-                                    <tr class="{{ $items->contains('nama_kategori', 'PLAT') ? '' : 'd-none' }}">
-                                        <td class="text-muted">
-                                            Cetak Resi
-                                        </td>
-                                        <td>
-                                            @if ($resiSudahDicetak)
-                                                <span class="badge bg-success">
-                                                    SUDAH DICETAK
-                                                </span>
-                                                <div class="small text-muted mt-1">
-                                                    {{ number_format($resiPrintCount, 0, ',', '.') }}x cetak
-                                                </div>
-                                                @if ($pesanan->resi_printed_at)
-                                                    @php
-                                                        try {
-                                                            $resiPrintedAt = \Carbon\Carbon::parse(
-                                                                $pesanan->resi_printed_at,
-                                                            );
-                                                        } catch (\Throwable $e) {
-                                                            $resiPrintedAt = null;
-                                                        }
-                                                    @endphp
-                                                    @if ($resiPrintedAt)
+
+                                    @if ($dataPlat != [] || $dataPlat != null)
+                                        <tr class="{{ $items->contains('nama_kategori', 'PLAT') ? '' : 'd-none' }}">
+                                            <td class="text-muted">
+                                                Cetak Resi
+                                            </td>
+                                            <td>
+                                                @if ($resiSudahDicetak)
+                                                    <span class="badge bg-success">
+                                                        SUDAH DICETAK
+                                                    </span>
+                                                    <div class="small text-muted mt-1">
+                                                        {{ number_format($resiPrintCount, 0, ',', '.') }}x cetak
+                                                    </div>
+                                                    @if ($pesanan->resi_printed_at)
+                                                        @php
+                                                            try {
+                                                                $resiPrintedAt = \Carbon\Carbon::parse(
+                                                                    $pesanan->resi_printed_at,
+                                                                );
+                                                            } catch (\Throwable $e) {
+                                                                $resiPrintedAt = null;
+                                                            }
+                                                        @endphp
+                                                        @if ($resiPrintedAt)
+                                                            <div class="small text-muted">
+                                                                Pertama:
+                                                                {{ $resiPrintedAt->format('d/m/Y H:i') }}
+                                                            </div>
+                                                        @endif
+                                                    @endif
+                                                    @if ($pesanan->resiPrinter)
                                                         <div class="small text-muted">
-                                                            Pertama:
-                                                            {{ $resiPrintedAt->format('d/m/Y H:i') }}
+                                                            Oleh:
+                                                            {{ $pesanan->resiPrinter->name }}
                                                         </div>
                                                     @endif
+                                                @else
+                                                    <span class="badge bg-secondary">
+                                                        BELUM DICETAK
+                                                    </span>
                                                 @endif
-                                                @if ($pesanan->resiPrinter)
-                                                    <div class="small text-muted">
-                                                        Oleh:
-                                                        {{ $pesanan->resiPrinter->name }}
-                                                    </div>
-                                                @endif
-                                            @else
-                                                <span class="badge bg-secondary">
-                                                    BELUM DICETAK
-                                                </span>
-                                            @endif
-                                        </td>
-                                    </tr>
+                                            </td>
+                                        </tr>
+                                    @endif
+
                                     <tr>
                                         <td class="text-muted">
                                             Item
@@ -509,144 +513,147 @@
             </div>
         </div>
 
-        <div class="card shadow-sm border-0 mb-3 {{ $items->contains('nama_kategori', 'PLAT') ? '' : 'd-none' }}">
-            <div class="card-header bg-white">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <h6 class="mb-0 fw-semibold">
-                            <i class="bi bi-pencil-square text-warning me-2"></i>
-                            Request Produk
-                        </h6>
+        @if ($dataPlat != [] || $dataPlat != null)
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <h6 class="mb-0 fw-semibold">
+                                <i class="bi bi-pencil-square text-warning me-2"></i>
+                                Request Produk
+                            </h6>
 
-                        <small class="text-muted">
-                            Permintaan custom dari pelanggan
-                        </small>
+                            <small class="text-muted">
+                                Permintaan custom dari pelanggan
+                            </small>
+                        </div>
+
+                        <span class="badge bg-warning-subtle text-warning border">
+                            {{ count($dataPlat) }} Request
+                        </span>
                     </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="60">
+                                    No
+                                </th>
+                                <th width="130">
+                                    SKU
+                                </th>
+                                <th width="100" class="text-center">
+                                    Plat Lengkap
+                                </th>
+                                <th width="200" class="text-center">
+                                    Tanggal/Bulan/Tahun
+                                </th>
+                                <th>
+                                    Nama
+                                </th>
+                                <th width="160" class="text-center">
+                                    Korlantas
+                                </th>
+                                <th width="180" class="text-center">
+                                    Heartbeat
+                                </th>
+                                <th>
+                                    Status Request
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($dataPlat as $index => $item)
+                                <tr class="align-middle">
+                                    <td class="text-center text-muted">
+                                        {{ $index + 1 }}
+                                    </td>
 
-                    <span class="badge bg-warning-subtle text-warning border">
-                        {{ count($dataPlat) }} Request
-                    </span>
+                                    <td>
+                                        <span class="badge bg-light text-dark border px-2 py-2">
+                                            <i class="bi bi-upc-scan me-1"></i>
+                                            {{ $item->pesananPerProduk->sku ?: '-' }}
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <span class="fw-bold text-primary">
+                                            {{ $item->plat_lengkap ?: '-' }}
+                                        </span>
+                                    </td>
+
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center gap-2">
+                                            <i class="bi bi-calendar3 text-muted"></i>
+                                            <span class="small">
+                                                {{ $item->tanggal_bulan_tahun ?: '-' }}
+                                            </span>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        <div class="fw-semibold text-dark">
+                                            {{ $item->nama ?: '-' }}
+                                        </div>
+                                    </td>
+
+                                    <td class="text-center">
+                                        @if ($item->tanpa_korlantas == 0)
+                                            <span
+                                                class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-2">
+                                                <i class="bi bi-x-circle me-1"></i>
+                                                Tidak
+                                            </span>
+                                        @else
+                                            <span
+                                                class="badge bg-success-subtle text-success border border-success-subtle px-2 py-2">
+                                                <i class="bi bi-check-circle me-1"></i>
+                                                Ya
+                                            </span>
+                                        @endif
+                                    </td>
+
+                                    <td class="text-center">
+                                        @if ($item->tanpa_heartbeat == 0)
+                                            <span
+                                                class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-2">
+                                                <i class="bi bi-x-circle me-1"></i>
+                                                Tidak
+                                            </span>
+                                        @else
+                                            <span
+                                                class="badge bg-success-subtle text-success border border-success-subtle px-2 py-2">
+                                                <i class="bi bi-check-circle me-1"></i>
+                                                Ya
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td class="text-center align-middle">
+                                        <span class="badge bg-light text-dark border px-2 py-2">
+                                            {{ ucfirst($item->status_request ?: '-') }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <i class="bi bi-box-seam fs-1 text-muted d-block mb-2"></i>
+                                        <div class="fw-semibold">
+                                            Tidak Ada Produk
+                                        </div>
+                                        <div class="small text-muted">
+                                            Pesanan ini tidak memiliki produk.
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th width="60">
-                                No
-                            </th>
-                            <th width="130">
-                                SKU
-                            </th>
-                            <th width="100" class="text-center">
-                                Plat Lengkap
-                            </th>
-                            <th width="200" class="text-center">
-                                Tanggal/Bulan/Tahun
-                            </th>
-                            <th>
-                                Nama
-                            </th>
-                            <th width="160" class="text-center">
-                                Korlantas
-                            </th>
-                            <th width="180" class="text-center">
-                                Heartbeat
-                            </th>
-                            <th>
-                                Status Request
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($dataPlat as $index => $item)
-                            <tr class="align-middle">
-                                <td class="text-center text-muted">
-                                    {{ $index + 1 }}
-                                </td>
+        @endif
 
-                                <td>
-                                    <span class="badge bg-light text-dark border px-2 py-2">
-                                        <i class="bi bi-upc-scan me-1"></i>
-                                        {{ $item->pesananPerProduk->sku ?: '-' }}
-                                    </span>
-                                </td>
-
-                                <td>
-                                    <span class="fw-bold text-primary">
-                                        {{ $item->plat_lengkap ?: '-' }}
-                                    </span>
-                                </td>
-
-                                <td class="text-center">
-                                    <div class="d-flex align-items-center justify-content-center gap-2">
-                                        <i class="bi bi-calendar3 text-muted"></i>
-                                        <span class="small">
-                                            {{ $item->tanggal_bulan_tahun ?: '-' }}
-                                        </span>
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <div class="fw-semibold text-dark">
-                                        {{ $item->nama ?: '-' }}
-                                    </div>
-                                </td>
-
-                                <td class="text-center">
-                                    @if ($item->tanpa_korlantas == 0)
-                                        <span
-                                            class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-2">
-                                            <i class="bi bi-x-circle me-1"></i>
-                                            Tidak
-                                        </span>
-                                    @else
-                                        <span
-                                            class="badge bg-success-subtle text-success border border-success-subtle px-2 py-2">
-                                            <i class="bi bi-check-circle me-1"></i>
-                                            Ya
-                                        </span>
-                                    @endif
-                                </td>
-
-                                <td class="text-center">
-                                    @if ($item->tanpa_heartbeat == 0)
-                                        <span
-                                            class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-2">
-                                            <i class="bi bi-x-circle me-1"></i>
-                                            Tidak
-                                        </span>
-                                    @else
-                                        <span
-                                            class="badge bg-success-subtle text-success border border-success-subtle px-2 py-2">
-                                            <i class="bi bi-check-circle me-1"></i>
-                                            Ya
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="text-center align-middle">
-                                    <span class="badge bg-light text-dark border px-2 py-2">
-                                        {{ ucfirst($item->status_request ?: '-') }}
-                                    </span>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="text-center py-5">
-                                    <i class="bi bi-box-seam fs-1 text-muted d-block mb-2"></i>
-                                    <div class="fw-semibold">
-                                        Tidak Ada Produk
-                                    </div>
-                                    <div class="small text-muted">
-                                        Pesanan ini tidak memiliki produk.
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
 
     </div>
 

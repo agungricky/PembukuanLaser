@@ -53,7 +53,7 @@ class PesananDetailController extends Controller
                 'pp.id_per_produk'
             )
             ->get();
-            // dd($items->take(30)->toArray());
+        // dd($items->take(30)->toArray());
 
         $totalHarga = (float) (
             $pesanan->total_harga ?? 0
@@ -122,8 +122,8 @@ class PesananDetailController extends Controller
             );
 
         $selisihText =
-            ($selisih < 0 ? '-' : '') .
-            'Rp' .
+            ($selisih < 0 ? '-' : '').
+            'Rp'.
             number_format(
                 abs($selisih),
                 0,
@@ -156,16 +156,13 @@ class PesananDetailController extends Controller
             'secondary';
 
         $statusLabel = match ($status) {
-            'pengiriman_gagal' =>
-                'Pengiriman Gagal',
+            'pengiriman_gagal' => 'Pengiriman Gagal',
 
-            'pengembalian' =>
-                'Pengembalian',
+            'pengembalian' => 'Pengembalian',
 
-            default =>
-                ucfirst(
-                    $status ?: '-'
-                ),
+            default => ucfirst(
+                $status ?: '-'
+            ),
         };
 
         $tanggalInput = $pesanan->tanggal
@@ -228,19 +225,16 @@ class PesananDetailController extends Controller
         $batasKirimSource = match (
             $pesanan->batas_kirim_source
         ) {
-            'shopee_estimated_ship_out_date' =>
-                'Shopee Excel',
+            'shopee_estimated_ship_out_date' => 'Shopee Excel',
 
-            'tiktok_in_transit_by' =>
-                'TikTok PDF',
+            'tiktok_in_transit_by' => 'TikTok PDF',
 
-            default =>
-                $pesanan->batas_kirim_source
+            default => $pesanan->batas_kirim_source
                     ?: '-',
         };
 
         $resiSudahDicetak =
-            !is_null(
+            ! is_null(
                 $pesanan->resi_printed_at
             );
 
@@ -252,9 +246,17 @@ class PesananDetailController extends Controller
         $dataPlat = [];
         foreach ($items as $value) {
             if ($value->nama_kategori == 'PLAT') {
-                $dataPlat[] = EditorRequest::with('pesananPerProduk')->where('id_per_produk', $value->id_per_produk)->first();
+                $editorRequest = EditorRequest::with('pesananPerProduk')
+                    ->where('id_per_produk', $value->id_per_produk)
+                    ->first();
+
+                if ($editorRequest) {
+                    $dataPlat[] = $editorRequest;
+                }
             }
-        } 
+        }
+
+        $dataPlat = $dataPlat === [] ? null : $dataPlat;
 
         return view(
             'pesanan.rincian',
@@ -294,7 +296,7 @@ class PesananDetailController extends Controller
                 'resiSudahDicetak' => $resiSudahDicetak,
                 'resiPrintCount' => $resiPrintCount,
 
-                'dataPlat' => $dataPlat
+                'dataPlat' => $dataPlat,
             ]
         );
     }
@@ -379,7 +381,7 @@ class PesananDetailController extends Controller
                     $validated['id_toko'];
 
                 $pesanan->no_resi =
-                    !empty(
+                    ! empty(
                         $validated['no_resi']
                     )
                         ? trim(
@@ -419,14 +421,14 @@ class PesananDetailController extends Controller
                     $statusLama !== 'kirim'
                 ) {
                     if (
-                        !$pesanan->tanggal_kirim
+                        ! $pesanan->tanggal_kirim
                     ) {
                         $pesanan->tanggal_kirim =
                             now();
                     }
 
                     if (
-                        !$pesanan->id_user_kirim
+                        ! $pesanan->id_user_kirim
                     ) {
                         $pesanan->id_user_kirim =
                             Auth::id();
