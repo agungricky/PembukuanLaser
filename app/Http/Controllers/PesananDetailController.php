@@ -296,7 +296,7 @@ class PesananDetailController extends Controller
                 'resiSudahDicetak' => $resiSudahDicetak,
                 'resiPrintCount' => $resiPrintCount,
 
-                'dataPlat' => $dataPlat,
+                // 'dataPlat' => $dataPlat,
             ]
         );
     }
