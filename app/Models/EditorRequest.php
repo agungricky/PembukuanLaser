@@ -69,4 +69,8 @@ class EditorRequest extends Model
             'id'
         );
     }
+
+    public function pesananPerProduk(){
+        return $this->belongsTo(pesananPerProduk::class, 'id_per_produk', 'id_per_produk');
+    }
 }

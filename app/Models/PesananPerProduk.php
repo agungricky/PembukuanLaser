@@ -75,4 +75,8 @@ class PesananPerProduk extends Model
     public function exporter(){
         return $this->belongsTo(Exporter::class, 'exporter_id', 'id');
     }
+
+    public function editorRequest(){
+        return $this->hasMany(editorRequest::class, 'id_per_produk', 'id_per_produk');
+    }
 }
