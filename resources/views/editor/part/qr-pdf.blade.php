@@ -3,11 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-
     <title>
         QR {{ $part->kode_part }}
     </title>
-
     <style>
         @page {
             size: 100mm 150mm;
@@ -172,115 +170,76 @@
             text-align: center;
             white-space: nowrap;
         }
+
+        .spasi{
+            margin-left: 4px;
+            margin-right: 3px;
+        }
     </style>
 </head>
 
 <body>
-
-    @foreach($pages as $pageRows)
-
+    @foreach ($pages as $pageRows)
         <div class="print-page {{ $loop->last ? 'last-page' : '' }}">
-
-            @foreach($pageRows as $row)
-
+            @foreach ($pageRows as $row)
                 @php
                     $top = $loop->index * 21;
                 @endphp
-
-                <div class="item"
-                    style="top: {{ $top }}mm;">
-
+                <div class="item" style="top: {{ $top }}mm;">
                     <table class="item-table">
-
                         <tr>
-
                             <td class="request-cell">
-
-                                @if($row['status_request'] === 'random')
-
+                                @if ($row['status_request'] === 'random')
                                     <div class="random">
                                         RANDOM
                                     </div>
-
                                 @else
-
-                                    @if($row['plat_lengkap'])
-
+                                    @if ($row['plat_lengkap'])
                                         <div class="request-main">
                                             {{ $row['plat_lengkap'] }}
                                         </div>
-
                                     @endif
-
-                                    @if($row['nama'])
-
+                                    @if ($row['nama'])
                                         <div class="request-secondary">
                                             {{ $row['nama'] }}
                                         </div>
-
                                     @endif
-
-                                    @if($row['tanggal_bulan_tahun'])
-
+                                    @if ($row['tanggal_bulan_tahun'])
                                         <div class="request-date">
                                             {{ $row['tanggal_bulan_tahun'] }}
                                         </div>
-
+                                    @endif
+                                @endif
+                                <div class="unit">
+                                    @if ($row['jumlah'] > 1)
+                                        UNIT {{ $row['unit'] }}/{{ $row['jumlah'] }} <span class="spasi">|</span>
                                     @endif
 
-                                @endif
-
-                                @if($row['jumlah'] > 1)
-
-                                    <div class="unit">
-                                        UNIT {{ $row['unit'] }}/{{ $row['jumlah'] }}
-                                    </div>
-
-                                @endif
-
+                                    {{ \Carbon\Carbon::parse($row['batas_kirim'])->format('d/m/Y H:i') }}
+                                </div>
                             </td>
-
                             <td class="product-cell">
-
                                 <div class="product-name">
                                     {{ $row['nama_produk'] }}
                                 </div>
-
-                                @if($row['variasi'])
-
+                                @if ($row['variasi'])
                                     <div class="variation">
                                         {{ $row['variasi'] }}
                                     </div>
-
                                 @endif
-
                             </td>
-
                             <td class="qr-cell">
-
-                                <img
-                                    src="{{ $row['qr_code'] }}"
-                                    class="qr-image"
-                                    alt="QR">
-
+                                <img src="{{ $row['qr_code'] }}" class="qr-image" alt="QR">
                                 <div class="no-pesanan">
                                     {{ $row['no_pesanan'] }}
                                 </div>
-
                             </td>
-
                         </tr>
-
                     </table>
-
                 </div>
-
             @endforeach
-
         </div>
-
     @endforeach
-
 </body>
 
 </html>
