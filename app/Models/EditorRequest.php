@@ -71,6 +71,6 @@ class EditorRequest extends Model
     }
 
     public function pesananPerProduk(){
-        return $this->belongsTo(pesananPerProduk::class, 'id_per_produk', 'id_per_produk');
+        return $this->belongsTo(PesananPerProduk::class, 'id_per_produk', 'id_per_produk');
     }
 }
