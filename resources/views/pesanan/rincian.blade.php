@@ -577,7 +577,7 @@
                                         </span>
                                     </td>
 
-                                    <td>
+                                    <td class="text-nowrap">
                                         <span class="fw-bold text-primary">
                                             {{ $item->plat_lengkap ?: '-' }}
                                         </span>
