@@ -146,7 +146,6 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::view('/perlu-dikirim', 'pesanan.perlu_dikirim')->name('pesanan.perludikirim');
         Route::get('/perlu-dikirim/json', [PesananProsesController::class, 'perludikirim'])->name('pesanan.perludikirim.json');
 
-
         // Pesanan Proses
         Route::get('/proses', [PesananProsesController::class, 'index'])->name('pesanan.proses');
         Route::post('/pesanan/ubah-status', [PesananProsesController::class, 'ubahStatus'])->name('pesanan.ubahStatus');

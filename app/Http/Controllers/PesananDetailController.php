@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EditorRequest;
 use App\Models\Pesanan;
 use App\Models\Toko;
 use Carbon\Carbon;
@@ -32,6 +33,7 @@ class PesananDetailController extends Controller
                 '=',
                 'pp.sku'
             )
+            ->leftJoin('kategoris as k', 'k.id', '=', 'p.kategori_id')
             ->select([
                 'pp.id_per_produk',
                 'pp.sku',
@@ -41,6 +43,7 @@ class PesananDetailController extends Controller
                 'pp.hpp',
                 'pp.harga',
                 DB::raw('(COALESCE(pp.harga, 0) * COALESCE(pp.jumlah, 0)) as subtotal'),
+                'k.nama_kategori',
             ])
             ->where(
                 'pp.no_pesanan',
@@ -50,6 +53,7 @@ class PesananDetailController extends Controller
                 'pp.id_per_produk'
             )
             ->get();
+            // dd($items->take(30)->toArray());
 
         $totalHarga = (float) (
             $pesanan->total_harga ?? 0
@@ -245,6 +249,13 @@ class PesananDetailController extends Controller
                 $pesanan->resi_print_count ?? 0
             );
 
+        $dataPlat = [];
+        foreach ($items as $value) {
+            if ($value->nama_kategori == 'PLAT') {
+                $dataPlat[] = EditorRequest::with('pesananPerProduk')->where('id_per_produk', $value->id_per_produk)->first();
+            }
+        } 
+
         return view(
             'pesanan.rincian',
             [
@@ -282,6 +293,8 @@ class PesananDetailController extends Controller
 
                 'resiSudahDicetak' => $resiSudahDicetak,
                 'resiPrintCount' => $resiPrintCount,
+
+                'dataPlat' => $dataPlat
             ]
         );
     }
