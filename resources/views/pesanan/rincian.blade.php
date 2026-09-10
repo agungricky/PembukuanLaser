@@ -233,7 +233,7 @@
                                         </td>
                                     </tr>
 
-                                    @if ($dataPlat != [] || $dataPlat != null)
+                                    {{-- @if ($dataPlat != [] || $dataPlat != null) --}}
                                         <tr class="{{ $items->contains('nama_kategori', 'PLAT') ? '' : 'd-none' }}">
                                             <td class="text-muted">
                                                 Cetak Resi
@@ -276,7 +276,7 @@
                                                 @endif
                                             </td>
                                         </tr>
-                                    @endif
+                                    {{-- @endif --}}
 
                                     <tr>
                                         <td class="text-muted">
@@ -513,7 +513,7 @@
             </div>
         </div>
 
-        @if ($dataPlat != [] || $dataPlat != null)
+        {{-- @if ($dataPlat != [] || $dataPlat != null)
             <div class="card shadow-sm border-0 mb-3">
                 <div class="card-header bg-white">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -652,7 +652,7 @@
                     </table>
                 </div>
             </div>
-        @endif
+        @endif --}}
 
 
     </div>
