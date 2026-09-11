@@ -34,7 +34,7 @@
                 <div>
                     <h2 class="h5 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
                         <i class="fa-solid fa-boxes-stacked text-primary"></i>
-                        Daftar Pesanan {{ Str::ucfirst($produksi) }}
+                        Daftar Pesanan
                     </h2>
                     <p class="text-muted small mb-0">
                         Menampilkan semua pesanan masuk.
@@ -57,15 +57,9 @@
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
-
-                    <button type="button" class="btn btn-primary btn-sm text-nowrap" data-bs-toggle="modal"
-                        data-bs-target="#pengambilModal" data-role="pegawai" id="btnPengambilModal">
-                        <i class="fa-solid fa-file-import me-1"></i>
-                        Import Excell
-                    </button>
-                    <button type="button" class="btn btn-success btn-sm text-nowrap" id="exportExcel">
-                        <i class="fa-solid fa-file-excel me-1"></i>
-                        Export Excel
+                    <button type="button" class="btn btn-primary btn-sm text-nowrap" id="ambilTugas">
+                        <i class="fa-solid fa-user-check me-1"></i>
+                        Ambil Tugas
                     </button>
                 </div>
             </div>
@@ -126,6 +120,40 @@
             let searchTimer = null;
             let skuDipilih = [];
 
+            // Perpage Halaman
+            $(document)
+                .off('change.orderlist', '#per_page')
+                .on('change.orderlist', '#per_page', function() {
+                    if (!table) {
+                        return;
+                    }
+                    const length = parseInt(this.value, 10);
+                    table
+                        .page
+                        .len(length)
+                        .draw();
+
+                });
+
+            // Search
+            $(document)
+                .off('input.orderlist', '#searchTable')
+                .on('input.orderlist', '#searchTable', function() {
+                    if (!table) {
+                        return;
+                    }
+
+                    const keyword = this.value;
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(function() {
+                        table
+                            .search(keyword)
+                            .draw();
+
+                    }, 350);
+                });
+
+            // Data Table
             table = $('#orderlist').DataTable({
                 processing: true,
                 serverSide: true,
@@ -133,6 +161,7 @@
                     url: "{{ route('produksi.pesanan.json') }}",
                     type: 'GET'
                 },
+                order: [],
                 searching: true,
                 lengthChange: false,
                 pageLength: 10,
@@ -274,6 +303,7 @@
                 }
             });
 
+            // Melakukan Checklist
             $('#orderlist tbody').on('click', 'tr', function(e) {
                 if ($(e.target).is('.item-checkbox')) {
                     return;
@@ -290,6 +320,7 @@
                 checkbox.trigger('change');
             });
 
+            // Mengambil data yang di checklist
             $('#orderlist tbody').on(
                 'change',
                 '.item-checkbox',
@@ -313,62 +344,58 @@
                 }
             );
 
-            $(document)
-                .off('change.orderlist', '#per_page')
-                .on('change.orderlist', '#per_page', function() {
-                    if (!table) {
-                        return;
-                    }
-                    const length = parseInt(this.value, 10);
-                    table
-                        .page
-                        .len(length)
-                        .draw();
-
-                });
-
-            $(document)
-                .off('input.orderlist', '#searchTable')
-                .on('input.orderlist', '#searchTable', function() {
-                    if (!table) {
-                        return;
-                    }
-
-                    const keyword = this.value;
-                    clearTimeout(searchTimer);
-                    searchTimer = setTimeout(function() {
-                        table
-                            .search(keyword)
-                            .draw();
-
-                    }, 350);
-                });
-
-            $('#orderlist').on('preXhr.dt', function(e, settings, data) {
-                console.log('Request server-side:', {
-                    start: data.start,
-                    length: data.length,
-                    search: data.search.value
-                });
-            });
-
+            // Push data ke variabel
             $('.item-checkbox:checked').each(function() {
                 skuDipilih.push($(this).val());
             });
 
-            $('#exportExcel').on('click', function() {
-                if (skuDipilih.length === 0) {
-                    alert('Pilih data terlebih dahulu');
+            $('#ambilTugas').on('click', function(e) {
+                e.preventDefault();
+
+                if (!skuDipilih || skuDipilih.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Belum Ada SKU Dipilih',
+                        text: 'Silakan pilih minimal satu produk terlebih dahulu.',
+                        confirmButtonText: 'OK'
+                    });
+
                     return;
                 }
 
-                const params = new URLSearchParams();
-                skuDipilih.forEach(function(sku) {
-                    params.append('sku[]', sku);
-                });
+                $.ajax({
+                    type: "POST",
+                    url: "{{ route('produksi.ambiltugas') }}",
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        sku: skuDipilih,
+                        source_type: 'reguler'
+                    },
+                    dataType: "json",
 
-                window.location.href = '{{ route('produksi.export') }}?' + params.toString();
+                    success: function(response) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: response.message ?? 'Tugas berhasil diambil.',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            location.reload();
+                        });
+                    },
+
+                    error: function(xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: xhr.responseJSON?.message ??
+                                'Terjadi kesalahan saat mengambil tugas.'
+                        });
+                    }
+                });
             });
+
         });
     </script>
 @endpush

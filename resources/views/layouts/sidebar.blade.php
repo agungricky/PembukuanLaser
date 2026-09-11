@@ -23,7 +23,8 @@
                     </li>
 
                     <li>
-                        <a href="{{ route('pesanan.proses') }}" class="{{ Request::is('proses') ? 'active' : '' }}">
+                        <a href="{{ route('pesanan.proses') }}"
+                            class="{{ Request::is('proses') ? 'active' : '' }}">
                             <i class="bi bi-gear me-2"></i>
                             Pesanan Diproses
                         </a>
@@ -62,6 +63,14 @@
                         <a href="{{ route('pesanan.cek') }}" class="{{ Request::is('cek') ? 'active' : '' }}">
                             <i class="bi bi-exclamation-triangle me-2"></i>
                             Pesanan Cek
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ route('pesanan.perludikirim') }}"
+                            class="bg-danger {{ Request::is('perlu-dikirim') ? 'active' : '' }}">
+                            <i class="bi bi-exclamation-triangle-fill me-2 text-light"></i>
+                            <span class="text-light">URGENT</span>
                         </a>
                     </li>
                 </ul>
@@ -473,51 +482,112 @@
                     </a>
                 </div>
 
-                <div>
-                    <div class="sidebar-heading mt-3 border-bottom">
-                        # TRANSAKSI
-                    </div>
+                <div id="sidebarAccordion">
 
-                    <a class="sidebar-link justify-content-between mt-1" data-bs-toggle="collapse"
-                        href="#transaksiMenu">
-
-                        <div class="d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                            <span>Pesanan</span>
+                    {{-- Transaksi --}}
+                    <div>
+                        <div class="sidebar-heading mt-3 border-bottom">
+                            # TRANSAKSI
                         </div>
 
-                        <i class="fa-solid fa-chevron-down small"></i>
-                    </a>
+                        <a class="sidebar-link justify-content-between mt-1" data-bs-toggle="collapse"
+                            href="#transaksiMenu">
 
-                    <div class="collapse {{ request()->routeIs('produksi.show') ? 'show' : '' }}" id="transaksiMenu">
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                                <span>Pesanan</span>
+                            </div>
 
-                        <a href="{{ route('produksi.show', ['produksi' => 'reguler']) }}"
-                            class="sidebar-sublink {{ request()->route('produksi') === 'reguler' ? 'active' : '' }}">
-
-                            <i class="fa-solid fa-box"></i>
-                            <small>Produk Reguler</small>
+                            <i class="fa-solid fa-chevron-down small"></i>
                         </a>
 
-                        <a href=""
-                            class="sidebar-sublink {{ request()->route('transaksi') === 'siap' ? 'active' : '' }}">
+                        <div class="collapse {{ request()->routeIs('produksi.show', 'produksi.stokmenipis') ? 'show' : '' }}"
+                            id="transaksiMenu" data-bs-parent="#sidebarAccordion">
 
-                            <i class="fa-solid fa-wand-magic-sparkles"></i>
-                            <small>Produk Custom</small>
-                        </a>
+                            <a href="{{ route('produksi.show', ['produksi' => 'reguler']) }}"
+                                class="sidebar-sublink {{ request()->route('produksi') === 'reguler' ? 'active' : '' }}">
+                                <i class="fa-solid fa-box"></i>
+                                <small>Produk Reguler</small>
+                            </a>
 
+                            <a href="" class="sidebar-sublink">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                <small>Produk Custom</small>
+                            </a>
+
+                            <a href="{{ route('produksi.stokmenipis') }}"
+                                class="sidebar-sublink {{ request()->routeIs('produksi.stokmenipis') ? 'active' : '' }}">
+
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-tags"></i>
+                                    <span style="font-size: 13px;">
+                                        Stok Menipis
+                                    </span>
+                                </div>
+                            </a>
+
+                        </div>
                     </div>
-                    <a href="{{ route('produksi.stokmenipis') }}"
-                        class="sidebar-link {{ Request::is('kategori-produk') ? 'active' : '' }}">
-                        <div class="d-flex align-items-center gap-3">
-                            <i class="fa-solid fa-tags"></i>
-                            <span>Stok Menipis</span>
+
+
+                    {{-- Penugasan --}}
+                    <div>
+                        <div class="sidebar-heading mt-3 border-bottom">
+                            # PENUGASAN
                         </div>
 
-                        <span class="badge rounded-pill bg-success">
-                            {{ $produksiMenipis ?? 0 }}
-                        </span>
-                    </a>
+                        <a class="sidebar-link justify-content-between mt-1" data-bs-toggle="collapse"
+                            href="#tugasMenu">
+
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="fa-solid fa-gear"></i>
+                                <span>Dikerjakan</span>
+                            </div>
+
+                            <i class="fa-solid fa-chevron-down small"></i>
+                        </a>
+
+                        <div class="collapse {{ request()->routeIs('penugasan.*') ? 'show' : '' }}" id="tugasMenu"
+                            data-bs-parent="#sidebarAccordion">
+
+                            <a href="{{ route('penugasan.task', ['page' => 'reguler']) }}"
+                                class="sidebar-sublink {{ request('page') === 'reguler' ? 'active' : '' }}">
+
+                                <i class="fa-solid fa-boxes-stacked"></i>
+                                <small>Reguler</small>
+
+                                <span class="badge rounded-pill bg-success text-nowrap">
+                                    {{ $produksi['reguler'] }}
+                                </span>
+                            </a>
+
+                            <a href="{{ route('penugasan.task', ['page' => 'custom']) }}"
+                                class="sidebar-sublink {{ request('page') === 'custom' ? 'active' : '' }}">
+
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                <small>Custom</small>
+
+                                <span class="badge rounded-pill bg-primary text-nowrap">
+                                    0
+                                </span>
+                            </a>
+
+                            <a href="{{ route('penugasan.task', ['page' => 'stok']) }}"
+                                class="sidebar-sublink {{ request('page') === 'stok' ? 'active' : '' }}">
+
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <small>Menipis</small>
+
+                                <span class="badge rounded-pill bg-danger text-nowrap">
+                                    {{ $produksi['stok'] }}
+                                </span>
+                            </a>
+
+                        </div>
+                    </div>
+
                 </div>
+
 
             </nav>
         </aside>

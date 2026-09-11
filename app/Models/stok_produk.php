@@ -10,6 +10,7 @@ class stok_produk extends Model
         'sku_id',
         'jumlah_tersedia',
         'min_stok',
+        'processing',
         'created_at',
         'updated_at'
     ];
