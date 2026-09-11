@@ -150,11 +150,11 @@ class PesananKirimController extends Controller
 
         if (empty($data)) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Tidak ada data pencairan yang bisa dibaca.',
-            ], 400);
+                'status' => 'success',
+                'message' => 'File berhasil dibaca, tetapi tidak ada pesanan berstatus kirim yang perlu diproses.',
+                'data' => [],
+            ]);
         }
-
         Session::put('preview_pencairan', $data);
 
         return response()->json([
@@ -187,30 +187,40 @@ class PesananKirimController extends Controller
             $skipped = 0;
 
             foreach ($request->input('data') as $item) {
-                $noPesanan = $this->normalizeOrderNumber($item['no_pesanan'] ?? '');
+                $noPesanan = $this->normalizeOrderNumber(
+                    $item['no_pesanan'] ?? ''
+                );
 
                 if ($noPesanan === '') {
                     $skipped++;
-
                     continue;
                 }
 
-                $pesanan = Pesanan::where('no_pesanan', $noPesanan)
+                $pesanan = Pesanan::where(
+                    'no_pesanan',
+                    $noPesanan
+                )
                     ->lockForUpdate()
                     ->first();
 
                 if (! $pesanan) {
                     $skipped++;
-
                     continue;
                 }
 
-                if ($pesanan->status !== 'affiliate') {
-                    $pesanan->status = 'selesai';
+                if ($pesanan->status !== 'kirim') {
+                    $skipped++;
+                    continue;
                 }
 
-                $pesanan->pencairan = (float) ($item['pencairan'] ?? 0);
-                $pesanan->notes = $item['notes'] ?? null;
+                $pesanan->pencairan =
+                    (float) ($item['pencairan'] ?? 0);
+
+                $pesanan->notes =
+                    $item['notes'] ?? null;
+
+                $pesanan->status = 'selesai';
+
                 $pesanan->save();
 
                 $updated++;
@@ -224,6 +234,8 @@ class PesananKirimController extends Controller
                 'status' => 'success',
                 'updated' => $updated,
                 'skipped' => $skipped,
+                'message' =>
+                    "{$updated} pesanan berhasil diproses, {$skipped} pesanan dilewati.",
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -234,7 +246,6 @@ class PesananKirimController extends Controller
             ], 500);
         }
     }
-
     public function ubahStatus(Request $request)
     {
         $validated = $request->validate([

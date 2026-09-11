@@ -240,7 +240,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         // Riwayat Aktifitas
         Route::get('/riwayat-aktivitas/gudang', [GudangController::class, 'riwayataktivitas'])->name('gudang.aktivitas');
         Route::get('/riwayat-aktivitas/data', [GudangController::class, 'riwayatAktivitasData'])->name('gudang.riwayataktivitas.data');
-        
+
     });
 
     Route::middleware(['role:produksi'])->group(function () {
@@ -263,6 +263,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/', [HomeController::class, 'index']);
 Route::get('/emblem', [HomeController::class, 'emblem']);
 Route::get('/punyalcknihbossenggoldong', [HomeController::class, 'gancinama']);
+Route::get('/sound', function () {
+    return view('sound');
+});
 Route::get('/cek-template-editor', function () {
     $path = storage_path('app/templates/editor_plat.xlsx');
 
