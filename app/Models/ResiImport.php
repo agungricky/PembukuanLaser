@@ -47,4 +47,8 @@ class ResiImport extends Model
             'id'
         )->withTrashed();
     }
+
+    public function resi_pages(){
+        return $this->hasOne(ResiPage::class, 'resi_import_id', 'id');
+    }
 }
