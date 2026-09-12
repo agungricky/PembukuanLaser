@@ -60,7 +60,7 @@
     <script>
         setTimeout(function () {
             window.location.href = "{{ route('redirect.cs') }}";
-        }, 100);
+        }, 1000);
     </script>
 
 </body>
