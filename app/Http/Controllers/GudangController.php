@@ -32,10 +32,12 @@ class GudangController extends Controller
     protected DashboardService $dashboardService;
     protected TransaksiService $transaksiService;
     public function __construct(
-        DashboardService $dashboardService
+        DashboardService $dashboardService,
+        TransaksiService $transaksiService
     )
     {
         $this->dashboardService = $dashboardService;
+        $this->transaksiService = $transaksiService;
     }
 
     // ==================================================//
