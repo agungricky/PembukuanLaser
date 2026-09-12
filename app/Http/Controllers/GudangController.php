@@ -9,6 +9,7 @@ use App\Models\mutasi_stok;
 use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
 use App\Models\Produk;
+use App\Models\ResiPage;
 use App\Models\retur;
 use App\Models\stok_produk;
 use App\Models\User;
@@ -18,8 +19,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
+use setasign\Fpdi\Fpdi;
 
 class GudangController extends Controller
 {
@@ -255,48 +258,33 @@ class GudangController extends Controller
     public function showdata($filter)
     {
         if ($filter === 'siapkan') {
-            $pesanan = Pesanan::with([
-                'pesanan_per_produk' => function ($query) {
-                    $query->where('custom', 0)
-                        ->with('produk');
-                },
-            ])->where('status', 'proses')
+            $pesanan = Pesanan::where('status', 'proses')->pluck('no_pesanan');
+
+            $pesananPerProduk = PesananPerProduk::with([
+                'produk.stok_produk',
+            ])
+                ->whereIn('no_pesanan', $pesanan)
+                ->where('custom', 0)
+                ->where('status_pesanan', '0')
                 ->get();
 
-            $kebutuhan = [];
-            foreach ($pesanan as $value) {
-                foreach ($value->pesanan_per_produk as $item) {
-                    $sku = $item->sku;
-                    $jumlah = $item->jumlah;
+            $kebutuhanProduk = $pesananPerProduk
+                ->groupBy('sku')
+                ->map(function ($items, $sku) {
+                    $produk = $items->first()->produk;
 
-                    if ($item->status_pesanan == 0) {
-                        if (isset($kebutuhan[$sku])) {
-                            $kebutuhan[$sku] += $jumlah;
-                        } else {
-                            $kebutuhan[$sku] = $jumlah;
-                        }
-                    }
-                }
-            }
-
-            $kebutuhanProduk = [];
-            foreach ($kebutuhan as $sku => $jumlah) {
-                $produk = Produk::with('stok_produk')->where('sku', $sku)->first();
-                $kebutuhanProduk[] = [
-                    'produk' => $produk,
-                    'stok' => $produk->stok_produk->jumlah_tersedia ?? 0,
-                    'kebutuhan' => $jumlah,
-                ];
-            }
-
-            $kebutuhanProduk = collect($kebutuhanProduk)
+                    return [
+                        'produk' => $produk,
+                        'stok' => $produk?->stok_produk?->jumlah_tersedia ?? 0,
+                        'kebutuhan' => $items->sum('jumlah'),
+                    ];
+                })
                 ->sortByDesc(function ($item) {
                     return $item['stok'] >= $item['kebutuhan'];
                 })
                 ->values();
 
             return response()->json($kebutuhanProduk);
-
         } elseif ($filter === 'siap') {
             $kebutuhanProduk = mutasi_stok::with('stok_produk.produk', 'gudang', 'admin_penjualan')
                 ->where('jenis_mutasi', 'siap')
@@ -435,6 +423,190 @@ class GudangController extends Controller
                 'message' => 'Gagal memperbarui status: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    protected function belumdiImport($noPesanan)
+    {
+        $resiPages = ResiPage::with('resi_imports')->whereIn('no_pesanan', $noPesanan)->get();
+        $pesananDitemukan = $resiPages->pluck('no_pesanan')->unique();
+        $pesananTidakDitemukan = collect($noPesanan)->diff($pesananDitemukan);
+        $tidakDitemukan = Pesanan::join(
+            'pesanan_per_produk',
+            'pesanan.no_pesanan',
+            '=',
+            'pesanan_per_produk.no_pesanan'
+        )
+            ->whereIn('pesanan.no_pesanan', $pesananTidakDitemukan)
+            ->get([
+                'pesanan.no_pesanan',
+                'pesanan.no_resi',
+                'pesanan_per_produk.sku',
+            ]);
+
+        if ($pesananTidakDitemukan->isNotEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terdapat Pesanan yang Resinya Belum di Import.',
+                'tidak_ditemukan' => $tidakDitemukan->values(),
+            ], 422);
+        }
+    }
+
+    public function previewResi($token)
+    {
+        $folder = 'temp/resi/'.$token;
+
+        if (! Storage::disk('local')->exists($folder)) {
+            abort(404, 'Folder resi tidak ditemukan.');
+        }
+
+        $files = Storage::disk('local')->files($folder);
+
+        if (empty($files)) {
+            abort(404, 'PDF resi tidak ditemukan.');
+        }
+
+        $path = Storage::disk('local')->path(
+            $files[0]
+        );
+
+        return response()->file($path, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="preview-resi.pdf"',
+        ]);
+    }
+
+    public function cetakResi(Request $request)
+    {
+        $request->validate([
+            'sku' => ['required', 'array', 'min:1'],
+            'sku.*' => ['required', 'string'],
+        ]);
+
+        $mutasi = mutasi_stok::whereIn('id', $request->sku)->get();
+
+        $noPesanan = PesananPerProduk::whereIn(
+            'mutasi_stok_id',
+            $mutasi->pluck('id')
+        )
+            ->distinct()
+            ->pluck('no_pesanan');
+
+        $cekImport = $this->belumdiImport($noPesanan);
+
+        if ($cekImport) {
+            return $cekImport;
+        }
+
+        $resiPages = ResiPage::select(
+            'id',
+            'no_pesanan',
+            'resi_import_id',
+            'halaman',
+            'urutan'
+        )
+            ->with([
+                'resi_imports:id,path_file,nama_file',
+            ])
+            ->whereIn('no_pesanan', $noPesanan)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'no_pesanan' => $item->no_pesanan,
+                    'resi_import_id' => $item->resi_import_id,
+                    'halaman' => $item->halaman,
+                    'urutan' => $item->urutan,
+                    'path_file' => $item->resi_imports?->path_file,
+                    'nama_file' => $item->resi_imports?->nama_file,
+                ];
+            });
+
+        // BUAT TOKEN
+        $token = (string) Str::uuid();
+
+        // FOLDER TEMP
+        $tempFolder = 'temp/resi/'.$token;
+
+        Storage::disk('local')->makeDirectory($tempFolder);
+
+        $hasilPotong = [];
+
+        foreach ($resiPages as $item) {
+
+            $sourcePath = Storage::disk('local')->path(
+                $item['path_file']
+            );
+
+            $pdf = new Fpdi;
+
+            // Baca PDF sumber
+            $pageCount = $pdf->setSourceFile($sourcePath);
+
+            // Cek halaman
+            if (
+                $item['halaman'] < 1 ||
+                $item['halaman'] > $pageCount
+            ) {
+                throw new Exception(
+                    'Halaman '.$item['halaman'].
+                    ' tidak ditemukan pada file '.
+                    $item['nama_file']
+                );
+            }
+
+            // Ambil halaman
+            $templateId = $pdf->importPage(
+                $item['halaman']
+            );
+
+            $size = $pdf->getTemplateSize(
+                $templateId
+            );
+
+            // Buat halaman baru
+            $pdf->AddPage(
+                $size['orientation'],
+                [
+                    $size['width'],
+                    $size['height'],
+                ]
+            );
+
+            $pdf->useTemplate($templateId);
+
+            // Nama file berdasarkan no pesanan
+            $namaFile = $item['no_pesanan'].'.pdf';
+
+            $relativePath = $tempFolder.'/'.$namaFile;
+
+            $outputPath = Storage::disk('local')->path(
+                $relativePath
+            );
+
+            // Simpan PDF
+            $pdf->Output(
+                'F',
+                $outputPath
+            );
+
+            $hasilPotong[] = [
+                'no_pesanan' => $item['no_pesanan'],
+                'halaman' => $item['halaman'],
+                'path' => $relativePath,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Resi berhasil diproses.',
+            'preview_url' => route(
+                'transaksi.preview-resi',
+                [
+                    'token' => $token,
+                ]
+            ),
+        ]);
     }
 
     // ==================================================//
@@ -670,6 +842,7 @@ class GudangController extends Controller
 
         } catch (\Throwable $e) {
             DB::rollBack();
+
             return response()->json([
                 'status' => false,
                 'message' => $e->getMessage(),

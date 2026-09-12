@@ -47,7 +47,7 @@
                             Tandai Sudah Disiapkan
                         </button>
                     @elseif ($id === 'siap')
-                        <button type="button" class="btn btn-danger btn-sm text-nowrap">
+                        <button type="button" id="cetakResi" class="btn btn-danger btn-sm text-nowrap">
                             <i class="fa-solid fa-print me-1"></i>
                             Cetak Resi
                         </button>
@@ -379,14 +379,14 @@
                                                 (item.produk?.stok_produk?.jumlah_tersedia ?? 0) >= (item.kebutuhan ?? 0)
                                                 ? 
                                                 `
-                                                                                                                    <span class="badge bg-success">Tersedia</span>
-                                                                                                                `
+                                                                                                                                        <span class="badge bg-success">Tersedia</span>
+                                                                                                                                    `
                                                 : 
                                                 
                                                 `
-                                                                                                                    <span class="badge bg-danger">Kurang</span>
-                                                                                                                    <input type="hidden" class="status-stok" value="kurang">
-                                                                                                                `
+                                                                                                                                        <span class="badge bg-danger">Kurang</span>
+                                                                                                                                        <input type="hidden" class="status-stok" value="kurang">
+                                                                                                                                    `
                                             }
                                         </td>
                                         <td class="py-3 px-4 text-center">
@@ -525,40 +525,40 @@
 
                                 ${filter === 'diambil' ? 
                                     `
-                                                            <td class="py-0 px-4 text-center">
-                                                                <div class="text-muted text-uppercase fw-semibold"
-                                                                    style="font-size: 9px; line-height: 1.1;">
-                                                                    Diambil Oleh
-                                                                </div>
+                                                                                <td class="py-0 px-4 text-center">
+                                                                                    <div class="text-muted text-uppercase fw-semibold"
+                                                                                        style="font-size: 9px; line-height: 1.1;">
+                                                                                        Diambil Oleh
+                                                                                    </div>
 
-                                                                <div class="fw-bold text-dark py-1"
-                                                                    style="font-size: 16px; line-height: 1.1;">
-                                                                    ${item.admin_penjualan?.name ?? '-'}
-                                                                </div>
+                                                                                    <div class="fw-bold text-dark py-1"
+                                                                                        style="font-size: 16px; line-height: 1.1;">
+                                                                                        ${item.admin_penjualan?.name ?? '-'}
+                                                                                    </div>
 
-                                                                <div class="text-muted d-flex align-items-center justify-content-center gap-2"
-                                                                    style="font-size: 10px; line-height: 1.1;">
-                                                                    <span>
-                                                                        <i class="fa-regular fa-calendar"></i>
-                                                                        ${ item.updated_at
-                                                                                ? new Date(item.updated_at).toLocaleDateString('id-ID')
-                                                                                : '-'
-                                                                        }
-                                                                    </span>
-                                                                    <span>
-                                                                        <i class="fa-regular fa-clock"></i>
-                                                                        ${
-                                                                            item.updated_at
-                                                                                ? new Date(item.updated_at).toLocaleTimeString('id-ID', {
-                                                                                    hour: '2-digit',
-                                                                                    minute: '2-digit'
-                                                                                })
-                                                                                : '-'
-                                                                        }
-                                                                    </span>
-                                                                </div>
-                                                            </td>
-                                                        `
+                                                                                    <div class="text-muted d-flex align-items-center justify-content-center gap-2"
+                                                                                        style="font-size: 10px; line-height: 1.1;">
+                                                                                        <span>
+                                                                                            <i class="fa-regular fa-calendar"></i>
+                                                                                            ${ item.updated_at
+                                                                                                    ? new Date(item.updated_at).toLocaleDateString('id-ID')
+                                                                                                    : '-'
+                                                                                            }
+                                                                                        </span>
+                                                                                        <span>
+                                                                                            <i class="fa-regular fa-clock"></i>
+                                                                                            ${
+                                                                                                item.updated_at
+                                                                                                    ? new Date(item.updated_at).toLocaleTimeString('id-ID', {
+                                                                                                        hour: '2-digit',
+                                                                                                        minute: '2-digit'
+                                                                                                    })
+                                                                                                    : '-'
+                                                                                            }
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </td>
+                                                                            `
                                     : '-'
                                 }
 
@@ -1103,6 +1103,107 @@
                 );
 
                 modal.show();
+            });
+
+            // Cetak Resi
+            $('#cetakResi').on('click', function() {
+                const selected = $('.item-checkbox:checked');
+
+                if (selected.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Belum Ada Barang',
+                        text: 'Silakan pilih barang terlebih dahulu.'
+                    });
+                    return;
+                }
+
+                const selectedSku = selected.map(function() {
+                    return $(this).val();
+                }).get();
+
+                console.log(selectedSku);
+
+                $.ajax({
+                    type: "GET",
+                    url: "{{ route('transaksi.cetak-resi') }}",
+                    data: {
+                        sku: selectedSku
+                    },
+                    dataType: "json",
+                    success: function(response) {
+
+                        if (response.success && response.preview_url) {
+                            window.open(response.preview_url, '_blank');
+                            return;
+                        }
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: response.message ?? 'Resi berhasil diproses.'
+                        });
+                    },
+
+                    error: function(xhr) {
+                        const response = xhr.responseJSON;
+                        console.log(response);
+
+                        if (xhr.status === 422 && response?.tidak_ditemukan) {
+                            const rows = response.tidak_ditemukan
+                                .map((item, index) => `
+                                        <tr>
+                                            <td>${index + 1}</td>
+                                            <td>${item.no_pesanan ?? '-'}</td>
+                                            <td>${item.no_resi ?? '-'}</td>
+                                            <td>
+                                                <span class="badge bg-danger">
+                                                    ${item.sku ?? '-'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    `)
+                                .join('');
+
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Pemberitahuan',
+                                width: 700,
+                                html: `
+                                    <div class="text-center mb-3">
+                                        ${response.message ?? 'Beberapa pesanan belum memiliki resi.'}
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-striped table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 60px;">No</th>
+                                                    <th>No. Pesanan</th>
+                                                    <th>No. Resi</th>
+                                                    <th style="width: 180px;">SKU</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${rows}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                `,
+                                confirmButtonText: 'OK'
+                            });
+
+                            return;
+                        }
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: response?.message ??
+                                'Terjadi kesalahan saat memproses resi.'
+                        });
+                    }
+                });
             });
         });
     </script>

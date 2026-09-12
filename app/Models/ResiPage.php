@@ -38,4 +38,8 @@ class ResiPage extends Model
             'no_pesanan'
         );
     }
+
+    public function resi_imports(){
+        return $this->belongsTo(ResiImport::class, 'resi_import_id', 'id');
+    }
 }
