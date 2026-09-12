@@ -14,6 +14,7 @@ use App\Models\retur;
 use App\Models\stok_produk;
 use App\Models\User;
 use App\Services\Gudang\DashboardService;
+use App\Services\Gudang\TransaksiService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -29,7 +30,10 @@ class GudangController extends Controller
 {
 
     protected DashboardService $dashboardService;
-    public function __construct(DashboardService $dashboardService)
+    protected TransaksiService $transaksiService;
+    public function __construct(
+        DashboardService $dashboardService
+    )
     {
         $this->dashboardService = $dashboardService;
     }
