@@ -292,10 +292,13 @@ Route::get('/cek-template-editor', function () {
     ];
 });
 
-Route::get('/cs', function () {
+Route::get('/cs/redirect', function () {
     $pesan = urlencode('Halo admin bila, saya ingin beli banner sound custom jaring...');
 
     return redirect()->away(
         'https://wa.me/6285334778790?text=' . $pesan
     );
-});
+})->name('redirect.cs');
+
+
+Route::view('/cs', 'cs');
