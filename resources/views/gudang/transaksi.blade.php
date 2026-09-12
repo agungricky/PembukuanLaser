@@ -132,6 +132,7 @@
                                     <th>Pengiriman</th>
                                     <th class="text-center">Status</th>
                                     <th>Tanggal Order</th>
+                                    <th>Aksi</th>
                                 </tr>
                             </thead>
 
@@ -249,6 +250,9 @@
             let filter = "{{ $id }}";
             let selected = [];
             let pengambilbarang = null;
+
+            // Untuk menandai dan mengecek pesanan terlewat saat scan
+            let cekDetail = [];
 
             $('#pengambil_id').select2({
                 theme: 'bootstrap-5',
@@ -379,14 +383,14 @@
                                                 (item.produk?.stok_produk?.jumlah_tersedia ?? 0) >= (item.kebutuhan ?? 0)
                                                 ? 
                                                 `
-                                                                                                                                        <span class="badge bg-success">Tersedia</span>
-                                                                                                                                    `
+                                                                                                                                                                                <span class="badge bg-success">Tersedia</span>
+                                                                                                                                                                            `
                                                 : 
                                                 
                                                 `
-                                                                                                                                        <span class="badge bg-danger">Kurang</span>
-                                                                                                                                        <input type="hidden" class="status-stok" value="kurang">
-                                                                                                                                    `
+                                                                                                                                                                                <span class="badge bg-danger">Kurang</span>
+                                                                                                                                                                                <input type="hidden" class="status-stok" value="kurang">
+                                                                                                                                                                            `
                                             }
                                         </td>
                                         <td class="py-3 px-4 text-center">
@@ -525,40 +529,40 @@
 
                                 ${filter === 'diambil' ? 
                                     `
-                                                                                <td class="py-0 px-4 text-center">
-                                                                                    <div class="text-muted text-uppercase fw-semibold"
-                                                                                        style="font-size: 9px; line-height: 1.1;">
-                                                                                        Diambil Oleh
-                                                                                    </div>
+                                                                                                                        <td class="py-0 px-4 text-center">
+                                                                                                                            <div class="text-muted text-uppercase fw-semibold"
+                                                                                                                                style="font-size: 9px; line-height: 1.1;">
+                                                                                                                                Diambil Oleh
+                                                                                                                            </div>
 
-                                                                                    <div class="fw-bold text-dark py-1"
-                                                                                        style="font-size: 16px; line-height: 1.1;">
-                                                                                        ${item.admin_penjualan?.name ?? '-'}
-                                                                                    </div>
+                                                                                                                            <div class="fw-bold text-dark py-1"
+                                                                                                                                style="font-size: 16px; line-height: 1.1;">
+                                                                                                                                ${item.admin_penjualan?.name ?? '-'}
+                                                                                                                            </div>
 
-                                                                                    <div class="text-muted d-flex align-items-center justify-content-center gap-2"
-                                                                                        style="font-size: 10px; line-height: 1.1;">
-                                                                                        <span>
-                                                                                            <i class="fa-regular fa-calendar"></i>
-                                                                                            ${ item.updated_at
-                                                                                                    ? new Date(item.updated_at).toLocaleDateString('id-ID')
-                                                                                                    : '-'
-                                                                                            }
-                                                                                        </span>
-                                                                                        <span>
-                                                                                            <i class="fa-regular fa-clock"></i>
-                                                                                            ${
-                                                                                                item.updated_at
-                                                                                                    ? new Date(item.updated_at).toLocaleTimeString('id-ID', {
-                                                                                                        hour: '2-digit',
-                                                                                                        minute: '2-digit'
-                                                                                                    })
-                                                                                                    : '-'
-                                                                                            }
-                                                                                        </span>
-                                                                                    </div>
-                                                                                </td>
-                                                                            `
+                                                                                                                            <div class="text-muted d-flex align-items-center justify-content-center gap-2"
+                                                                                                                                style="font-size: 10px; line-height: 1.1;">
+                                                                                                                                <span>
+                                                                                                                                    <i class="fa-regular fa-calendar"></i>
+                                                                                                                                    ${ item.updated_at
+                                                                                                                                            ? new Date(item.updated_at).toLocaleDateString('id-ID')
+                                                                                                                                            : '-'
+                                                                                                                                    }
+                                                                                                                                </span>
+                                                                                                                                <span>
+                                                                                                                                    <i class="fa-regular fa-clock"></i>
+                                                                                                                                    ${
+                                                                                                                                        item.updated_at
+                                                                                                                                            ? new Date(item.updated_at).toLocaleTimeString('id-ID', {
+                                                                                                                                                hour: '2-digit',
+                                                                                                                                                minute: '2-digit'
+                                                                                                                                            })
+                                                                                                                                            : '-'
+                                                                                                                                    }
+                                                                                                                                </span>
+                                                                                                                            </div>
+                                                                                                                        </td>
+                                                                                                                    `
                                     : '-'
                                 }
 
@@ -1057,6 +1061,14 @@
                                             ${item.pesanan.toko.nama_toko ?? '-'}
                                         </div>
                                     </td>
+                                    <td>
+                                        <button type="button"
+                                            class="btn btn-success btn-sm btn-selesai"
+                                            data-no-pesanan="${pesanan.no_pesanan}"
+                                            ${cekDetail.includes(pesanan.no_pesanan) ? 'disabled' : ''}>
+                                            Selesai
+                                        </button>
+                                    </td>
                                 </tr>
                             `);
                         });
@@ -1104,6 +1116,46 @@
 
                 modal.show();
             });
+
+            $(document).on('click', '.btn-selesai', function() {
+                const noPesanan = String($(this).data('no-pesanan')).trim();
+                if (!cekDetail.includes(noPesanan)) {
+                    cekDetail.push(noPesanan);
+                }
+                $(this).prop('disabled', true);
+            });
+
+            $(document).on('hidden.bs.modal', '#detailModal', function() {
+                if (cekDetail.length > 0) {
+
+                    $.ajax({
+                        type: "POST",
+                        url: "{{ route('transaksi.update.selesai') }}",
+                        data: {
+                            no_pesanan: cekDetail,
+                            _token: "{{ csrf_token() }}"
+                        },
+                        dataType: "json",
+                        success: function(response) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Data Berhasil Diubah',
+                                text: 'Data telah berubah. Kami akan memperbarui jumlah kebutuhan.',
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        },
+                        error: function(xhr) {
+                            console.log(xhr.responseText);
+                        }
+                    });
+
+                }
+            });
+
+
+
 
             // Cetak Resi
             $('#cetakResi').on('click', function() {

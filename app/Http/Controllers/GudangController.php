@@ -425,6 +425,25 @@ class GudangController extends Controller
         }
     }
 
+    public function updateselesai(Request $request){
+        $request->validate([
+            'no_pesanan' => 'required',
+        ]);
+
+        PesananPerProduk::whereIn('no_pesanan', $request->no_pesanan)->update([
+            'status_pesanan' => '1',
+        ]);
+
+        Pesanan::whereIn('no_pesanan', $request->no_pesanan)->update([
+            'status' => 'kirim',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Data berhasil diupdate'
+        ]);
+    }
+
     protected function belumdiImport($noPesanan)
     {
         $resiPages = ResiPage::with('resi_imports')->whereIn('no_pesanan', $noPesanan)->get();
