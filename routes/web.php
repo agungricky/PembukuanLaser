@@ -293,5 +293,9 @@ Route::get('/cek-template-editor', function () {
 });
 
 Route::get('/cs', function () {
-    return redirect()->away('https://wa.me/6285334778790');
+    $pesan = urlencode('Halo admin bila, saya ingin beli banner sound custom jaring...');
+
+    return redirect()->away(
+        'https://wa.me/6285334778790?text=' . $pesan
+    );
 });
