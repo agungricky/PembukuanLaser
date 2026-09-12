@@ -291,3 +291,7 @@ Route::get('/cek-template-editor', function () {
             : null,
     ];
 });
+
+Route::get('/cs', function () {
+    return redirect()->away('https://wa.me/6285334778790');
+});
