@@ -212,7 +212,8 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/kebutuhan/detail-pesanan/{filter}/{sku}', [GudangController::class, 'detailpesanan'])->name('kebutuhan.detailpesanan');
 
         // Transaksi
-        Route::resource('/transaksi', GudangController::class);
+        // Route::resource('/transaksi', GudangController::class);
+        Route::get('/transaksi/perludisiapkan', [GudangController::class, 'perludisiapkan'])->name('transaksi.perludisiapkan');
         Route::get('/show/{filter}', [GudangController::class, 'showdata'])->name('showdata.json');
         Route::post('/transaksi/update-status', [GudangController::class, 'updateStatus'])->name('transaksi.updatestatus');
 
