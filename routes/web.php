@@ -305,3 +305,4 @@ Route::get('/cs/redirect', function () {
 
 Route::get('/dashboard/admin-cs', [rotatorController::class, 'index'])->name('rotator.index');
 Route::redirect('/', '/login');
+// Login
