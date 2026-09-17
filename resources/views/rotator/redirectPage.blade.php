@@ -8,6 +8,41 @@
         content="Emblem sound custom akrilik dengan UV DTF timbul. Bisa pakai logo sendiri, edit gratis, kuat menempel, tahan panas dan hujan." />
     <title>Emblem Sound Custom</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <!-- Meta Pixel Code -->
+    <script>
+        ! function(f, b, e, v, n, t, s) {
+            if (f.fbq) return;
+            n = f.fbq = function() {
+                n.callMethod ?
+                    n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+            };
+            if (!f._fbq) f._fbq = n;
+            n.push = n;
+            n.loaded = !0;
+            n.version = '2.0';
+            n.queue = [];
+            t = b.createElement(e);
+            t.async = !0;
+            t.src = v;
+            s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s)
+        }(window, document, 'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+
+        fbq('init', '1234805588838630');
+
+        fbq('track', 'PageView');
+
+        fbq('track', 'ViewContent', {
+            content_name: 'Emblem Sound Custom'
+        });
+    </script>
+
+    <noscript>
+        <img height="1" width="1" style="display:none"
+            src="https://www.facebook.com/tr?id=1234805588838630&ev=PageView&noscript=1" />
+    </noscript>
+    <!-- End Meta Pixel Code -->
     <style>
         :root {
             --paper: #f6f7fb;
@@ -961,15 +996,15 @@
         }
     </style>
     <style>
-      .chip i {
-                margin-right: 6px;
-                color: #7c3aed;
-            }
+        .chip i {
+            margin-right: 6px;
+            color: #7c3aed;
+        }
 
-            .btn-wa i {
-                font-size: 24px;
-                vertical-align: middle;
-            }
+        .btn-wa i {
+            font-size: 24px;
+            vertical-align: middle;
+        }
     </style>
 
 </head>
