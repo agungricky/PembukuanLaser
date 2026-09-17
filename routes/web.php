@@ -304,5 +304,4 @@ Route::get('/cs/redirect', function () {
 })->name('redirect.cs');
 
 Route::get('/dashboard/admin-cs', [rotatorController::class, 'index'])->name('rotator.index');
-
-// Halo Hai
+Route::redirect('/', '/login');
