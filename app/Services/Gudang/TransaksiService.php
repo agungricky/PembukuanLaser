@@ -13,12 +13,310 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use setasign\Fpdi\Fpdi;
+use Yajra\DataTables\Facades\DataTables;
 
 class TransaksiService
 {
+    public function detailpesanan($filter, $sku)
+    {
+        if ($filter === 'siapkan') {
+            $data = PesananPerProduk::with('pesanan.toko', 'produk')
+                ->where('sku', $sku)
+                ->where('status_pesanan', '0')
+                ->whereHas('pesanan', function ($query) {
+                    $query->where('status', 'proses');
+                })->get();
+
+            return response()->json($data);
+        } else {
+            $kebutuhanProduk = PesananPerProduk::with('pesanan.toko', 'produk')->where('mutasi_stok_id', $sku)->get();
+
+            return response()->json($kebutuhanProduk);
+        }
+    }
+
+    private function siapkan()
+    {
+        $tanggalAwal = now()->subDays(6)->startOfDay();
+        $tanggalAkhir = now()->endOfDay();
+
+        // =========================================================
+        // QUERY UTAMA YAJRA
+        // =========================================================
+        $data = Pesanan::query()
+            ->with('pesanan_per_produk', 'toko')
+            ->where('status', 'proses')
+            ->whereBetween('tanggal', [
+                $tanggalAwal,
+                $tanggalAkhir,
+            ])
+            ->orderByRaw('batas_kirim_at IS NULL ASC')
+            ->orderBy('batas_kirim_at', 'ASC');
+
+        $marketplace = request('marketplace');
+        if (! empty($marketplace)) {
+            $data->whereHas('toko', function ($query) use ($marketplace) {
+                $query->where(
+                    'marketplace',
+                    $marketplace
+                );
+            });
+        }
+
+        // =========================================================
+        // AMBIL ANTRIAN PESANAN UNTUK PERHITUNGAN STOK
+        // =========================================================
+        $antrian = Pesanan::query()
+            ->select([
+                'no_pesanan',
+                'batas_kirim_at',
+            ])
+            ->with([
+                'pesanan_per_produk' => function ($query) {
+                    $query->select([
+                        'id_per_produk',
+                        'no_pesanan',
+                        'sku',
+                        'jumlah',
+                    ]);
+                },
+            ])
+            ->where('status', 'proses')
+            ->whereBetween('tanggal', [
+                $tanggalAwal,
+                $tanggalAkhir,
+            ])
+            ->orderByRaw('batas_kirim_at IS NULL ASC')
+            ->orderBy('batas_kirim_at', 'ASC')
+            ->get();
+
+        // =========================================================
+        // AMBIL SEMUA SKU
+        // =========================================================
+        $semuaSku = $antrian
+            ->pluck('pesanan_per_produk')
+            ->flatten()
+            ->pluck('sku')
+            ->filter()
+            ->unique()
+            ->values();
+
+        // =========================================================
+        // AMBIL STOK
+        // =========================================================
+        $stokProduk = stok_produk::query()
+            ->whereIn('sku_id', $semuaSku)
+            ->pluck(
+                'jumlah_tersedia',
+                'sku_id'
+            );
+
+        // =========================================================
+        // HITUNG ALOKASI STOK
+        // =========================================================
+        $sisaStok = [];
+        $alokasiStok = [];
+        foreach ($antrian as $pesanan) {
+            foreach ($pesanan->pesanan_per_produk as $item) {
+                $sku = $item->sku;
+                $jumlah = (int) $item->jumlah;
+
+                // Pertama kali SKU ditemukan
+                if (! array_key_exists($sku, $sisaStok)) {
+
+                    $sisaStok[$sku] = (int) (
+                        $stokProduk[$sku] ?? 0
+                    );
+                }
+
+                $stokSebelum = $sisaStok[$sku];
+
+                // Apakah stok cukup untuk pesanan ini?
+                $tersedia = $stokSebelum >= $jumlah;
+
+                // Kurangi stok berdasarkan urutan pesanan
+                $sisaStok[$sku] = max(
+                    0,
+                    $stokSebelum - $jumlah
+                );
+
+                $alokasiStok[$item->id_per_produk] = [
+                    'stok_awal' => $stokSebelum,
+                    'jumlah' => $jumlah,
+                    'stok_sisa' => $sisaStok[$sku],
+                    'tersedia' => $tersedia,
+                ];
+            }
+        }
+
+        // =========================================================
+        // TENTUKAN STATUS STOK PER PESANAN
+        //
+        // Semua item tersedia = Tersedia
+        // Ada satu item kurang = Kurang
+        // =========================================================
+        $pesananTersedia = [];
+        foreach ($antrian as $pesanan) {
+            $semuaTersedia = true;
+            foreach ($pesanan->pesanan_per_produk as $item) {
+                $tersedia =
+                    $alokasiStok[$item->id_per_produk]['tersedia']
+                    ?? false;
+
+                if (! $tersedia) {
+                    $semuaTersedia = false;
+                    break;
+                }
+            }
+
+            if ($semuaTersedia) {
+                $pesananTersedia[] =
+                    $pesanan->no_pesanan;
+            }
+        }
+
+        $pesananTersedia = array_values(
+            array_unique($pesananTersedia)
+        );
+
+        // =========================================================
+        // DATATABLE
+        // =========================================================
+        return DataTables::eloquent($data)
+            // =====================================================
+            // TAMBAHKAN STATUS STOK KE PESANAN_PER_PRODUK
+            // =====================================================
+            ->editColumn('pesanan_per_produk', function ($pesanan) use ($alokasiStok, $stokProduk) {
+
+                return $pesanan->pesanan_per_produk
+                    ->map(function ($item) use ($alokasiStok, $stokProduk) {
+
+                        $alokasi = $alokasiStok[$item->id_per_produk] ?? null;
+
+                        return [
+                            'id_per_produk' => $item->id_per_produk,
+                            'no_pesanan' => $item->no_pesanan,
+                            'sku' => $item->sku,
+                            'nama_produk' => $item->nama_produk,
+                            'variasi' => $item->variasi,
+                            'jumlah' => $item->jumlah,
+
+                            // STOK ASLI DATABASE
+                            'stok_total' => (int) ($stokProduk[$item->sku] ?? 0),
+
+                            // ALOKASI ANTRIAN
+                            'stok_awal' => $alokasi['stok_awal'] ?? 0,
+                            'stok_sisa' => $alokasi['stok_sisa'] ?? 0,
+                            'tersedia' => $alokasi['tersedia'] ?? false,
+                        ];
+
+                    })
+                    ->values()
+                    ->toArray();
+
+            })
+
+            // =====================================================
+            // SEARCH SKU
+            // =====================================================
+            ->filterColumn(
+                'pesanan_per_produk',
+                function ($query, $keyword) {
+                    $keyword = trim($keyword);
+                    $query->whereHas(
+                        'pesanan_per_produk',
+                        function ($q) use ($keyword) {
+                            $q->where(
+                                'sku',
+                                'like',
+                                $keyword.'%'
+                            );
+
+                        }
+                    );
+
+                }
+            )
+
+            // =====================================================
+            // SEARCH TOKO
+            // =====================================================
+            ->filterColumn(
+                'no_resi',
+                function ($query, $keyword) {
+                    $keyword = trim($keyword);
+                    $query->whereHas(
+                        'toko',
+                        function ($q) use ($keyword) {
+                            $q->where(
+                                'nama_toko',
+                                'like',
+                                '%'.$keyword.'%'
+                            );
+
+                        }
+                    );
+                }
+            )
+
+            // =====================================================
+            // ORDER STATUS STOK
+            //
+            // ASC  = Tersedia dulu
+            // DESC = Kurang dulu
+            // =====================================================
+            ->orderColumn(
+                'status_stok',
+                function ($query, $order) use ($pesananTersedia) {
+                    $order = strtolower($order) === 'desc' ? 'DESC' : 'ASC';
+
+                    // Hapus order bawaan sementara
+                    // ketika kolom stok diklik
+                    $query->reorder();
+                    if (! empty($pesananTersedia)) {
+                        $placeholders = implode(
+                            ',',
+                            array_fill(
+                                0,
+                                count($pesananTersedia),
+                                '?'
+                            )
+                        );
+
+                        $query->orderByRaw(
+                            "
+                        CASE
+                            WHEN no_pesanan IN ($placeholders)
+                                THEN 0
+                            ELSE 1
+                        END {$order}
+                        ",
+                            $pesananTersedia
+                        );
+                    }
+
+                    // Kalau status sama,
+                    // tetap urut berdasarkan batas kirim
+                    $query
+                        ->orderByRaw(
+                            'batas_kirim_at IS NULL ASC'
+                        )
+                        ->orderBy(
+                            'batas_kirim_at',
+                            'ASC'
+                        );
+
+                }
+            )
+
+            ->toJson();
+    }
+
     public function showdata($filter)
     {
         if ($filter === 'siapkan') {
+            return $this->siapkan();
+        } elseif ($filter === 'siap') {
             $pesanan = Pesanan::where('status', 'proses')->pluck('no_pesanan');
 
             $pesananPerProduk = PesananPerProduk::with([
@@ -44,13 +342,6 @@ class TransaksiService
                     return $item['stok'] >= $item['kebutuhan'];
                 })
                 ->values();
-
-            return response()->json($kebutuhanProduk);
-        } elseif ($filter === 'siap') {
-            $kebutuhanProduk = mutasi_stok::with('stok_produk.produk', 'gudang', 'admin_penjualan')
-                ->where('jenis_mutasi', 'siap')
-                ->orderBy('updated_at', 'DESC')
-                ->get();
 
             return response()->json($kebutuhanProduk);
 
@@ -260,9 +551,19 @@ class TransaksiService
     public function cetakResi(Request $request)
     {
         $request->validate([
-            'sku' => ['required', 'array', 'min:1'],
-            'sku.*' => ['required', 'string'],
+            'pesanan' => 'required|array|min:1',
+            'pesanan.*' => 'required|string',
+            'kebutuhan' => 'required|array|min:1',
+            'kebutuhan.*.sku' => 'required|string',
+            'kebutuhan.*.nama_produk' => 'required|string',
+            'kebutuhan.*.stok_awal' => 'required|integer|min:0',
+            'kebutuhan.*.kebutuhan' => 'required|integer|min:1',
+            'alasan_export' => 'required|string',
         ]);
+
+        $pesanan = ResiPage::with('resi_imports')->whereIn('no_pesanan', $request->pesanan)->get();
+        dd($pesanan);
+
 
         $mutasi = mutasi_stok::whereIn('id', $request->sku)->get();
 

@@ -203,24 +203,4 @@ class DashboardService
 
         return response()->json($data);
     }
-
-    public function detailpesanan($filter, $sku)
-    {
-        if ($filter === 'siapkan') {
-            $data = PesananPerProduk::with('pesanan.toko', 'produk')
-                ->where('sku', $sku)
-                ->where('status_pesanan', '0')
-                ->whereHas('pesanan', function ($query) {
-                    $query->where('status', 'proses');
-                })->get();
-
-            return response()->json($data);
-
-        } else {
-            $kebutuhanProduk = PesananPerProduk::with('pesanan.toko', 'produk')->where('mutasi_stok_id', $sku)->get();
-
-            return response()->json($kebutuhanProduk);
-
-        }
-    }
 }

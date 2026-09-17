@@ -15,7 +15,8 @@
         "picqer/php-barcode-generator": "^3.2",
         "setasign/fpdf": "^1.9",
         "setasign/fpdi": "^2.6",
-        "smalot/pdfparser": "^2.12"
+        "smalot/pdfparser": "^2.12",
+        "yajra/laravel-datatables-oracle": "^12.7"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

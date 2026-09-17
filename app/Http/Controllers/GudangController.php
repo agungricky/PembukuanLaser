@@ -2,17 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\gudangStokExport;
-use App\Imports\stokImport;
 use App\Models\kategori;
-use App\Models\mutasi_stok;
-use App\Models\Pesanan;
-use App\Models\PesananPerProduk;
 use App\Models\Produk;
-use App\Models\ResiPage;
 use App\Models\retur;
-use App\Models\stok_produk;
-use App\Models\User;
 use App\Services\Gudang\CustomService;
 use App\Services\Gudang\DashboardService;
 use App\Services\Gudang\KategoriService;
@@ -21,27 +13,24 @@ use App\Services\Gudang\ReturService;
 use App\Services\Gudang\RiwayatAktivitasService;
 use App\Services\Gudang\SampleService;
 use App\Services\Gudang\TransaksiService;
-use Carbon\Carbon;
-use Exception;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Maatwebsite\Excel\Facades\Excel;
-use setasign\Fpdi\Fpdi;
 
 class GudangController extends Controller
 {
-
     protected DashboardService $dashboardService;
+
     protected TransaksiService $transaksiService;
+
     protected SampleService $sampleService;
+
     protected ReturService $returService;
+
     protected CustomService $customService;
+
     protected ProdukService $produkService;
+
     protected KategoriService $kategoriService;
+
     protected RiwayatAktivitasService $riwayatAktivitasService;
 
     public function __construct(
@@ -53,8 +42,7 @@ class GudangController extends Controller
         ProdukService $produkService,
         KategoriService $kategoriService,
         RiwayatAktivitasService $riwayatAktivitasService
-    )
-    {
+    ) {
         $this->dashboardService = $dashboardService;
         $this->transaksiService = $transaksiService;
         $this->sampleService = $sampleService;
@@ -93,20 +81,23 @@ class GudangController extends Controller
         return $this->dashboardService->detailcard($card);
     }
 
-    public function detailpesanan($filter, $sku)
-    {
-        return $this->detailpesanan($filter, $sku);
-    }
-
     // ==================================================//
     // ================== TRANSAKSI =====================//
     // ==================================================//
-    public function perludisiapkan(){
-        return view('')
-    }
-    public function show(string $id)
+    public function show(string $page)
     {
-        return view('gudang.transaksi', compact('id'));
+        if ($page === 'siapkan') {
+            return view('gudang.siapkan', compact('page'));
+        } elseif ($page === 'siap') {
+            return view('gudang.siap', compact('page'));
+        } else {
+            return view('gudang.diambil', compact('page'));
+        }
+    }
+
+    public function detailpesanan($filter, $sku)
+    {
+        return $this->transaksiService->detailpesanan($filter, $sku);
     }
 
     public function showdata($filter)
@@ -124,7 +115,8 @@ class GudangController extends Controller
         return $this->transaksiService->updateStatus($request);
     }
 
-    public function updateselesai(Request $request){
+    public function updateselesai(Request $request)
+    {
         return $this->transaksiService->updateselesai($request);
     }
 
@@ -234,6 +226,6 @@ class GudangController extends Controller
 
     public function riwayatAktivitasData(Request $request)
     {
-       $this->riwayatAktivitasService->riwayatAktivitasData($request);
+        $this->riwayatAktivitasService->riwayatAktivitasData($request);
     }
 }

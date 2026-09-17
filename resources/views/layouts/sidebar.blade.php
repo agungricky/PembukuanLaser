@@ -371,22 +371,22 @@
                     <div class="collapse {{ request()->routeIs('transaksi.*', 'gudang.sampel', 'gudang.retur', 'produk-custom.*') ? 'show' : '' }}"
                         id="transaksiMenu">
 
-                        <a href="{{ route('transaksi.show', ['transaksi' => 'siapkan']) }}"
-                            class="sidebar-sublink {{ request()->route('transaksi') === 'siapkan' ? 'active' : '' }}">
+                         <a href="{{ route('transaksi.show', ['page' => 'siapkan']) }}"
+                            class="sidebar-sublink {{ request()->route('page') === 'siapkan' ? 'active' : '' }}">
 
                             <i class="fa-solid fa-box"></i>
                             <small>Perlu Disiapkan</small>
                         </a>
 
-                        <a href="{{ route('transaksi.show', ['transaksi' => 'siap']) }}"
-                            class="sidebar-sublink {{ request()->route('transaksi') === 'siap' ? 'active' : '' }}">
+                        <a href="{{ route('transaksi.show', ['page' => 'siap']) }}"
+                            class="sidebar-sublink {{ request()->route('page') === 'siap' ? 'active' : '' }}">
 
                             <i class="fa-solid fa-box-open"></i>
                             <small>Siap Diambil</small>
                         </a>
 
-                        <a href="{{ route('transaksi.show', ['transaksi' => 'diambil']) }}"
-                            class="sidebar-sublink {{ request()->route('transaksi') === 'diambil' ? 'active' : '' }}">
+                        <a href="{{ route('transaksi.show', ['page' => 'diambil']) }}"
+                            class="sidebar-sublink {{ request()->route('page') === 'diambil' ? 'active' : '' }}">
 
                             <i class="fa-solid fa-circle-check"></i>
                             <small>Sudah Diambil</small>

@@ -42,8 +42,10 @@ class ResiImportController extends Controller
                 ->withInput()
                 ->with('error', 'Toko tidak sesuai dengan marketplace.');
         }
-
+dd(session()->all());
         $previewLama = session('resi_preview');
+
+        dd($previewLama);
 
         if (
             $previewLama &&
