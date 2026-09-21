@@ -946,10 +946,7 @@ class ResiImportController extends Controller
         ];
     }
 
-    private function normalizeTikTokPdf(
-        string $sourcePath,
-        string $directory
-    ): string {
+    private function normalizeTikTokPdf(string $sourcePath, string $directory): string {
         $normalizedPath =
             $directory .
             DIRECTORY_SEPARATOR .

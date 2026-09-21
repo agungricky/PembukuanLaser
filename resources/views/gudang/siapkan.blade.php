@@ -1323,121 +1323,154 @@
                     `);
 
                 $.ajax({
-                    type: "GET",
-                    url: "{{ route('transaksi.cetak-resi') }}",
-                    data: {
-                        pesanan: pesananExport,
-                        kebutuhan: kebutuhanExport,
-                        alasan_export: alasanExport
-                    },
-                    dataType: "json",
-                    beforeSend: function() {
-                        Swal.fire({
-                            title: 'Memproses Resi',
-                            html: `
-                                <div class="text-muted">
-                                    Sedang menggabungkan beberapa resi...
-                                </div>
-                            `,
-                            allowOutsideClick: false,
-                            allowEscapeKey: false,
-                            showConfirmButton: false,
+    type: "POST",
 
-                            didOpen: () => {
-                                Swal.showLoading();
-                            }
-                        });
-                    },
-                    success: function(response) {
-                        const modalEl = document.getElementById('modalAlasanExport');
-                        const modal = bootstrap.Modal.getInstance(modalEl);
-                        modal?.hide();
+    url: "{{ route('transaksi.cetak-resi') }}",
 
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil',
-                            text: response.message ?? 'Resi berhasil diproses.'
-                        });
+    headers: {
+        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+    },
 
-                        // Kalau backend memberikan URL preview
-                        if (response.success && response.preview_url) {
-                            window.open(
-                                response.preview_url,
-                                '_blank'
-                            );
-                            return;
+    contentType: "application/json",
+    dataType: "json",
+
+    data: JSON.stringify({
+        pesanan: pesananExport,
+        kebutuhan: kebutuhanExport,
+        alasan_export: alasanExport
+    }),
+
+    beforeSend: function() {
+        Swal.fire({
+            title: 'Memproses Resi',
+            html: `
+                <div class="text-muted">
+                    Sedang menggabungkan beberapa resi...
+                </div>
+            `,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    },
+
+    success: function(response) {
+
+        const modalEl =
+            document.getElementById('modalAlasanExport');
+
+        const modal =
+            bootstrap.Modal.getInstance(modalEl);
+
+        modal?.hide();
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: response.message ??
+                'Resi berhasil diproses.'
+        });
+
+        if (
+            response.success &&
+            response.preview_url
+        ) {
+            window.open(
+                response.preview_url,
+                '_blank'
+            );
+
+            return;
+        }
+    },
+
+    error: function(xhr) {
+
+        const response = xhr.responseJSON;
+
+        if (
+            xhr.status === 422 &&
+            response?.data
+        ) {
+
+            const rows = response.data
+                .map((item, index) => `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${item ?? '-'}</td>
+                    </tr>
+                `)
+                .join('');
+
+            Swal.fire({
+                icon: 'warning',
+                title: 'Pemberitahuan',
+                width: 700,
+
+                html: `
+                    <div class="text-center mb-3">
+
+                        ${
+                            response.message ??
+                            'Beberapa pesanan belum memiliki resi.'
                         }
 
-                    },
-                    error: function(xhr) {
-                        const response = xhr.responseJSON;
+                    </div>
 
-                        if (xhr.status === 422 && response?.data) {
-                            const rows = response.data
-                                .map((item, index) => `
-                                    <tr>
-                                        <td>${index + 1}</td>
-                                        <td>${item ?? '-'}</td>
-                                    </tr>
-                                `)
-                                .join('');
+                    <div class="table-responsive">
 
+                        <table
+                            class="table table-bordered table-striped table-sm">
 
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Pemberitahuan',
-                                width: 700,
-                                html: `
-                                    <div class="text-center mb-3">
+                            <thead>
+                                <tr>
+                                    <th style="width:60px;">
+                                        No
+                                    </th>
 
-                                        ${
-                                            response.message ??
-                                            'Beberapa pesanan belum memiliki resi.'
-                                        }
+                                    <th>
+                                        No. Pesanan
+                                    </th>
+                                </tr>
+                            </thead>
 
-                                    </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered table-striped table-sm">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width:60px;">No</th>
-                                                    <th>No. Pesanan</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                ${rows}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                `,
-                                confirmButtonText: 'OK'
-                            });
-                            return;
-                        }
+                            <tbody>
+                                ${rows}
+                            </tbody>
 
+                        </table>
 
-                        // ==========================================
-                        // ERROR LAINNYA
-                        // ==========================================
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal',
-                            text: response?.message ??
-                                'Terjadi kesalahan saat memproses resi.'
-                        });
+                    </div>
+                `,
 
-                    },
-                    complete: function() {
-                        button
-                            .prop('disabled', false)
-                            .html(`
-                    <i class="fa-solid fa-file-export me-1"></i>
-                    Export Resi
-                `);
+                confirmButtonText: 'OK'
+            });
 
-                    }
+            return;
+        }
 
-                });
+        Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: response?.message ??
+                'Terjadi kesalahan saat memproses resi.'
+        });
+    },
+
+    complete: function() {
+
+        button
+            .prop('disabled', false)
+            .html(`
+                <i class="fa-solid fa-file-export me-1"></i>
+                Export Resi
+            `);
+    }
+});
 
             });
 
