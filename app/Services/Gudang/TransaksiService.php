@@ -174,6 +174,7 @@ class TransaksiService
                                 $alokasiStok[
                                     $item->id_per_produk
                                 ] ?? null;
+
                             return [
                                 'id_per_produk' => $item->id_per_produk,
                                 'no_pesanan' => $item->no_pesanan,
@@ -562,7 +563,7 @@ class TransaksiService
         ]);
     }
 
-    protected function belumdiImport($noPesanan)
+    private function belumdiImport($noPesanan)
     {
         $resiPages = ResiPage::with('resi_imports')->whereIn('no_pesanan', $noPesanan)->get();
         $pesananDitemukan = $resiPages->pluck('no_pesanan')->unique();
@@ -592,13 +593,11 @@ class TransaksiService
     public function previewResi($token)
     {
         $folder = 'temp/resi/'.$token;
-
         if (! Storage::disk('local')->exists($folder)) {
             abort(404, 'Folder resi tidak ditemukan.');
         }
 
         $files = Storage::disk('local')->files($folder);
-
         if (empty($files)) {
             abort(404, 'PDF resi tidak ditemukan.');
         }
@@ -615,7 +614,12 @@ class TransaksiService
 
     private function viewResi($request)
     {
+        // =========================================================
+        // CEK PESANAN YANG SUDAH IMPORT RESI
+        // =========================================================
+
         $daftarPesanan = collect($request->pesanan);
+
         $pesananSudahImport = ResiPage::with('resi_imports')
             ->whereIn('no_pesanan', $daftarPesanan)
             ->get();
@@ -633,6 +637,7 @@ class TransaksiService
         ];
 
         if ($cekImport['belum_import']->isNotEmpty()) {
+
             return response()->json([
                 'success' => false,
                 'message' => 'Terdapat Pesanan Belum di Import, Mohon Import Resi Terlebih Dahulu',
@@ -640,45 +645,200 @@ class TransaksiService
             ], 422);
         }
 
-        $resi = ResiPage::whereIn('no_pesanan', $cekImport['sudah_import'])
+        // =========================================================
+        // AMBIL DATA RESI
+        // =========================================================
+
+        $resi = ResiPage::with('resi_imports')
+            ->whereIn(
+                'no_pesanan',
+                $cekImport['sudah_import']
+            )
             ->get()
             ->map(function ($item) {
+
                 return [
                     'id' => $item->id,
                     'no_pesanan' => $item->no_pesanan,
                     'resi_import_id' => $item->resi_import_id,
                     'halaman' => $item->halaman,
                     'urutan' => $item->urutan,
+
                     'path_file' => $item->resi_imports?->path_file,
+
                     'nama_file' => $item->resi_imports?->nama_file,
                 ];
             });
 
-        // BUAT TOKEN
+        // =========================================================
+        // BUAT TOKEN & FOLDER TEMP
+        // =========================================================
+
         $token = (string) Str::uuid();
+
         $tempFolder = 'temp/resi/'.$token;
+
         Storage::disk('local')->makeDirectory(
             $tempFolder
         );
 
+        // =========================================================
+        // FPDI
+        // =========================================================
+
         $pdf = new Fpdi;
 
-        // ============================================
-        // PENGATURAN HALAMAN LAPORAN
-        // ============================================
-
-        // Margin kiri 0, atas 2 mm, kanan 0
         $pdf->SetMargins(0, 2, 0);
+
+        // Kita handle page break secara manual
         $pdf->SetAutoPageBreak(false, 0);
 
-        $pdf->AddPage('P', [150, 105]);
+        // =========================================================
+        // HELPER HEADER TABEL
+        // =========================================================
 
-        // ============================================
+        $drawTableHeader = function () use ($pdf) {
+
+            $pdf->SetFont(
+                'Courier',
+                'B',
+                8
+            );
+
+            $pdf->Cell(
+                8,
+                5,
+                'NO',
+                0,
+                0,
+                'L'
+            );
+
+            $pdf->Cell(
+                20,
+                5,
+                'SKU',
+                0,
+                0,
+                'L'
+            );
+
+            $pdf->Cell(
+                50,
+                5,
+                'NAMA PRODUK',
+                0,
+                0,
+                'L'
+            );
+
+            $pdf->Cell(
+                15,
+                5,
+                'SISA STOK',
+                0,
+                0,
+                'C'
+            );
+
+            $pdf->Cell(
+                10,
+                5,
+                'BUTUH',
+                0,
+                1,
+                'C'
+            );
+
+            // Garis bawah header
+            $pdf->SetFont(
+                'Courier',
+                '',
+                6
+            );
+
+            $pdf->Cell(
+                0,
+                3,
+                str_repeat('-', 110),
+                0,
+                1,
+                'L'
+            );
+
+            $pdf->SetFont(
+                'Courier',
+                '',
+                8
+            );
+        };
+
+        // =========================================================
+        // HELPER HALAMAN LANJUTAN
+        // =========================================================
+
+        $addContinuationPage =
+            function () use (
+                $pdf,
+                $drawTableHeader
+            ) {
+
+                $pdf->AddPage(
+                    'P',
+                    [150, 105]
+                );
+
+                $pdf->SetFont(
+                    'Courier',
+                    'B',
+                    10
+                );
+
+                $pdf->Cell(
+                    0,
+                    6,
+                    'LAPORAN CETAK RESI - LANJUTAN',
+                    0,
+                    1,
+                    'C'
+                );
+
+                $pdf->SetFont(
+                    'Courier',
+                    '',
+                    7
+                );
+
+                $pdf->Cell(
+                    0,
+                    3,
+                    str_repeat('=', 88),
+                    0,
+                    1,
+                    'L'
+                );
+
+                $drawTableHeader();
+            };
+
+        // =========================================================
+        // HALAMAN PERTAMA LAPORAN
+        // =========================================================
+
+        $pdf->AddPage(
+            'P',
+            [150, 105]
+        );
+
+        // =========================================================
         // JUDUL
-        // ============================================
+        // =========================================================
 
-        // Courier = gaya seperti mesin ketik / monospace
-        $pdf->SetFont('Courier', 'B', 12);
+        $pdf->SetFont(
+            'Courier',
+            'B',
+            12
+        );
 
         $pdf->Cell(
             0,
@@ -689,8 +849,15 @@ class TransaksiService
             'C'
         );
 
-        // Garis pemisah
-        $pdf->SetFont('Courier', '', 8);
+        // =========================================================
+        // GARIS
+        // =========================================================
+
+        $pdf->SetFont(
+            'Courier',
+            '',
+            8
+        );
 
         $pdf->Cell(
             0,
@@ -701,12 +868,25 @@ class TransaksiService
             'L'
         );
 
-        // ============================================
+        // =========================================================
         // INFORMASI CETAK
-        // ============================================
-        $pdf->SetFont('Courier', '', 8);
+        // =========================================================
 
-        $pdf->Cell(25, 5, 'TANGGAL', 0, 0);
+        $pdf->SetFont(
+            'Courier',
+            '',
+            8
+        );
+
+        // TANGGAL
+        $pdf->Cell(
+            25,
+            5,
+            'TANGGAL',
+            0,
+            0
+        );
+
         $pdf->Cell(
             0,
             5,
@@ -715,27 +895,47 @@ class TransaksiService
             1
         );
 
-        $pdf->Cell(25, 5, 'CETAK BY', 0, 0);
+        // CETAK BY
+        $pdf->Cell(
+            25,
+            5,
+            'CETAK BY',
+            0,
+            0
+        );
+
         $pdf->Cell(
             0,
             5,
-            ': '.strtoupper(Auth::user()->name ?? '-'),
+            ': '.strtoupper(
+                Auth::user()->name ?? '-'
+            ),
             0,
             1
         );
 
-        $pdf->Cell(25, 5, 'KETERANGAN', 0, 0);
+        // KETERANGAN
+        $pdf->Cell(
+            25,
+            5,
+            'KETERANGAN',
+            0,
+            0
+        );
+
         $pdf->Cell(
             0,
             5,
-            ': '.strtoupper($request->alasan_export ?? '-'),
+            ': '.strtoupper(
+                $request->alasan_export ?? '-'
+            ),
             0,
             1
         );
 
-        // ============================================
-        // GARIS PENUTUP INFORMASI
-        // ============================================
+        // =========================================================
+        // GARIS
+        // =========================================================
 
         $pdf->Cell(
             0,
@@ -746,44 +946,39 @@ class TransaksiService
             'L'
         );
 
-        // ============================================
+        // =========================================================
         // HEADER TABEL
-        // ============================================
+        // =========================================================
 
-        $pdf->SetFont('Courier', 'B', 8);
-        // Header
-        $pdf->Cell(8, 5, 'NO', 0, 0, 'L');
-        $pdf->Cell(18, 5, 'SKU', 0, 0, 'L');
-        $pdf->Cell(50, 5, 'NAMA PRODUK', 0, 0, 'L');
-        $pdf->Cell(15, 5, 'SISA STOK', 0, 0, 'C');
-        $pdf->Cell(0, 5, 'BUTUH', 0, 1, 'C');
+        $drawTableHeader();
 
-        // Garis bawah header
-        $pdf->Cell(
-            0,
-            4,
-            str_repeat('-', 88),
-            0,
-            1,
-            'L'
-        );
-
-        // ============================================
+        // =========================================================
         // ISI TABEL
-        // ============================================
+        // =========================================================
 
-        $pdf->SetFont('Courier', '', 8);
+        $pdf->SetFont(
+            'Courier',
+            '',
+            8
+        );
 
         $totalKebutuhan = 0;
-        foreach ($request->kebutuhan as $index => $item) {
 
-            // ============================================
-            // PECAH NAMA PRODUK SETIAP 4 KATA
-            // ============================================
+        foreach (
+            $request->kebutuhan as $index => $item
+        ) {
+
+            // =====================================================
+            // NAMA PRODUK
+            // =====================================================
 
             $kata = preg_split(
                 '/\s+/',
-                trim(strtoupper($item['nama_produk']))
+                trim(
+                    strtoupper(
+                        $item['nama_produk']
+                    )
+                )
             );
 
             $barisNama = array_chunk(
@@ -794,14 +989,17 @@ class TransaksiService
             $namaProduk = implode(
                 "\n",
                 array_map(
-                    fn ($row) => implode(' ', $row),
+                    fn ($row) => implode(
+                        ' ',
+                        $row
+                    ),
                     $barisNama
                 )
             );
 
-            // ============================================
+            // =====================================================
             // VARIASI
-            // ============================================
+            // =====================================================
 
             $variasi = trim(
                 strtoupper(
@@ -809,9 +1007,9 @@ class TransaksiService
                 )
             );
 
-            // ============================================
-            // TINGGI
-            // ============================================
+            // =====================================================
+            // HITUNG TINGGI ROW
+            // =====================================================
 
             $tinggiNama = 4;
             $tinggiVariasi = 4;
@@ -822,22 +1020,53 @@ class TransaksiService
             );
 
             $tinggiRow =
-                ($jumlahBarisNama * $tinggiNama)
-                + ($variasi !== '' ? $tinggiVariasi : 0);
+                (
+                    $jumlahBarisNama
+                    * $tinggiNama
+                )
+                +
+                (
+                    $variasi !== ''
+                        ? $tinggiVariasi
+                        : 0
+                );
 
             // Sedikit ruang bawah
             $tinggiRow += 1;
 
-            // ============================================
+            // =====================================================
+            // CEK APAKAH ROW MASIH MUAT
+            // =====================================================
+
+            $tinggiGaris = 3;
+
+            $batasBawah =
+                $pdf->GetPageHeight()
+                - 4;
+
+            $posisiAkhirRow =
+                $pdf->GetY()
+                + $tinggiRow
+                + $tinggiGaris;
+
+            if (
+                $posisiAkhirRow
+                > $batasBawah
+            ) {
+
+                $addContinuationPage();
+            }
+
+            // =====================================================
             // POSISI AWAL ROW
-            // ============================================
+            // =====================================================
 
             $x = $pdf->GetX();
             $y = $pdf->GetY();
 
-            // ============================================
+            // =====================================================
             // UKURAN KOLOM
-            // ============================================
+            // =====================================================
 
             $lebarNo = 8;
             $lebarSku = 20;
@@ -845,9 +1074,9 @@ class TransaksiService
             $lebarStok = 15;
             $lebarButuh = 10;
 
-            // ============================================
+            // =====================================================
             // NO
-            // ============================================
+            // =====================================================
 
             $pdf->SetXY(
                 $x,
@@ -869,9 +1098,9 @@ class TransaksiService
                 'C'
             );
 
-            // ============================================
+            // =====================================================
             // SKU
-            // ============================================
+            // =====================================================
 
             $pdf->SetXY(
                 $x + $lebarNo,
@@ -893,9 +1122,9 @@ class TransaksiService
                 'L'
             );
 
-            // ============================================
+            // =====================================================
             // NAMA PRODUK
-            // ============================================
+            // =====================================================
 
             $xNama =
                 $x
@@ -907,7 +1136,6 @@ class TransaksiService
                 $y
             );
 
-            // Nama produk dibuat bold
             $pdf->SetFont(
                 'Courier',
                 'B',
@@ -922,22 +1150,25 @@ class TransaksiService
                 'L'
             );
 
-            // ============================================
+            // =====================================================
             // VARIASI
-            // ============================================
+            // =====================================================
 
             if ($variasi !== '') {
 
                 $yVariasi =
                     $y
-                    + ($jumlahBarisNama * $tinggiNama);
+                    +
+                    (
+                        $jumlahBarisNama
+                        * $tinggiNama
+                    );
 
                 $pdf->SetXY(
                     $xNama,
                     $yVariasi
                 );
 
-                // Variasi dibuat lebih kecil
                 $pdf->SetFont(
                     'Courier',
                     '',
@@ -954,9 +1185,9 @@ class TransaksiService
                 );
             }
 
-            // ============================================
-            // STOK
-            // ============================================
+            // =====================================================
+            // SISA STOK
+            // =====================================================
 
             $pdf->SetXY(
                 $x
@@ -975,15 +1206,20 @@ class TransaksiService
             $pdf->Cell(
                 $lebarStok,
                 $tinggiRow,
-                $item['stok_awal'] - $item['kebutuhan'],
+
+                max(
+                    0,
+                    $item['stok_awal'] - $item['kebutuhan']
+                ),
+
                 0,
                 0,
                 'C'
             );
 
-            // ============================================
+            // =====================================================
             // KEBUTUHAN
-            // ============================================
+            // =====================================================
 
             $pdf->SetXY(
                 $x
@@ -1003,9 +1239,9 @@ class TransaksiService
                 'C'
             );
 
-            // ============================================
+            // =====================================================
             // GARIS PEMISAH ROW
-            // ============================================
+            // =====================================================
 
             $yBawah =
                 $y
@@ -1016,7 +1252,6 @@ class TransaksiService
                 $yBawah
             );
 
-            // Garis seperti mesin ketik
             $pdf->SetFont(
                 'Courier',
                 '',
@@ -1032,9 +1267,9 @@ class TransaksiService
                 'L'
             );
 
-            // ============================================
-            // KEMBALIKAN FONT
-            // ============================================
+            // =====================================================
+            // PINDAH KE ROW BERIKUTNYA
+            // =====================================================
 
             $pdf->SetFont(
                 'Courier',
@@ -1042,35 +1277,90 @@ class TransaksiService
                 8
             );
 
-            // ============================================
-            // PINDAH KE ROW BERIKUTNYA
-            // ============================================
-
             $pdf->SetXY(
                 $x,
                 $yBawah + 3
             );
 
-            // ============================================
+            // =====================================================
             // TOTAL
-            // ============================================
+            // =====================================================
 
             $totalKebutuhan +=
                 (int) $item['kebutuhan'];
         }
 
-        // ============================================
+        // =========================================================
+        // CEK RUANG UNTUK TOTAL + INFO
+        // =========================================================
+
+        $tinggiFooter = 20;
+
+        if (
+            (
+                $pdf->GetY()
+                + $tinggiFooter
+            )
+            >
+            (
+                $pdf->GetPageHeight()
+                - 4
+            )
+        ) {
+
+            $pdf->AddPage(
+                'P',
+                [150, 105]
+            );
+
+            $pdf->SetFont(
+                'Courier',
+                'B',
+                10
+            );
+
+            $pdf->Cell(
+                0,
+                6,
+                'LAPORAN CETAK RESI - RINGKASAN',
+                0,
+                1,
+                'C'
+            );
+
+            $pdf->SetFont(
+                'Courier',
+                '',
+                7
+            );
+
+            $pdf->Cell(
+                0,
+                3,
+                str_repeat('=', 88),
+                0,
+                1,
+                'L'
+            );
+        }
+
+        // =========================================================
         // TOTAL LAPORAN
-        // ============================================
+        // =========================================================
+
         $pdf->SetFont(
             'Courier',
             'B',
             7
         );
 
-        // Lebar area yang tersedia
-        $lebarHalaman = $pdf->GetPageWidth();
-        $marginKiri = $pdf->GetX();
+        $pdf->SetX(0);
+
+        $lebarHalaman =
+            $pdf->GetPageWidth();
+
+        $marginKiri = 0;
+
         $marginKanan = 3;
 
         $lebarArea =
@@ -1078,84 +1368,89 @@ class TransaksiService
             - $marginKiri
             - $marginKanan;
 
-        // Dibagi 2
-        $lebarTotal = $lebarArea / 2;
+        $lebarTotal =
+            $lebarArea / 2;
 
-        // ============================================
         // TOTAL SKU
-        // ============================================
-
         $pdf->Cell(
             $lebarTotal,
             6,
-            'TOTAL SKU : '.count($request->kebutuhan),
+
+            'TOTAL SKU : '
+            .count(
+                $request->kebutuhan
+            ),
+
             0,
             0,
             'C'
         );
 
-        // ============================================
         // TOTAL KEBUTUHAN
-        // ============================================
-
         $pdf->Cell(
             $lebarTotal,
             6,
-            'TOTAL KEBUTUHAN : '.$totalKebutuhan,
+
+            'TOTAL KEBUTUHAN : '
+            .$totalKebutuhan,
+
             0,
             1,
             'C'
         );
 
-        // ============================================
+        // =========================================================
         // INFO
-        // ============================================
+        // =========================================================
 
         $x = $pdf->GetX();
         $y = $pdf->GetY();
 
-        // ============================================
-        // ICON PERINGATAN
-        // ============================================
-
         $ukuranIcon = 3;
 
-        // Geser icon ke kanan
         $xIcon = $x + 2;
         $yIcon = $y;
 
         $pdf->SetLineWidth(0.2);
 
-        // ============================================
-        // SEGITIGA
-        // ============================================
+        // Segitiga
         $pdf->Line(
             $xIcon,
             $yIcon + $ukuranIcon,
-            $xIcon + ($ukuranIcon / 2),
+
+            $xIcon
+            + ($ukuranIcon / 2),
+
             $yIcon
         );
 
-        // atas tengah → kanan bawah
         $pdf->Line(
-            $xIcon + ($ukuranIcon / 2),
+            $xIcon
+            + ($ukuranIcon / 2),
+
             $yIcon,
-            $xIcon + $ukuranIcon,
-            $yIcon + $ukuranIcon
+
+            $xIcon
+            + $ukuranIcon,
+
+            $yIcon
+            + $ukuranIcon
         );
 
-        // kanan bawah → kiri bawah
         $pdf->Line(
-            $xIcon + $ukuranIcon,
-            $yIcon + $ukuranIcon,
+            $xIcon
+            + $ukuranIcon,
+
+            $yIcon
+            + $ukuranIcon,
+
             $xIcon,
-            $yIcon + $ukuranIcon
+
+            $yIcon
+            + $ukuranIcon
         );
 
-        // ============================================
-        // TANDA SERU
-        // ============================================
-
+        // Tanda seru
         $pdf->SetFont(
             'Courier',
             'B',
@@ -1164,31 +1459,32 @@ class TransaksiService
 
         $tandaSeru = '!';
 
-        // Hitung lebar tanda seru
-        $lebarTandaSeru = $pdf->GetStringWidth(
-            $tandaSeru
-        );
+        $lebarTandaSeru =
+            $pdf->GetStringWidth(
+                $tandaSeru
+            );
 
-        // Posisi horizontal tepat di tengah segitiga
         $xTandaSeru =
             $xIcon
-            + (($ukuranIcon - $lebarTandaSeru) / 2);
+            +
+            (
+                (
+                    $ukuranIcon
+                    - $lebarTandaSeru
+                )
+                / 2
+            );
 
-        // Posisi vertikal
         $yTandaSeru =
             $yIcon + 2.2;
 
-        // Tulis langsung supaya posisi lebih presisi
         $pdf->Text(
             $xTandaSeru,
             $yTandaSeru,
             $tandaSeru
         );
 
-        // ============================================
-        // TEXT INFO
-        // ============================================
-
+        // Text info
         $pdf->SetFont(
             'Courier',
             '',
@@ -1196,20 +1492,31 @@ class TransaksiService
         );
 
         $pdf->SetXY(
-            $x + $ukuranIcon + 2,
+            $x
+            + $ukuranIcon
+            + 2,
+
             $y
         );
 
         $pdf->MultiCell(
-            $lebarArea - $ukuranIcon - 2,
+            $lebarArea
+            - $ukuranIcon
+            - 2,
+
             4,
+
             'INFO: Stok adalah sisa akhir setelah barang diambil dari gudang.',
+
             0,
             'L'
         );
-        // ============================================
+
+        // =========================================================
         // GARIS PENUTUP
-        // ============================================
+        // =========================================================
+
+        $pdf->SetX(0);
 
         $pdf->SetFont(
             'Courier',
@@ -1226,58 +1533,385 @@ class TransaksiService
             'L'
         );
 
-        // ============================================
+        // =========================================================
         // HALAMAN RESI
-        // ============================================
+        // =========================================================
+        // =========================================================
+// AMBIL PRODUK PER PESANAN
+// =========================================================
 
-        foreach ($resi as $item) {
+$produkPerPesanan = PesananPerProduk::query()
+    ->whereIn(
+        'no_pesanan',
+        $cekImport['sudah_import']
+    )
+    ->get()
+    ->groupBy('no_pesanan');
 
-            $sourcePath = Storage::disk('local')->path(
-                $item['path_file']
-            );
 
-            $pageCount = $pdf->setSourceFile(
-                $sourcePath
-            );
+// =========================================================
+// AMBIL SEMUA SKU
+// =========================================================
 
-            if (
-                $item['halaman'] < 1 ||
-                $item['halaman'] > $pageCount
-            ) {
-                throw new Exception(
-                    'Halaman '.$item['halaman'].
-                    ' tidak ditemukan pada file '.
-                    $item['nama_file']
+$semuaSku = $produkPerPesanan
+    ->flatten()
+    ->pluck('sku')
+    ->filter()
+    ->unique()
+    ->values();
+
+
+// =========================================================
+// AMBIL STOK
+// =========================================================
+
+$stokProduk = stok_produk::query()
+    ->whereIn(
+        'sku_id',
+        $semuaSku
+    )
+    ->pluck(
+        'jumlah_tersedia',
+        'sku_id'
+    );
+
+
+// =========================================================
+// PROSES RESI
+// =========================================================
+
+foreach ($resi as $item) {
+
+    $sourcePath =
+        Storage::disk('local')->path(
+            $item['path_file']
+        );
+
+    $pageCount =
+        $pdf->setSourceFile(
+            $sourcePath
+        );
+
+
+    // =====================================================
+    // VALIDASI HALAMAN
+    // =====================================================
+
+    if (
+        $item['halaman'] < 1 ||
+        $item['halaman'] > $pageCount
+    ) {
+
+        throw new Exception(
+            'Halaman '
+            . $item['halaman']
+            . ' tidak ditemukan pada file '
+            . $item['nama_file']
+        );
+    }
+
+
+    // =====================================================
+    // IMPORT HALAMAN RESI
+    // =====================================================
+
+    $templateId =
+        $pdf->importPage(
+            $item['halaman']
+        );
+
+    $size =
+        $pdf->getTemplateSize(
+            $templateId
+        );
+
+
+    // =====================================================
+    // BUAT HALAMAN
+    // =====================================================
+
+    $pdf->AddPage(
+        $size['orientation'],
+        [
+            $size['width'],
+            $size['height'],
+        ]
+    );
+
+
+    // =====================================================
+    // TEMPEL RESI
+    // =====================================================
+
+    $pdf->useTemplate(
+        $templateId
+    );
+
+
+    // =====================================================
+    // AMBIL PRODUK PESANAN
+    // =====================================================
+
+    $produkPesanan =
+        $produkPerPesanan[
+            $item['no_pesanan']
+        ] ?? collect();
+
+    $produkPesanan =
+        $produkPesanan->values();
+
+
+    // =====================================================
+    // HANYA PESANAN YANG PRODUKNYA LEBIH DARI 1
+    // =====================================================
+
+    if ($produkPesanan->count() <= 1) {
+        continue;
+    }
+
+
+    // =====================================================
+    // CEK STOK SETIAP PRODUK
+    // =====================================================
+
+    $statusProduk =
+        $produkPesanan
+            ->map(function ($produk) use ($stokProduk) {
+
+                $sku = strtoupper(
+                    trim(
+                        $produk->sku ?? ''
+                    )
                 );
-            }
 
-            $templateId = $pdf->importPage(
-                $item['halaman']
-            );
+                $jumlah =
+                    (int) $produk->jumlah;
 
-            $size = $pdf->getTemplateSize(
-                $templateId
-            );
+                $stok =
+                    (int) (
+                        $stokProduk[$sku]
+                        ?? 0
+                    );
 
-            $pdf->AddPage(
-                $size['orientation'],
-                [
-                    $size['width'],
-                    $size['height'],
-                ]
-            );
 
-            $pdf->useTemplate(
-                $templateId
-            );
+                // =========================================
+                // SKU CUSTOM AKHIR C
+                // SELALU DIANGGAP TERSEDIA
+                // =========================================
+
+                $skuCustom =
+                    str_ends_with(
+                        $sku,
+                        'C'
+                    );
+
+
+                $tersedia =
+                    $skuCustom ||
+                    $stok >= $jumlah;
+
+
+                return [
+                    'produk' => $produk,
+
+                    'sku' => $sku,
+
+                    'jumlah' => $jumlah,
+
+                    'stok' => $stok,
+
+                    'tersedia' => $tersedia,
+                ];
+            });
+
+
+    // =====================================================
+    // HITUNG BERAPA YANG TERSEDIA DAN KURANG
+    // =====================================================
+
+    $jumlahTersedia =
+        $statusProduk
+            ->where(
+                'tersedia',
+                true
+            )
+            ->count();
+
+    $jumlahKurang =
+        $statusProduk
+            ->where(
+                'tersedia',
+                false
+            )
+            ->count();
+
+
+    // =====================================================
+    // KALAU SEMUA TERSEDIA
+    // TIDAK PERLU TANDA
+    // =====================================================
+
+    if ($jumlahKurang === 0) {
+        continue;
+    }
+
+
+    // =====================================================
+    // KALAU SEMUA KURANG
+    // TIDAK PERLU TANDA
+    // =====================================================
+
+    if ($jumlahTersedia === 0) {
+        continue;
+    }
+
+
+    // =====================================================
+    // SAMPAI SINI BERARTI KONDISINYA CAMPURAN
+    //
+    // CONTOH:
+    //
+    // 3 produk:
+    // Produk 1 tersedia
+    // Produk 2 kurang
+    // Produk 3 tersedia
+    //
+    // Maka produk 1 & 3 ditandai hijau
+    // =====================================================
+
+
+    // =====================================================
+    // DETEKSI MARKETPLACE
+    // =====================================================
+
+    $namaFile =
+        strtolower(
+            $item['nama_file'] ?? ''
+        );
+
+    if (
+        str_contains(
+            $namaFile,
+            'tiktok'
+        )
+    ) {
+
+        $marketplace = 'tiktok';
+
+    } else {
+
+        $marketplace = 'shopee';
+    }
+
+
+    // =====================================================
+    // KOORDINAT QTY
+    // =====================================================
+
+    if ($marketplace === 'tiktok') {
+
+        $qtyX = 93;
+
+        // Qty produk pertama
+        $qtyYAwal = 72;
+
+        // Jarak tiap produk
+        $jarakProduk = 13;
+
+    } else {
+
+        $qtyX = 93;
+
+        // Qty produk pertama
+        $qtyYAwal = 68;
+
+        // Jarak tiap produk
+        $jarakProduk = 12;
+    }
+
+
+    // =====================================================
+    // TANDAI HANYA PRODUK YANG TERSEDIA
+    // =====================================================
+
+    foreach (
+        $statusProduk as $index => $status
+    ) {
+
+        // Produk kurang → jangan diberi tanda
+        if (!$status['tersedia']) {
+            continue;
         }
 
-        // ============================================
-        // SIMPAN
-        // ============================================
+
+        // =================================================
+        // HITUNG POSISI BERDASARKAN URUTAN PRODUK
+        // =================================================
+
+        $qtyY =
+            $qtyYAwal
+            +
+            (
+                $index
+                * $jarakProduk
+            );
+
+
+        // =================================================
+        // WARNA HIJAU
+        // =================================================
+
+        $pdf->SetDrawColor(
+            25,
+            135,
+            84
+        );
+
+        $pdf->SetFillColor(
+            25,
+            135,
+            84
+        );
+
+
+        // =================================================
+        // TANDA HIJAU DI AREA QTY
+        // =================================================
+
+        $pdf->Rect(
+            $qtyX,
+            $qtyY,
+            4,
+            4,
+            'F'
+        );
+
+
+        // =================================================
+        // KEMBALIKAN WARNA
+        // =================================================
+
+        $pdf->SetDrawColor(
+            0,
+            0,
+            0
+        );
+
+        $pdf->SetFillColor(
+            255,
+            255,
+            255
+        );
+    }
+}
+
+        // =========================================================
+        // SIMPAN PDF
+        // =========================================================
 
         $relativePath =
-            $tempFolder.'/preview.pdf';
+            $tempFolder
+            .'/preview.pdf';
 
         $outputPath =
             Storage::disk('local')->path(
@@ -1288,6 +1922,10 @@ class TransaksiService
             'F',
             $outputPath
         );
+
+        // =========================================================
+        // RESPONSE
+        // =========================================================
 
         return response()->json([
             'success' => true,

@@ -215,13 +215,10 @@ Route::middleware(['web', 'auth'])->group(function () {
         // Transaksi
         Route::resource('/transaksi', GudangController::class)->parameters([
             'transaksi' => 'page',
-        ]);
-        
+        ]);        
         Route::get('/show/{filter}', [GudangController::class, 'showdata'])->name('showdata.json');
         Route::post('/transaksi/update-status', [GudangController::class, 'updateStatus'])->name('transaksi.updatestatus');
-
-        // Masi Percobaan
-        Route::get('/cetak-resi/transaksi', [GudangController::class, 'cetakResi'])->name('transaksi.cetak-resi');
+        Route::post('/cetak-resi/transaksi', [GudangController::class, 'cetakResi'])->name('transaksi.cetak-resi');
         Route::get('/transaksi/preview-resi/{token}', [GudangController::class, 'previewResi'])->name('transaksi.preview-resi');
         Route::post('/update/pesanan-selesai', [GudangController::class, 'updateselesai'])->name('transaksi.update.selesai');
 
