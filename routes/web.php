@@ -22,6 +22,7 @@ use App\Http\Controllers\PesananProsesController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProduksiController;
 use App\Http\Controllers\ResiImportController;
+use App\Http\Controllers\rotatorController;
 use App\Http\Controllers\SkuController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\UserController;
@@ -295,4 +296,16 @@ Route::get('/cek-template-editor', function () {
     ];
 });
 
+Route::get('/cs', [rotatorController::class, 'redirect'])->name('redirect');
+
+Route::get('/cs/redirect', function () {
+    $pesan = urlencode('Halo admin bila, saya ingin beli banner sound custom jaring...');
+
+    return redirect()->away(
+        'https://wa.me/6285334778790?text=' . $pesan
+    );
+})->name('redirect.cs');
+
+Route::get('/dashboard/admin-cs', [rotatorController::class, 'index'])->name('rotator.index');
 Route::redirect('/', '/login');
+// Login

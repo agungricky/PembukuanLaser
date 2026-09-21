@@ -268,6 +268,7 @@
                 autoWidth: false
             });
 
+            // Data Awal 
             $.ajax({
                 type: "GET",
                 url: "{{ route('showdata.json', ':filter') }}".replace(':filter', filter),
@@ -313,6 +314,7 @@
                 },
 
                 success: function(response) {
+                    console.log(response);
                     let html = '';
                     let no = 1;
 
@@ -382,14 +384,14 @@
                                                 (item.produk?.stok_produk?.jumlah_tersedia ?? 0) >= (item.kebutuhan ?? 0)
                                                 ? 
                                                 `
-                                                                                                                                                                                <span class="badge bg-success">Tersedia</span>
-                                                                                                                                                                            `
+                                                                                                                                                                                    <span class="badge bg-success">Tersedia</span>
+                                                                                                                                                                                `
                                                 : 
                                                 
                                                 `
-                                                                                                                                                                                <span class="badge bg-danger">Kurang</span>
-                                                                                                                                                                                <input type="hidden" class="status-stok" value="kurang">
-                                                                                                                                                                            `
+                                                                                                                                                                                    <span class="badge bg-danger">Kurang</span>
+                                                                                                                                                                                    <input type="hidden" class="status-stok" value="kurang">
+                                                                                                                                                                                `
                                             }
                                         </td>
                                         <td class="py-3 px-4 text-center">
@@ -528,40 +530,40 @@
 
                                 ${filter === 'diambil' ? 
                                     `
-                                                                                                                        <td class="py-0 px-4 text-center">
-                                                                                                                            <div class="text-muted text-uppercase fw-semibold"
-                                                                                                                                style="font-size: 9px; line-height: 1.1;">
-                                                                                                                                Diambil Oleh
-                                                                                                                            </div>
+                                                                                                                            <td class="py-0 px-4 text-center">
+                                                                                                                                <div class="text-muted text-uppercase fw-semibold"
+                                                                                                                                    style="font-size: 9px; line-height: 1.1;">
+                                                                                                                                    Diambil Oleh
+                                                                                                                                </div>
 
-                                                                                                                            <div class="fw-bold text-dark py-1"
-                                                                                                                                style="font-size: 16px; line-height: 1.1;">
-                                                                                                                                ${item.admin_penjualan?.name ?? '-'}
-                                                                                                                            </div>
+                                                                                                                                <div class="fw-bold text-dark py-1"
+                                                                                                                                    style="font-size: 16px; line-height: 1.1;">
+                                                                                                                                    ${item.admin_penjualan?.name ?? '-'}
+                                                                                                                                </div>
 
-                                                                                                                            <div class="text-muted d-flex align-items-center justify-content-center gap-2"
-                                                                                                                                style="font-size: 10px; line-height: 1.1;">
-                                                                                                                                <span>
-                                                                                                                                    <i class="fa-regular fa-calendar"></i>
-                                                                                                                                    ${ item.updated_at
-                                                                                                                                            ? new Date(item.updated_at).toLocaleDateString('id-ID')
-                                                                                                                                            : '-'
-                                                                                                                                    }
-                                                                                                                                </span>
-                                                                                                                                <span>
-                                                                                                                                    <i class="fa-regular fa-clock"></i>
-                                                                                                                                    ${
-                                                                                                                                        item.updated_at
-                                                                                                                                            ? new Date(item.updated_at).toLocaleTimeString('id-ID', {
-                                                                                                                                                hour: '2-digit',
-                                                                                                                                                minute: '2-digit'
-                                                                                                                                            })
-                                                                                                                                            : '-'
-                                                                                                                                    }
-                                                                                                                                </span>
-                                                                                                                            </div>
-                                                                                                                        </td>
-                                                                                                                    `
+                                                                                                                                <div class="text-muted d-flex align-items-center justify-content-center gap-2"
+                                                                                                                                    style="font-size: 10px; line-height: 1.1;">
+                                                                                                                                    <span>
+                                                                                                                                        <i class="fa-regular fa-calendar"></i>
+                                                                                                                                        ${ item.updated_at
+                                                                                                                                                ? new Date(item.updated_at).toLocaleDateString('id-ID')
+                                                                                                                                                : '-'
+                                                                                                                                        }
+                                                                                                                                    </span>
+                                                                                                                                    <span>
+                                                                                                                                        <i class="fa-regular fa-clock"></i>
+                                                                                                                                        ${
+                                                                                                                                            item.updated_at
+                                                                                                                                                ? new Date(item.updated_at).toLocaleTimeString('id-ID', {
+                                                                                                                                                    hour: '2-digit',
+                                                                                                                                                    minute: '2-digit'
+                                                                                                                                                })
+                                                                                                                                                : '-'
+                                                                                                                                        }
+                                                                                                                                    </span>
+                                                                                                                                </div>
+                                                                                                                            </td>
+                                                                                                                        `
                                     : '-'
                                 }
 
@@ -912,7 +914,7 @@
             $('#stockTableBody').on('click', '.btnDetail', function(e) {
                 e.stopPropagation();
 
-                let sku = $(this).data('sku');
+                const sku = $(this).data('sku');
                 $('#modalTitle').text('Detail Kebutuhan Terhadap Pesanan');
 
                 if (filter == "siapkan") {
@@ -967,7 +969,8 @@
                         .replace(':sku', sku),
                     dataType: "JSON",
                     success: function(response) {
-                        $('#skuProduk').text(response[0].sku);
+                        console.log(response);
+                        // $('#skuProduk').text(response[0].sku);
                         $('#detailTableBody').empty();
                         $.each(response, function(index, item) {
                             const pesanan = item.pesanan ?? {};
