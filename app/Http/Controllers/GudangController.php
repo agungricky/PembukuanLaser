@@ -88,9 +88,7 @@ class GudangController extends Controller
     {
         if ($page === 'siapkan') {
             return view('gudang.siapkan', compact('page'));
-        } elseif ($page === 'siap') {
-            return view('gudang.siap', compact('page'));
-        } else {
+        } elseif ($page === 'diambil') {
             return view('gudang.diambil', compact('page'));
         }
     }
@@ -208,12 +206,12 @@ class GudangController extends Controller
     // ==================================================//
     public function kategori()
     {
-        $this->kategoriService->kategori();
+        return $this->kategoriService->kategori();
     }
 
     public function kategorishow(string $id)
     {
-        $this->kategoriService->kategorishow($id);
+        return $this->kategoriService->kategorishow($id);
     }
 
     // ==================================================//
@@ -226,6 +224,6 @@ class GudangController extends Controller
 
     public function riwayatAktivitasData(Request $request)
     {
-        $this->riwayatAktivitasService->riwayatAktivitasData($request);
+        return $this->riwayatAktivitasService->riwayatAktivitasData($request);
     }
 }

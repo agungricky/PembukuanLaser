@@ -3,14 +3,85 @@
     <main class="flex-grow-1 overflow-auto p-3 p-lg-4">
         <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
             <div>
-                <h1 class="h3 fw-bold text-dark mb-1" id="headertitle"></h1>
-                <p class="text-muted small mb-0" id="headersub"></p>
+                <h1 class="h3 fw-bold text-dark mb-1">Pesanan Selesai & Keluar Gudang</h1>
+                <p class="text-muted small mb-0">
+                    <span class="text-muted">
+                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                        Pesanan keluar
+                    </span>
+                    <span class="mx-2 text-secondary">/</span>
+                    <span class="fw-semibold text-primary">
+                        Pesanan Selesai
+                    </span>
+                </p>
             </div>
+        </div>
+
+        {{-- Filter Yang Aktif --}}
+        <div class="alert alert-light border d-flex align-items-center gap-2 py-2 px-3 mb-3" style="font-size: 12px;">
+            <i class="fa-solid fa-magnifying-glass text-primary"></i>
+            <div class="border-end pe-3 me-2">
+                <span class="fw-semibold text-dark">Pencarian aktif:</span>
+                <span class="badge bg-primary ms-1">No Pesanan</span>
+                <span class="badge bg-primary ms-1">Nama Toko</span>
+                <span class="badge bg-primary ms-1">SKU</span>
+            </div>
+            <div class="">
+                <span class="fw-semibold text-dark">Data Tampil :</span>
+                <span class="badge bg-primary ms-1">1 Bulan Terakhir</span>
+            </div>
+        </div>
+
+        <div id="stokCard" class="stok-card mb-3 d-none">
+            <div class="stok-card-header d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="stok-title">
+                        Kebutuhan Produk
+                    </div>
+
+                    <div class="stok-subtitle">
+                        Perbandingan kebutuhan SKU dengan stok yang tersedia
+                    </div>
+                </div>
+
+                <span class="stok-live">
+                    <span class="stok-live-dot"></span>
+                    Stok Live
+                </span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 stok-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="px-4">
+                                SKU
+                            </th>
+
+                            <th class="px-4">
+                                Nama Produk
+                            </th>
+
+                            <th class="px-4 text-center" style="width:150px;">
+                                Stok Tersedia
+                            </th>
+
+                            <th class="px-4 text-center" style="width:150px;">
+                                Kebutuhan
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="stokLiveBody">
+                    </tbody>
+
+                </table>
+            </div>
+
         </div>
 
         <!-- Inventory Stock Table Section -->
         <section id="stockTableSection" class="card border-0 shadow-sm rounded-4 overflow-hidden mb-0 pb-0">
-            <!-- Table Header Bar -->
             <div
                 class="card-header bg-white border-bottom p-3 p-md-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                 <div>
@@ -19,81 +90,66 @@
                         Daftar Pesanan Terbaru
                     </h2>
                     <p class="text-muted small mb-0">
-                        Rincian pesanan yang perlu cek & disiapkan.
+                        Rincian pesanan yang perlu disiapkan.
                     </p>
                 </div>
-
                 <!-- Controls: Filters & Table Search -->
                 <div class="d-flex flex-nowrap align-items-center gap-2">
                     <div class="input-group input-group-sm" style="max-width: 240px;">
                         <span class="input-group-text bg-light border-end-0">
                             <i class="fa-solid fa-magnifying-glass text-muted"></i>
                         </span>
-                        <input type="text" id="searchTable" placeholder="Cari SKU / Produk..."
+                        <input type="text" id="searchTable" placeholder="Search"
                             class="form-control form-control-sm border-start-0 bg-light" />
                     </div>
-
+                    <select id="filterMarketplace" class="form-select form-select-sm"
+                        style="width: auto; min-width: 140px;">
+                        <option value="">Semua Toko</option>
+                        <option value="Shopee">Shopee</option>
+                        <option value="TikTok">TikTok</option>
+                    </select>
                     <select id="per_page" class="form-select form-select-sm" style="width: auto;">
-                        <option value="10">10</option>
-                        <option value="20" selected>20</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
-
-                    @if ($id === 'siapkan')
-                        <button type="button" class="btn btn-success btn-sm text-nowrap" id="btnDisiapkan">
-                            <i class="fa-solid fa-circle-check me-1"></i>
-                            Tandai Sudah Disiapkan
-                        </button>
-                    @elseif ($id === 'siap')
-                        <button type="button" id="cetakResi" class="btn btn-danger btn-sm text-nowrap">
-                            <i class="fa-solid fa-print me-1"></i>
-                            Cetak Resi
-                        </button>
-                        <button type="button" class="btn btn-primary btn-sm text-nowrap" data-bs-toggle="modal"
-                            data-bs-target="#pengambilModal" data-role="pegawai" id="btnPengambilModal" disabled>
-                            <i class="fa-solid fa-circle-check me-1"></i>
-                            Tandai Sudah Diambil
-                        </button>
-                    @endif
                 </div>
             </div>
-
             <!-- Table Container -->
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 text-nowrap" id="orderlist">
+                <table class="table table-hover align-middle mb-0" id="orderlist">
                     <thead class="table-light">
                         <tr>
-                            <th class="py-3 px-4 text-center" data-dt-order="disable">
+                            <th class="text-center px-2" data-dt-order="disable" style="width: 44px;">
                                 <input type="checkbox" class="form-check-input" id="checkAll"
-                                    style="width: 18px; height: 18px;">
+                                    style="width: 16px; height: 16px;">
                             </th>
-                            <th scope="col" class="py-3 px-4">Nama Produk</th>
-                            <th scope="col" class="py-3 px-4 text-center">Variasi</th>
-                            @if ($id === 'siapkan')
-                                <th scope="col" class="py-3 px-4 text-center">Hpp</th>
-                                <th scope="col" class="py-3 px-4 text-center">
-                                    Stok
-                                </th>
-                            @endif
-                            @if ($id === 'siap')
-                                <th scope="col" class="py-3 px-4 text-center">
-                                    Kebutuhan
-                                </th>
-                            @endif
-                            @if ($id === 'diambil')
-                                <th scope="col" class="py-3 px-4 text-center">
-                                    Qty
-                                </th>
-                                <th scope="col" class="py-3 px-4 text-center">
-                                    Tanggal disiapkan
-                                </th>
-                            @endif
-                            <th scope="col" class="py-3 px-4 text-center" id="filteron">Status Stok</th>
-                            <th scope="col" class="py-3 px-4 text-center">Detail Pesanan</th>
+                            <th class="px-3" style="width: 190px;">
+                                <i class="fa-regular fa-user me-1"></i>
+                                Pesanan
+                            </th>
+                            <th class="px-3" style="width: 180px;">
+                                <i class="fa-solid fa-truck-fast me-1"></i>
+                                No Resi
+                            </th>
+                            <th class="px-3" style="min-width: 280px;">
+                                <i class="fa-solid fa-box me-1"></i>
+                                Produk
+                            </th>
+                            <th class="px-2 text-center" style="width: 75px;">
+                                <i class="fa-solid fa-hashtag me-1"></i>
+                                Qty
+                            </th>
+                            <th class="px-2 text-center" style="width: 120px;">
+                                <i class="fa-solid fa-user me-1"></i>
+                                Aktor
+                            </th>
                         </tr>
                     </thead>
-                    <tbody id="stockTableBody"></tbody>
+                    <tbody id="stockTableBody">
+
+                    </tbody>
                 </table>
                 <div id="loadingData" class="text-center py-3" style="display: none;">
                     <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
@@ -102,1160 +158,619 @@
             </div>
         </section>
     </main>
-
     @include('layouts.footer')
-
-    <!-- Modal Detail -->
-    <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow">
-
-                <div class="modal-header">
-                    <div>
-                        <h5 class="modal-title fw-bold" id="modalTitle"></h5>
-                        <small class="text-muted" id="detailSku"></small>
-                    </div>
-
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="table-responsive">
-                        <table id="detailTable" class="table table-hover align-middle w-100">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 50px;">No</th>
-                                    <th>Pesanan</th>
-                                    <th>Produk</th>
-                                    <th class="text-center">Qty</th>
-                                    <th>Pengiriman</th>
-                                    <th class="text-center">Status</th>
-                                    <th>Tanggal Order</th>
-                                    <th>Aksi</th>
-                                </tr>
-                            </thead>
-
-                            <tbody id="detailTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Pengambil Barang -->
-    <div class="modal fade" id="pengambilModal" tabindex="-1" aria-labelledby="pengambilModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow">
-
-                <div class="modal-header">
-                    <div>
-                        <h5 class="modal-title fw-bold" id="pengambilModalLabel">
-                            Pengambil Barang
-                        </h5>
-                        <small class="text-muted">
-                            Pilih orang yang mengambil barang dari gudang
-                        </small>
-                    </div>
-
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-                    </button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="pengambil_id" class="form-label fw-semibold">
-                            Nama Pengambil
-                        </label>
-
-                        <select class="form-select" id="pengambil_id" name="pengambil_id" required>
-                            <option>-- Pilih Pengambil --</option>
-                        </select>
-                        <span id="userpengambilbarang" class="text-danger" style="font-size: 11px; font-weight: 400;">
-                        </span>
-                    </div>
-
-                </div>
-
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                        Batal
-                    </button>
-                    <button type="button" class="btn btn-primary" id="btnSiap">
-                        <i class="ri-save-line me-1"></i>
-                        Simpan
-                    </button>
-                </div>
-
-            </div>
-        </div>
-    </div>
 @endsection
-
 @push('styles')
     <style>
-        #detailModal .dt-length {
-            margin-left: 16px;
-            margin-top: 0 !important;
-            padding-top: 0 !important;
+        #orderlist {
+            font-size: 13px;
         }
 
-        #detailModal .dt-search {
-            display: flex !important;
-            align-items: center;
-            justify-content: flex-end;
-            padding: 0 12px !important;
-            margin: 0 !important;
-            gap: 6px;
-        }
-
-        #detailModal .dt-search label {
-            font-size: 11px;
+        #orderlist thead th {
+            font-size: 12px;
+            font-weight: 600;
             color: #6c757d;
-            margin: 0 !important;
-            padding: 0 !important;
+            white-space: nowrap;
+            vertical-align: middle;
         }
 
-        #detailModal .dt-search input {
-            width: 160px !important;
-            height: 30px;
-            padding: 4px 9px;
+        #orderlist tbody td {
+            vertical-align: middle !important;
+        }
+
+        .order-main {
+            font-size: 15px;
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .order-sub {
+            font-size: 12px;
+            color: #6c757d;
+            line-height: 1.35;
+        }
+
+        .resi-main {
+            font-size: 14px;
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .product-item {
+            padding: 6px 0;
+            line-height: 1.3;
+        }
+
+        .product-item+.product-item {
+            border-top: 1px solid #eeeeee;
+        }
+
+        .product-sku {
+            font-size: 13px;
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .product-name {
+            font-size: 13px;
+            color: #495057;
+        }
+
+        .product-variant {
             font-size: 11px;
-            border: 1px solid #dee2e6;
+            color: #8a8f94;
+        }
+
+        .status-proses {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #e65100;
+            background: #fff3e0;
+            border: 1px solid #ffe0b2;
+        }
+
+        .tanggal-label {
+            font-size: 10px;
+            color: #adb5bd;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: .3px;
+        }
+
+        .tanggal-value {
+            font-size: 12px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .qty-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .btn-detail-table {
+            width: 34px;
+            height: 34px;
+            padding: 0;
             border-radius: 7px;
+        }
+
+        .stok-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            overflow: hidden;
             background: #fff;
-            outline: none;
-
-            margin: 0 !important;
         }
 
-        #detailModal .dt-search input:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.08);
+        .stok-card-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid #e9ecef;
+            background: #fff;
         }
 
-        #detailModal .dt-layout-row:first-child {
-            align-items: center !important;
-            margin: 0 !important;
-            padding-top: 0 !important;
+        .stok-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .stok-subtitle {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 2px;
+        }
+
+        .product-row-sync {
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+        }
+
+        .product-row-sync.border-top {
+            border-top: 1px solid #dee2e6 !important;
+        }
+
+        .produk-cell,
+        .jumlah-cell,
+        .stok-cell {
+            vertical-align: middle !important;
         }
     </style>
 @endpush
-
 @push('scripts')
     <script>
         $(document).ready(function() {
-            let filter = "{{ $id }}";
+            let filter = "{{ $page }}";
             let selected = [];
             let pengambilbarang = null;
-
-            // Untuk menandai dan mengecek pesanan terlewat saat scan
             let cekDetail = [];
-
-            $('#pengambil_id').select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                placeholder: 'Pilih Pengambil',
-                allowClear: true,
-                dropdownParent: $('#pengambilModal')
-            });
-
-            let table = new DataTable('#orderlist', {
-                pageLength: 10,
-                searching: true,
-                lengthChange: false,
-                autoWidth: false
-            });
-
-            $.ajax({
-                type: "GET",
-                url: "{{ route('showdata.json', ':filter') }}".replace(':filter', filter),
-                dataType: "JSON",
-                beforeSend: function() {
-                    if ($.fn.DataTable.isDataTable('#orderlist')) {
-                        $('#orderlist').DataTable().destroy();
-                    }
-
-                    const jumlahKolom = $('#orderlist thead th').length;
-                    const kolomTengah = Math.floor(jumlahKolom / 2);
-
-                    let tdLoading = '';
-
-                    for (let i = 0; i < jumlahKolom; i++) {
-
-                        if (i === kolomTengah) {
-                            tdLoading += `
-                            <td class="text-center py-3">
-                                <div class="d-flex align-items-center justify-content-center gap-2">
-                                    <div
-                                        class="spinner-border spinner-border-sm text-primary"
-                                        role="status"
-                                        style="width: 16px; height: 16px;">
-                                    </div>
-
-                                    <span class="text-muted" style="font-size: 12px;">
-                                        Memuat...
-                                    </span>
-                                </div>
-                            </td>
-                        `;
-                        } else {
-                            tdLoading += `<td></td>`;
-                        }
-                    }
-
-                    $('#stockTableBody').html(`
-                    <tr class="loading-row">
-                        ${tdLoading}
-                    </tr>
-                `);
-                },
-
-                success: function(response) {
-                    let html = '';
-                    let no = 1;
-
-                    if (filter === "siapkan") {
-                        $.each(response, function(index, item) {
-                            html += `
-                                    <tr>
-                                       <td class="py-3 px-4 text-center">
-                                            <input type="checkbox"
-                                                class="form-check-input item-checkbox"
-                                                value="${item.id}">
-                                        </td>
-                                        <td class="py-3 px-4 text-start">
-                                            <div class="d-flex flex-column">
-                                                <span class="fw-semibold text-dark d-inline-block"
-                                                    style="max-width: 180px; white-space: normal; word-break: break-word;">
-                                                    ${item.produk?.nama_produk ?? '-'}
-                                                </span>
-
-                                                <span class="badge bg-light text-secondary border fw-normal"
-                                                    style="font-size: 10px; letter-spacing: .3px;">
-                                                    SKU: <span class="sku">${item.produk?.sku ?? '-'}</span>
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td class="py-3 px-4 text-start">
-                                            ${(item.produk?.variasi ?? '-').replace(/,\s*/g, '<br>')}
-                                        </td>
-
-                                        <td class="py-3 px-4 text-center">
-                                            <div class="fw-bold text-success fs-6">
-                                                ${Number(item.produk?.hpp ?? 0).toLocaleString('id-ID', {
-                                                    style: 'currency',
-                                                    currency: 'IDR',
-                                                    minimumFractionDigits: 0
-                                                })}
-                                            </div>
-                                            <small class="text-muted">/ Item</small>
-                                        </td>
-
-                                        <td class="py-3 px-4 text-center">
-                                            <div class="d-flex flex-column gap-1 align-items-center">
-                                                <div class="d-flex align-items-center gap-1">
-                                                    <i class="fa-solid fa-box-open text-danger" style="font-size: 11px;"></i>
-                                                    <span class="text-muted" style="font-size: 11px;">
-                                                        Kebutuhan :
-                                                    </span>
-                                                    <span class="fw-bold text-danger">
-                                                        ${item.kebutuhan ?? 0}
-                                                    </span>
-                                                </div>
-
-                                                <div class="d-flex align-items-center gap-1">
-                                                    <i class="fa-solid fa-boxes-stacked text-primary" style="font-size: 11px;"></i>
-                                                    <span class="text-muted" style="font-size: 11px;">
-                                                        Tersedia :
-                                                    </span>
-                                                    <span class="fw-bold text-primary">
-                                                        ${item.produk?.stok_produk?.jumlah_tersedia ?? 0}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        <td class="py-3 px-4 text-center">
-                                            ${
-                                                (item.produk?.stok_produk?.jumlah_tersedia ?? 0) >= (item.kebutuhan ?? 0)
-                                                ? 
-                                                `
-                                                                                                                                                                                <span class="badge bg-success">Tersedia</span>
-                                                                                                                                                                            `
-                                                : 
-                                                
-                                                `
-                                                                                                                                                                                <span class="badge bg-danger">Kurang</span>
-                                                                                                                                                                                <input type="hidden" class="status-stok" value="kurang">
-                                                                                                                                                                            `
-                                            }
-                                        </td>
-                                        <td class="py-3 px-4 text-center">
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-primary btnDetail"
-                                                data-sku="${item.produk?.sku ?? ''}"
-                                                title="Lihat Detail"
-                                                style="width: 34px; height: 34px; padding: 0;">
-                                                <i class="fa-solid fa-eye"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                            `;
-                        });
-
-                        $('#headertitle').text("Produk Perlu Disiapkan");
-                        $('#headersub').html(`
-                                <span class="text-muted">
-                                    <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                                    Transaksi
-                                </span>
-                                <span class="mx-2 text-secondary">/</span>
-                                <span class="fw-semibold text-primary">
-                                    Perlu Disiapkan
-                                </span>
-                            `);
-                    } else if (filter === "siap" || filter === "diambil") {
-                        $.each(response, function(index, item) {
-                            html += `
-                            <tr>
-                                <td class="py-3 px-4 text-center">
-                                    <input type="checkbox"
-                                        class="form-check-input item-checkbox"
-                                        value="${item.id}">
-                                </td>
-
-                                <td class="py-3 px-4 text-start">
-                                    <div class="d-flex flex-column">
-                                        <span class="fw-semibold text-dark d-inline-block sku"
-                                        style="max-width: 180px; white-space: normal; word-break: break-word;">
-                                            ${item.stok_produk?.produk?.nama_produk ?? '-'}
-                                        </span>
-
-                                        <span class="badge bg-light text-secondary border fw-normal"
-                                            style="font-size: 10px; letter-spacing: .3px;">
-                                            SKU: ${item.stok_produk?.sku_id ?? '-'}
-                                        </span>
-                                    </div>
-                                </td>
-
-                                <td class="py-3 px-4 text-center">
-                                    <div class="d-flex flex-column align-items-center">
-                                        <span class="text-center small">
-                                            ${(item.stok_produk?.produk?.variasi ?? '-').replace(/,\s*/g, '<br>')}
-                                        </span>
-
-                                        <div class="d-flex align-items-center justify-content-center gap-1 mt-1">
-                                            <span class="text-muted" style="font-size: 11px;">Hpp :</span>
-                                            <span class="fw-semibold text-success" style="font-size: 11px;">
-                                                ${Number(item.stok_produk?.produk?.hpp ?? 0)
-                                                    .toLocaleString('id-ID', {
-                                                        style: 'currency',
-                                                        currency: 'IDR',
-                                                        minimumFractionDigits: 0
-                                                    })}
-                                            </span>
-
-                                            <span class="text-muted" style="font-size: 9px;">
-                                                / Item
-                                            </span>
-                                        </div>
-                                    </div>
-                                </td>
-
-                                <td class="py-3 px-4 text-center">
-                                    <div class="d-inline-flex flex-column align-items-center">
-                                        <span
-                                            class="fw-bold d-inline-flex align-items-center justify-content-center px-2 py-1"
-                                            style="
-                                                color: #dc3545;
-                                                background: rgba(220, 53, 69, 0.10);
-                                                border: 1px solid rgba(220, 53, 69, 0.20);
-                                                border-radius: 6px;
-                                                font-size: 12px;
-                                                min-width: 32px;
-                                            "
-                                        >
-                                            ${item.jumlah ?? 0}
-                                        </span>
-
-                                        <span
-                                            class="text-muted mt-1"
-                                            style="
-                                                font-size: 10px;
-                                                line-height: 1;
-                                            "
-                                        >
-                                            items
-                                        </span>
-                                    </div>
-                                </td>
-
-                                <td class="py-0 px-4 text-center">
-                                    <div class="text-muted text-uppercase fw-semibold"
-                                        style="font-size: 9px; line-height: 1.1;">
-                                        Disiapkan Oleh
-                                    </div>
-
-                                    <div class="fw-bold text-dark py-1"
-                                        style="font-size: 16px; line-height: 1.1;">
-                                        ${item.gudang?.name ?? '-'}
-                                    </div>
-
-                                    <div class="text-muted d-flex align-items-center justify-content-center gap-2"
-                                        style="font-size: 10px; line-height: 1.1;">
-                                        <span>
-                                            <i class="fa-regular fa-calendar"></i>
-                                            ${ item.created_at
-                                                    ? new Date(item.created_at).toLocaleDateString('id-ID')
-                                                    : '-'
-                                            }
-                                        </span>
-                                        <span>
-                                            <i class="fa-regular fa-clock"></i>
-                                            ${
-                                                item.created_at
-                                                    ? new Date(item.created_at).toLocaleTimeString('id-ID', {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })
-                                                    : '-'
-                                            }
-                                        </span>
-                                    </div>
-                                </td>
-
-                                ${filter === 'diambil' ? 
-                                    `
-                                                                                                                        <td class="py-0 px-4 text-center">
-                                                                                                                            <div class="text-muted text-uppercase fw-semibold"
-                                                                                                                                style="font-size: 9px; line-height: 1.1;">
-                                                                                                                                Diambil Oleh
-                                                                                                                            </div>
-
-                                                                                                                            <div class="fw-bold text-dark py-1"
-                                                                                                                                style="font-size: 16px; line-height: 1.1;">
-                                                                                                                                ${item.admin_penjualan?.name ?? '-'}
-                                                                                                                            </div>
-
-                                                                                                                            <div class="text-muted d-flex align-items-center justify-content-center gap-2"
-                                                                                                                                style="font-size: 10px; line-height: 1.1;">
-                                                                                                                                <span>
-                                                                                                                                    <i class="fa-regular fa-calendar"></i>
-                                                                                                                                    ${ item.updated_at
-                                                                                                                                            ? new Date(item.updated_at).toLocaleDateString('id-ID')
-                                                                                                                                            : '-'
-                                                                                                                                    }
-                                                                                                                                </span>
-                                                                                                                                <span>
-                                                                                                                                    <i class="fa-regular fa-clock"></i>
-                                                                                                                                    ${
-                                                                                                                                        item.updated_at
-                                                                                                                                            ? new Date(item.updated_at).toLocaleTimeString('id-ID', {
-                                                                                                                                                hour: '2-digit',
-                                                                                                                                                minute: '2-digit'
-                                                                                                                                            })
-                                                                                                                                            : '-'
-                                                                                                                                    }
-                                                                                                                                </span>
-                                                                                                                            </div>
-                                                                                                                        </td>
-                                                                                                                    `
-                                    : '-'
-                                }
-
-                                <td class="py-3 px-4 text-center">
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-primary btnDetail"
-                                        data-sku="${item.id ?? ''}"
-                                        title="Lihat Detail"
-                                        style="width: 34px; height: 34px; padding: 0;">
-                                        <i class="fa-solid fa-eye"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
-                        });
-
-                        if (filter === "siap") {
-                            $('#filteron').text("Tanggal Disiapkan");
-                            $('#headertitle').text("Produk Siap Diambil");
-                            $('#headersub').html(`
-                                <span class="text-muted">
-                                    <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                                    Transaksi
-                                </span>
-                                <span class="mx-2 text-secondary">/</span>
-                                <span class="fw-semibold text-primary">
-                                    Siap Diambil
-                                </span>
-                            `);
-                        } else {
-                            $('#filteron').text("Tanggal Diambil");
-                            $('#headertitle').text("Produk Sudah Diambil");
-                            $('#headersub').html(`
-                                <span class="text-muted">
-                                    <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                                    Transaksi
-                                </span>
-                                <span class="mx-2 text-secondary">/</span>
-                                <span class="fw-semibold text-primary">
-                                    Sudah Diambil
-                                </span>
-                            `);
-                        }
-                    }
-
-                    if ($.fn.DataTable.isDataTable('#orderlist')) {
-                        table.destroy();
-                    }
-
-                    $('#stockTableBody').html(html);
-                    table = new DataTable('#orderlist', {
-                        pageLength: 10,
-                        searching: true,
-                        lengthChange: false,
-                        autoWidth: false
-                    });
-                },
-
-                error: function(xhr) {
-                    console.log(xhr.responseText);
-                }
-            });
+            let table;
+            let kebutuhan = [];
 
             $('#per_page').val(10);
             $('#per_page').on('change', function() {
+                resetChecklist();
                 if (table) {
                     table.page.len(parseInt(this.value)).draw();
                 }
             });
 
             $('#searchTable').on('input', function() {
+                resetChecklist();
                 if (table) {
                     table.search(this.value).draw();
                 }
             });
 
-            // Menangani Pengambilan User Sesuai Role
-            $('#pengambilModal').on('shown.bs.modal', function(event) {
-                const button = $(event.relatedTarget);
-                const role = button.data('role');
+            $('#filterMarketplace').on('change', function() {
+                resetChecklist();
+                if (table) {
+                    table.ajax.reload();
+                }
+            });
 
-                pengambilbarang = null;
-                $('#pengambil_id').html(`
-                    <option value="">Memuat data...</option>
-                `);
+            // Mengosongkan CheckAll saat halaman baru dimuat
+            $('#checkAll').prop('checked', false);
+            $('.item-checkbox').prop('checked', false);
 
-                $.ajax({
-                    type: "GET",
-                    url: "{{ route('user.data', ':role') }}".replace(':role', role),
-                    dataType: "json",
-                    success: function(response) {
-                        let option = `
-                                <option value="">
-                                    -- Pilih Pengambil --
-                                </option>
-                            `;
+            // Melakukan singkronisasi tinggi sebuah ROW
+            function syncProductRows() {
+                $('#orderlist tbody tr').each(function() {
 
-                        $.each(response, function(index, user) {
-                            option += `
-                                <option value="${user.id}">
-                                    ${user.name}
-                                </option>
-                            `;
-                        });
+                    const row = $(this);
 
-                        $('#pengambil_id').html(option);
-                    },
-                    error: function(xhr) {
-                        console.log(xhr.responseText);
+                    const produk = row.find('.produk-item');
+                    const jumlah = row.find('.jumlah-item');
+                    const stok = row.find('.stok-item');
 
-                        $('#pengambil_id').html(`
-                            <option value="">
-                                Gagal memuat data
-                            </option>
-                        `);
-                    }
+                    produk.css('height', '');
+                    jumlah.css('height', '');
+                    stok.css('height', '');
+
+                    produk.each(function(index) {
+
+                        const produkItem = produk.eq(index);
+                        const jumlahItem = jumlah.eq(index);
+                        const stokItem = stok.eq(index);
+
+                        const tinggi = Math.ceil(
+                            Math.max(
+                                produkItem.outerHeight() || 0,
+                                jumlahItem.outerHeight() || 0,
+                                stokItem.outerHeight() || 0
+                            )
+                        );
+
+                        produkItem.css('height', tinggi + 'px');
+                        jumlahItem.css('height', tinggi + 'px');
+                        stokItem.css('height', tinggi + 'px');
+
+                    });
+
                 });
-            });
 
-            // Mengambil Field Pengambil Barang
-            $('#pengambil_id').on('change', function() {
-                pengambilbarang = $(this).val() || null;
-            });
-
-            // Mereset CheckAll
-            $(document).ready(function() {
-                $('#checkAll').prop('checked', false);
-                $('.item-checkbox').prop('checked', false);
-            });
-
-            function updateButtonPengambil() {
-                const adaYangDipilih = $('.item-checkbox:checked').length > 0;
-                $('#btnPengambilModal').prop('disabled', !adaYangDipilih);
             }
+
+            $('#stockTableBody').empty();
+
+            // Datatable Utama
+            table = new DataTable('#orderlist', {
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: "{{ route('showdata.json', ':filter') }}".replace(':filter', filter),
+                    type: "GET",
+                    data: function(d) {
+                        d.marketplace = $('#filterMarketplace').val();
+                    }
+                },
+                pageLength: 10,
+                searching: true,
+                lengthChange: false,
+                autoWidth: false,
+                order: [],
+                columns: [
+                    // CHECKBOX
+                    {
+                        data: 'id',
+                        name: 'id',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center px-2',
+                        render: function(data, type, row) {
+                            return `
+                                <input
+                                    type="checkbox"
+                                    class="form-check-input item-checkbox"
+                                    value="${data ?? ''}"
+                                    data-no-pesanan="${row.no_pesanan ?? ''}"
+                                    style="width: 16px; height: 16px;"
+                                >
+                            `;
+                        }
+                    },
+
+                    // PESANAN
+                    {
+                        data: 'no_pesanan',
+                        name: 'no_pesanan',
+                        orderable: false,
+                        searchable: true,
+                        className: 'px-3 py-2',
+                        render: function(data, type, row) {
+                            const batasKirim = row.batas_kirim_at ?
+                                new Date(row.batas_kirim_at) :
+                                null;
+
+                            const barang = Array.isArray(row.pesanan_per_produk) ?
+                                row.pesanan_per_produk : [];
+
+                            // Ambil updated_at paling terbaru
+                            const updatedAtTerbaru = barang
+                                .filter(item => item.updated_at)
+                                .map(item => new Date(item.updated_at))
+                                .sort((a, b) => b - a)[0] ?? null;
+
+                            return `
+                                <div class="d-flex flex-column gap-1">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fa-solid fa-receipt text-primary"
+                                            style="font-size: 12px;"></i>
+
+                                        <span class="fw-bold text-dark"
+                                            style="font-size: 14px;">
+                                            ${data ?? '-'}
+                                        </span>
+                                    </div>
+
+                                    <div class="d-flex flex-column">
+                                        <div class="d-flex align-items-center gap-2 text-nowrap">
+                                            <span class="text-muted fw-semibold"
+                                                style="font-size: 10px;">
+
+                                                <i class="fa-solid fa-truck me-1"></i>
+                                                Batas Kirim
+                                            </span>
+
+                                            <span class="fw-semibold text-danger"
+                                                style="font-size: 11px;">
+                                                ${
+                                                    batasKirim
+                                                        ? batasKirim.toLocaleString('id-ID', {
+                                                            day: '2-digit',
+                                                            month: 'short',
+                                                            year: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                            hour12: false,
+                                                            timeZone: 'Asia/Jakarta'
+                                                        })
+                                                        : '-'
+                                                }
+                                            </span>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2 text-nowrap">
+                                            <span class="text-muted fw-semibold"
+                                                style="font-size: 10px;">
+                                                <i class="fa-solid fa-dolly me-1"></i>
+                                                Diambil
+                                            </span>
+                                            <span class="fw-semibold text-success"
+                                                style="font-size: 11px;">
+                                                ${
+                                                    updatedAtTerbaru
+                                                        ? updatedAtTerbaru.toLocaleString('id-ID', {
+                                                            day: '2-digit',
+                                                            month: 'short',
+                                                            year: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit',
+                                                            hour12: false,
+                                                            timeZone: 'Asia/Jakarta'
+                                                        })
+                                                        : '-'
+                                                }
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    },
+
+                    // RESI
+                    {
+                        data: 'no_resi',
+                        name: 'no_resi',
+                        orderable: false,
+                        searchable: true,
+                        className: 'px-3 py-2',
+                        render: function(data, type, row) {
+                            return `
+                                <div
+                                    class="d-flex flex-column align-items-start"
+                                    style="line-height: 1.25;">
+
+                                    <span class="resi-main">
+                                        <i class="fa-solid fa-barcode text-secondary me-1" style="font-size: 11px;"></i>
+                                        ${data ?? '-'}
+                                    </span>
+
+                                    <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
+                                        <span
+                                            class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill"
+                                            style="
+                                                font-size: 10px;
+                                                font-weight: 600;
+                                                color: #e8590c;
+                                                background: rgba(253, 126, 20, 0.15);
+                                                border: 1px solid rgba(253, 126, 20, 0.35);
+                                            "
+                                        >
+                                            <i class="fa-solid fa-clock"></i>
+                                            ${row.status ?? '-'}
+                                        </span>
+                                        <span
+                                            class="d-inline-flex align-items-center gap-1 px-2 py-1 rounded-pill"
+                                            style="
+                                                font-size: 10px;
+                                                font-weight: 600;
+                                                color: #6c757d;
+                                                background: #f8f9fa;
+                                                border: 1px solid #dee2e6;
+                                            "
+                                        >
+                                            <i class="fa-solid fa-store"></i>
+                                            ${row.toko?.nama_toko ?? '-'}
+                                        </span>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    },
+
+                    // PRODUK
+                    {
+                        data: 'pesanan_per_produk',
+                        orderable: false,
+                        searchable: true,
+                        className: 'px-3 py-0 produk-cell',
+                        render: function(data, type, row) {
+                            let html = '';
+                            const barang = Array.isArray(row.pesanan_per_produk) ?
+                                row.pesanan_per_produk : [];
+
+                            barang.forEach(function(item, index) {
+                                const border = index > 0 ? 'border-top' : '';
+                                html += `
+                                    <div class="product-row-sync produk-item ${border} py-2">
+                                        <div class="d-flex align-items-center flex-wrap gap-2 w-100">
+                                            <span class="product-sku d-inline-flex align-items-center fw-semibold text-dark">
+                                                <i
+                                                    class="fa-solid fa-cube text-primary me-1"
+                                                    style="font-size:10px;">
+                                                </i>
+                                                ${item.sku ?? '-'}
+                                            </span>
+                                            <span class="text-muted">•</span>
+                                            <span class="product-name text-secondary">
+                                                ${
+                                                    item.nama_produk
+                                                        ? item.nama_produk
+                                                            .split(' ')
+                                                            .reduce((hasil, kata, index) => {
+                                                                return hasil +
+                                                                    kata +
+                                                                    ((index + 1) % 5 === 0
+                                                                        ? '<br>'
+                                                                        : ' ');
+                                                            }, '')
+                                                        : '-'
+                                                }
+                                            </span>
+                                            ${
+                                                item.variasi
+                                                    ? `
+                                                                                                                                                                                                                            <span
+                                                                                                                                                                                                                                class="badge bg-light text-dark border fw-normal"
+                                                                                                                                                                                                                                style="font-size:10px;">
+                                                                                                                                                                                                                                ${item.variasi}
+                                                                                                                                                                                                                            </span>
+                                                                                                                                                                                                                        `
+                                                    : ''
+                                            }
+
+                                        </div>
+
+                                    </div>
+                                `;
+                            });
+
+                            return html;
+                        }
+                    },
+
+                    // JUMLAH
+                    {
+                        data: 'pesanan_per_produk',
+                        orderable: false,
+                        searchable: false,
+                        className: 'px-2 py-0 text-center jumlah-cell',
+                        render: function(data, type, row) {
+                            let html = '';
+                            const barang = Array.isArray(row.pesanan_per_produk) ?
+                                row.pesanan_per_produk : [];
+
+                            barang.forEach(function(item, index) {
+                                const border = index > 0 ? 'border-top' : '';
+                                html += `
+                                    <div
+                                        class="product-row-sync jumlah-item ${border}
+                                            justify-content-center"
+                                    >
+                                        <span class="qty-value">
+                                            ${item.jumlah ?? 0}
+                                        </span>
+                                    </div>
+                                `;
+                            });
+
+                            return html;
+                        }
+                    },
+
+                    // AKTOR
+                    {
+                        data: null,
+                        name: 'aktor',
+                        orderable: false,
+                        searchable: false,
+                        className: 'px-2 py-0 text-center',
+                        render: function(data, type, row) {
+                            const produk = row.pesanan_per_produk?.[0];
+                            const adminGudang = produk?.mutasi?.gudang?.name ?? '-';
+                            const pengambilBarang = produk?.mutasi?.admin_penjualan?.name ?? '-';
+                            return `
+                                <div class="d-flex flex-column gap-2 py-2">
+
+                                    <div>
+                                        <div class="text-muted small mb-1">
+                                            Admin Gudang
+                                        </div>
+
+                                        <span class="badge bg-primary">
+                                            ${adminGudang}
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        <div class="text-muted small mb-1">
+                                            Pengambil Barang
+                                        </div>
+
+                                        <span class="badge bg-success">
+                                            ${pengambilBarang}
+                                        </span>
+                                    </div>
+
+                                </div>
+                            `;
+                        }
+                    },
+                ],
+                drawCallback: function() {
+                    requestAnimationFrame(function() {
+                        syncProductRows();
+
+                    });
+
+                }
+            });
 
             // Check All
             $(document).on('change', '#checkAll', function() {
                 const checked = $(this).prop('checked');
-                $('#orderlist tbody tr').each(function() {
-                    const status = $(this).find('.status-stok').val();
-                    const checkbox = $(this).find('.item-checkbox');
 
-                    if (!checkbox.length) {
-                        return;
-                    }
+                $('#orderlist tbody .item-checkbox').each(function() {
+                    $(this).prop('checked', checked);
 
-                    if (status === 'kurang') {
-                        checkbox.prop('checked', false);
-                        $(this).removeClass('table-active');
-                        return;
-                    }
-
-                    checkbox.prop('checked', checked);
-                    $(this).toggleClass(
+                    $(this).closest('tr').toggleClass(
                         'table-active',
                         checked
                     );
                 });
 
                 updateButtonPengambil();
+                updateStokLive();
             });
 
             // Klik Row
             $(document).on('click', '#orderlist tbody tr', function(e) {
+                // Abaikan kalau klik tombol detail
                 if ($(e.target).closest('.btnDetail').length) {
                     return;
                 }
 
-                const status = $(this).find('.status-stok').val();
-                const checkbox = $(this).find('.item-checkbox');
+                const row = $(this);
+                const checkbox = row.find('.item-checkbox');
 
                 if (!checkbox.length) {
                     return;
                 }
 
-                if (status === 'kurang') {
-                    checkbox.prop('checked', false);
-                    $(this).removeClass('table-active');
-
-                    updateButtonPengambil();
-                    return;
-                }
-
+                // Kalau klik checkbox langsung
                 if ($(e.target).is('.item-checkbox')) {
-                    $(this).toggleClass(
+                    row.toggleClass(
                         'table-active',
                         checkbox.prop('checked')
                     );
 
                     updateButtonPengambil();
+                    updateStokLive();
+
                     return;
                 }
 
-                // Kalau klik area row
+                // Klik area row
                 const checked = !checkbox.prop('checked');
+
                 checkbox.prop('checked', checked);
-                $(this).toggleClass(
+
+                row.toggleClass(
                     'table-active',
                     checked
                 );
 
                 updateButtonPengambil();
+                updateStokLive();
             });
 
-            // Submit Barang Disiapkan
-            $('#btnDisiapkan').on('click', function() {
-                const selected = $('.item-checkbox:checked');
-                if (selected.length === 0) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Belum Ada Barang',
-                        text: 'Silakan pilih barang terlebih dahulu.'
-                    });
-                    return;
+            // Logic jika filter ganti maka hapus checklist
+            function resetChecklist() {
+                // Hapus semua checkbox item
+                $('.item-checkbox').prop('checked', false);
+
+                // Hapus check all
+                $('#checkAll').prop('checked', false);
+
+                // Hapus highlight row
+                $('#orderlist tbody tr').removeClass('table-active');
+
+                // Update tombol
+                updateButtonPengambil();
+
+                // Update card stok live kalau kamu pakai
+                if (typeof updateStokLive === 'function') {
+                    updateStokLive();
                 }
-
-                const selectedSku = selected.map(function() {
-                    return $(this)
-                        .closest('tr')
-                        .find('.sku')
-                        .text()
-                        .trim();
-                }).get();
-
-                Swal.fire({
-                    title: 'Konfirmasi',
-                    text: `Tandai ${selected.length} barang sebagai sudah disiapkan?`,
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Ya, Proses',
-                    cancelButtonText: 'Batal'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.ajax({
-                            type: "POST",
-                            url: "{{ route('transaksi.store') }}",
-                            data: {
-                                _token: "{{ csrf_token() }}",
-                                sku: selectedSku
-                            },
-                            dataType: "JSON",
-                            success: function(response) {
-                                if (response.success) {
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Berhasil',
-                                        text: response.message,
-                                        timer: 1800,
-                                        showConfirmButton: false
-                                    }).then(() => {
-                                        location.reload();
-                                    });
-
-                                } else {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Gagal',
-                                        text: response.message ??
-                                            'Terjadi kesalahan.'
-                                    });
-                                }
-                            },
-
-                            error: function(xhr) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Gagal',
-                                    text: xhr.responseJSON?.message ??
-                                        'Terjadi kesalahan saat memproses data.'
-                                });
-
-                            }
-                        });
-                    }
-
-                });
-
-            });
-
-            // Submit halaman Siap
-            $('#btnSiap').on('click', function() {
-                const selected = $('.item-checkbox:checked');
-                if (selected.length === 0) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Belum Ada Barang',
-                        text: 'Silakan pilih barang terlebih dahulu.'
-                    });
-                    return;
-                }
-
-                const selectedSku = selected.map(function() {
-                    return $(this).val();
-                }).get();
-
-                if (pengambilbarang == null) {
-                    $('#userpengambilbarang').html('Pengambil barang tidak boleh kosong');
-                } else {
-                    $.ajax({
-                        type: "POST",
-                        url: "{{ route('transaksi.updatestatus') }}",
-                        data: {
-                            _token: "{{ csrf_token() }}",
-                            sku: selectedSku,
-                            pengambil_barang: pengambilbarang
-                        },
-                        dataType: "JSON",
-                        success: function(response) {
-                            if (response.success) {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Berhasil',
-                                    text: response.message,
-                                    timer: 1800,
-                                    showConfirmButton: false
-                                }).then(() => {
-                                    location.reload();
-                                });
-
-                            } else {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Gagal',
-                                    text: response.message ??
-                                        'Terjadi kesalahan.'
-                                });
-                            }
-                        },
-
-                        error: function(xhr) {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Gagal',
-                                text: xhr.responseJSON?.message ??
-                                    'Terjadi kesalahan saat memproses data.'
-                            });
-
-                        }
-                    });
-                }
-
-
-
-            });
-
-            // Button View Detail
-            let detailTable = null;
-            $('#stockTableBody').on('click', '.btnDetail', function(e) {
-                e.stopPropagation();
-
-                let sku = $(this).data('sku');
-                $('#modalTitle').text('Detail Kebutuhan Terhadap Pesanan');
-
-                if (filter == "siapkan") {
-                    if (!sku || String(sku).trim() === '') {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Data tidak valid',
-                            text: 'Data pesanan tidak valid.'
-                        });
-                        return;
-                    }
-
-                    $('#detailSku').html(
-                        `
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="text-muted fw-semibold">SKU Produk :</span>
-                            <span class="badge bg-primary-subtle text-primary fs-6">
-                                ${sku}
-                            </span>
-                        </div>
-                    `);
-                } else {
-                    if (!sku || String(sku).trim() === '') {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Data tidak valid',
-                            text: 'Data pesanan tidak valid.'
-                        });
-                        return;
-                    }
-
-                    $('#detailSku').html(
-                        `
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="text-muted fw-semibold">SKU Produk :</span>
-                            <span id="skuProduk" class="badge bg-primary-subtle text-primary fs-6">
-                                ${sku}
-                            </span>
-                        </div>
-                    `);
-                }
-
-                if ($.fn.DataTable.isDataTable('#detailTable')) {
-                    $('#detailTable').DataTable().destroy();
-                }
-                $('#detailTableBody').empty();
-
-                $.ajax({
-                    type: "GET",
-                    url: "{{ route('kebutuhan.detailpesanan', ['filter' => ':filter', 'sku' => ':sku']) }}"
-                        .replace(':filter', filter)
-                        .replace(':sku', sku),
-                    dataType: "JSON",
-                    success: function(response) {
-                        $('#skuProduk').text(response[0].sku);
-                        $('#detailTableBody').empty();
-                        $.each(response, function(index, item) {
-                            const pesanan = item.pesanan ?? {};
-                            const namaPembeli = pesanan.nama_pembeli ?? '-';
-                            const username = pesanan.username ?? '-';
-                            const kurir = pesanan.kurir ?? '-';
-                            const noResi = pesanan.no_resi ?? '-';
-                            const status = pesanan.status ?? '-';
-                            const tanggal = pesanan.tanggal ?
-                                new Date(pesanan.tanggal).toLocaleDateString('id-ID', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric'
-                                }) : '-';
-                            let statusBadge = 'bg-secondary-subtle text-secondary';
-
-                            if (status === 'proses') {
-                                statusBadge = 'bg-warning-subtle text-warning';
-                            } else if (status === 'selesai') {
-                                statusBadge = 'bg-success-subtle text-success';
-                            } else if (status === 'batal') {
-                                statusBadge = 'bg-danger-subtle text-danger';
-                            } else if (status === 'packing') {
-                                statusBadge = 'bg-info-subtle text-info';
-                            }
-
-                            $('#detailTableBody').append(`
-                                <tr>
-                                    <td class="text-center">
-                                        <span class="fw-bold text-muted">
-                                            ${index + 1}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="fw-bold text-dark">
-                                            ${item.pesanan?.no_pesanan ?? '-'}
-                                        </div>
-
-                                        <div class="small mt-1">
-                                            <i class="fa-solid fa-user text-muted me-1"></i>
-                                            ${item.pesanan?.nama_pembeli ?? '-'}
-                                        </div>
-                                        <div class="text-muted" style="font-size: 11px;">
-                                            @${item.pesanan?.username}
-                                        </div>
-                                    </td>
-                                    <td style="max-width: 300px;">
-                                        <div class="fw-semibold text-dark">
-                                            ${item.produk.nama_produk ?? '-'}
-                                        </div>
-                                        <div class="d-flex gap-2 mt-1 flex-wrap">
-                                            <span class="badge bg-light text-dark border">
-                                                ${item.produk.variasi ?? '-'}
-                                            </span>
-                                            <span class="badge bg-primary-subtle text-primary">
-                                                ${item.sku ?? '-'}
-                                            </span>
-                                        </div>
-                                        <div class="text-muted mt-1" style="font-size: 11px;">
-                                            Rp ${Number(item.harga ?? 0).toLocaleString('id-ID')}
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge rounded-pill bg-primary fs-6 px-3">
-                                            ${item.jumlah ?? 0}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="fw-semibold">
-                                            ${kurir}
-                                        </div>
-
-                                        <div class="text-muted mt-1" style="font-size: 11px;">
-                                            <i class="fa-solid fa-barcode me-1"></i>
-                                            ${noResi}
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge ${statusBadge} text-uppercase">
-                                            ${status}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="fw-semibold">
-                                            ${tanggal}
-                                        </div>
-                                        <hr class="m-0 p-0">
-                                        <div class="text-muted mt-1" style="font-size: 11px;">
-                                            <i class="fa-solid fa-store me-1"></i>
-                                            ${item.pesanan.toko.nama_toko ?? '-'}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <button type="button"
-                                            class="btn btn-success btn-sm btn-selesai"
-                                            data-no-pesanan="${pesanan.no_pesanan}"
-                                            ${cekDetail.includes(pesanan.no_pesanan) ? 'disabled' : ''}>
-                                            Selesai
-                                        </button>
-                                    </td>
-                                </tr>
-                            `);
-                        });
-
-                        detailTable = $('#detailTable').DataTable({
-                            pageLength: 10,
-                            lengthChange: true,
-                            searching: true,
-                            ordering: true,
-                            autoWidth: false,
-                            responsive: true,
-
-                            language: {
-                                search: '',
-                                searchPlaceholder: 'Cari pesanan...',
-                                emptyTable: 'Tidak ada data pesanan',
-                                zeroRecords: 'Data tidak ditemukan',
-                                info: 'Menampilkan _START_ - _END_ dari _TOTAL_ pesanan',
-                                infoEmpty: 'Tidak ada data'
-                            },
-
-                            columnDefs: [{
-                                targets: 0,
-                                orderable: false,
-                                searchable: true
-                            }]
-                        });
-                    },
-
-                    error: function(xhr) {
-                        console.log(xhr.responseText);
-
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal',
-                            text: 'Gagal mengambil detail pesanan.'
-                        });
-                    }
-                });
-
-
-                const modal = new bootstrap.Modal(
-                    document.getElementById('detailModal')
-                );
-
-                modal.show();
-            });
-
-            $(document).on('click', '.btn-selesai', function() {
-                const noPesanan = String($(this).data('no-pesanan')).trim();
-                if (!cekDetail.includes(noPesanan)) {
-                    cekDetail.push(noPesanan);
-                }
-                $(this).prop('disabled', true);
-            });
-
-            $(document).on('hidden.bs.modal', '#detailModal', function() {
-                if (cekDetail.length > 0) {
-
-                    $.ajax({
-                        type: "POST",
-                        url: "{{ route('transaksi.update.selesai') }}",
-                        data: {
-                            no_pesanan: cekDetail,
-                            _token: "{{ csrf_token() }}"
-                        },
-                        dataType: "json",
-                        success: function(response) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Data Berhasil Diubah',
-                                text: 'Data telah berubah. Kami akan memperbarui jumlah kebutuhan.',
-                                confirmButtonText: 'OK'
-                            }).then(() => {
-                                location.reload();
-                            });
-                        },
-                        error: function(xhr) {
-                            console.log(xhr.responseText);
-                        }
-                    });
-
-                }
-            });
-
-
-
-
-            // Cetak Resi
-            $('#cetakResi').on('click', function() {
-                const selected = $('.item-checkbox:checked');
-
-                if (selected.length === 0) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Belum Ada Barang',
-                        text: 'Silakan pilih barang terlebih dahulu.'
-                    });
-                    return;
-                }
-
-                const selectedSku = selected.map(function() {
-                    return $(this).val();
-                }).get();
-
-                console.log(selectedSku);
-
-                $.ajax({
-                    type: "GET",
-                    url: "{{ route('transaksi.cetak-resi') }}",
-                    data: {
-                        sku: selectedSku
-                    },
-                    dataType: "json",
-                    success: function(response) {
-
-                        if (response.success && response.preview_url) {
-                            window.open(response.preview_url, '_blank');
-                            return;
-                        }
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil',
-                            text: response.message ?? 'Resi berhasil diproses.'
-                        });
-                    },
-
-                    error: function(xhr) {
-                        const response = xhr.responseJSON;
-                        console.log(response);
-
-                        if (xhr.status === 422 && response?.tidak_ditemukan) {
-                            const rows = response.tidak_ditemukan
-                                .map((item, index) => `
-                                        <tr>
-                                            <td>${index + 1}</td>
-                                            <td>${item.no_pesanan ?? '-'}</td>
-                                            <td>${item.no_resi ?? '-'}</td>
-                                            <td>
-                                                <span class="badge bg-danger">
-                                                    ${item.sku ?? '-'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    `)
-                                .join('');
-
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Pemberitahuan',
-                                width: 700,
-                                html: `
-                                    <div class="text-center mb-3">
-                                        ${response.message ?? 'Beberapa pesanan belum memiliki resi.'}
-                                    </div>
-
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered table-striped table-sm">
-                                            <thead>
-                                                <tr>
-                                                    <th style="width: 60px;">No</th>
-                                                    <th>No. Pesanan</th>
-                                                    <th>No. Resi</th>
-                                                    <th style="width: 180px;">SKU</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                ${rows}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                `,
-                                confirmButtonText: 'OK'
-                            });
-
-                            return;
-                        }
-
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal',
-                            text: response?.message ??
-                                'Terjadi kesalahan saat memproses resi.'
-                        });
-                    }
-                });
-            });
+            }
         });
     </script>
 @endpush

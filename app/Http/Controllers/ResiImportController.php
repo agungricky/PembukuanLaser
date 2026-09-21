@@ -27,6 +27,7 @@ class ResiImportController extends Controller
 
     public function preview(Request $request)
     {
+        
         $request->validate([
             'marketplace' => 'required|in:Shopee,Tiktok',
             'id_toko' => 'required|exists:toko,id_toko',
@@ -42,10 +43,8 @@ class ResiImportController extends Controller
                 ->withInput()
                 ->with('error', 'Toko tidak sesuai dengan marketplace.');
         }
-dd(session()->all());
-        $previewLama = session('resi_preview');
 
-        dd($previewLama);
+        $previewLama = session('resi_preview');
 
         if (
             $previewLama &&
@@ -85,7 +84,6 @@ dd(session()->all());
             );
 
             $pages = $pdf->getPages();
-
         } catch (\Throwable $e) {
             File::delete($tempPath);
 
@@ -110,7 +108,6 @@ dd(session()->all());
         }
 
         $preview = [];
-
         foreach ($pages as $index => $page) {
             $halaman = $index + 1;
 

@@ -377,19 +377,11 @@
                             <i class="fa-solid fa-box"></i>
                             <small>Perlu Disiapkan</small>
                         </a>
-
-                        <a href="{{ route('transaksi.show', ['page' => 'siap']) }}"
-                            class="sidebar-sublink {{ request()->route('page') === 'siap' ? 'active' : '' }}">
-
-                            <i class="fa-solid fa-box-open"></i>
-                            <small>Siap Diambil</small>
-                        </a>
-
                         <a href="{{ route('transaksi.show', ['page' => 'diambil']) }}"
                             class="sidebar-sublink {{ request()->route('page') === 'diambil' ? 'active' : '' }}">
 
                             <i class="fa-solid fa-circle-check"></i>
-                            <small>Sudah Diambil</small>
+                            <small>Pesanan Keluar</small>
                         </a>
 
                         <a href="{{ route('gudang.retur') }}"
