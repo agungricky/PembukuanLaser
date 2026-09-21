@@ -130,9 +130,50 @@
                 <table class="table table-hover align-middle mb-0" id="orderlist">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-center px-2" data-dt-order="disable" style="width: 44px;">
-                                <input type="checkbox" class="form-check-input" id="checkAll"
-                                    style="width: 16px; height: 16px;">
+                            <th class="text-center px-2" data-dt-order="disable" style="width: 55px;">
+
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-light border dropdown-toggle" type="button"
+                                        data-bs-toggle="dropdown" style="padding: 2px 7px;" title="Pilih pesanan">
+
+                                        <i class="fa-solid fa-check-double"></i>
+                                    </button>
+
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <button class="dropdown-item pilih-checkbox" data-type="all">
+                                                <i class="fa-solid fa-check-double me-2 text-primary"></i>
+                                                Pilih Semua
+                                            </button>
+                                        </li>
+
+                                        <li>
+                                            <button class="dropdown-item pilih-checkbox" data-type="tersedia">
+                                                <i class="fa-solid fa-circle-check me-2 text-success"></i>
+                                                Pilih Tersedia
+                                            </button>
+                                        </li>
+
+                                        <li>
+                                            <button class="dropdown-item pilih-checkbox" data-type="kurang">
+                                                <i class="fa-solid fa-triangle-exclamation me-2 text-danger"></i>
+                                                Pilih Tidak Tersedia
+                                            </button>
+                                        </li>
+
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+
+                                        <li>
+                                            <button class="dropdown-item pilih-checkbox" data-type="clear">
+                                                <i class="fa-solid fa-xmark me-2 text-secondary"></i>
+                                                Kosongkan Pilihan
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+
                             </th>
                             <th class="px-3" style="width: 190px;">
                                 <i class="fa-regular fa-user me-1"></i>
@@ -721,17 +762,17 @@
                                     ${
                                         terlambat
                                             ? `
-                                                                                                                                                                                                                    <div class="mt-1">
-                                                                                                                                                                                                                        <span
-                                                                                                                                                                                                                            class="badge bg-danger text-white"
-                                                                                                                                                                                                                            style="font-size: 9px;">
+                                                                                                                                                                                                                                <div class="mt-1">
+                                                                                                                                                                                                                                    <span
+                                                                                                                                                                                                                                        class="badge bg-danger text-white"
+                                                                                                                                                                                                                                        style="font-size: 9px;">
 
-                                                                                                                                                                                                                            <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                                                                                                                                                                                                                            Terlambat
+                                                                                                                                                                                                                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                                                                                                                                                                                                                        Terlambat
 
-                                                                                                                                                                                                                        </span>
-                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                `
+                                                                                                                                                                                                                                    </span>
+                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                            `
                                             : ''
                                     }
                                 </div>
@@ -850,12 +891,12 @@
                                             ${
                                                 item.variasi
                                                     ? `
-                                                                                                                                                                                                <span
-                                                                                                                                                                                                    class="badge bg-light text-dark border fw-normal"
-                                                                                                                                                                                                    style="font-size:10px;">
-                                                                                                                                                                                                    ${item.variasi}
-                                                                                                                                                                                                </span>
-                                                                                                                                                                                            `
+                                                                                                                                                                                                            <span
+                                                                                                                                                                                                                class="badge bg-light text-dark border fw-normal"
+                                                                                                                                                                                                                style="font-size:10px;">
+                                                                                                                                                                                                                ${item.variasi}
+                                                                                                                                                                                                            </span>
+                                                                                                                                                                                                        `
                                                     : ''
                                             }
 
@@ -936,17 +977,17 @@
                                         ${
                                             tersedia
                                                 ? `
-                                                                        <span class="status-stok stok-tersedia">
-                                                                            <i class="fa-solid fa-circle-check"></i>
-                                                                            Tersedia
-                                                                        </span>
-                                                                    `
+                                                                                    <span class="status-stok stok-tersedia">
+                                                                                        <i class="fa-solid fa-circle-check"></i>
+                                                                                        Tersedia
+                                                                                    </span>
+                                                                                `
                                                 : `
-                                                                        <span class="status-stok stok-kurang">
-                                                                            <i class="fa-solid fa-triangle-exclamation"></i>
-                                                                            Kurang
-                                                                        </span>
-                                                                    `
+                                                                                    <span class="status-stok stok-kurang">
+                                                                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                                                                        Kurang
+                                                                                    </span>
+                                                                                `
                                         }
 
                                     </div>
@@ -967,9 +1008,10 @@
             });
 
             // Check All
-            $(document).on('change', '#checkAll', function() {
-                const checked = $(this).prop('checked');
+            $(document).on('click', '.pilih-checkbox', function() {
+                const type = $(this).data('type');
                 $('#orderlist tbody tr').each(function() {
+
                     const row = $(this);
                     const checkbox = row.find('.item-checkbox');
 
@@ -979,19 +1021,20 @@
 
                     // Ambil data row dari DataTable
                     const rowData = table.row(this).data();
+
                     const barang = Array.isArray(rowData?.pesanan_per_produk) ?
                         rowData.pesanan_per_produk : [];
 
-                    // ================================================
                     // CEK APAKAH ADA SKU NON-C YANG STOKNYA KURANG
-                    // ================================================
                     const adaKurangNonCustom = barang.some(function(item) {
+
                         const sku = String(item.sku ?? '')
                             .trim()
                             .toUpperCase();
 
                         const skuCustom = sku.endsWith('C');
-                        // SKU berakhiran C tetap boleh walaupun stok kurang
+
+                        // SKU berakhiran C tetap dianggap tersedia
                         if (skuCustom) {
                             return false;
                         }
@@ -1000,16 +1043,36 @@
                         return item.tersedia !== true;
                     });
 
-                    // Kalau ada SKU biasa yang kurang
-                    if (adaKurangNonCustom || barang.length === 0) {
-                        checkbox.prop('checked', false);
-                        row.removeClass('table-active');
-                        return;
+
+                    // STATUS PESANAN
+                    const tersedia =
+                        barang.length > 0 &&
+                        !adaKurangNonCustom;
+
+                    let checked = false;
+
+                    // PILIH SEMUA
+                    if (type === 'all') {
+                        checked = true;
                     }
 
-                    // Semua SKU biasa tersedia
-                    // SKU berakhiran C diabaikan dari pengecekan
+                    // PILIH YANG TERSEDIA
+                    else if (type === 'tersedia') {
+                        checked = tersedia;
+                    }
+
+                    // PILIH YANG TIDAK TERSEDIA
+                    else if (type === 'kurang') {
+                        checked = !tersedia;
+                    }
+
+                    // KOSONGKAN
+                    else if (type === 'clear') {
+                        checked = false;
+                    }
+
                     checkbox.prop('checked', checked);
+
                     row.toggleClass(
                         'table-active',
                         checked
@@ -1018,15 +1081,11 @@
 
                 updateButtonPengambil();
                 updateStokLive();
+
             });
 
             // Klik Row
             $(document).on('click', '#orderlist tbody tr', function(e) {
-                // Abaikan kalau klik tombol detail
-                if ($(e.target).closest('.btnDetail').length) {
-                    return;
-                }
-
                 const row = $(this);
                 const checkbox = row.find('.item-checkbox');
 
@@ -1034,50 +1093,7 @@
                     return;
                 }
 
-                // Ambil data row dari DataTable
-                const rowData = table.row(this).data();
-                const barang = Array.isArray(rowData?.pesanan_per_produk) ?
-                    rowData.pesanan_per_produk : [];
-
-                // =====================================================
-                // CEK STOK
-                // SKU berakhiran C diabaikan dari pengecekan stok
-                // =====================================================
-                const adaKurangNonCustom = barang.some(function(item) {
-                    const sku = String(item.sku ?? '')
-                        .trim()
-                        .toUpperCase();
-
-                    const skuCustom = sku.endsWith('C');
-                    // Kalau belakangnya C, selalu dianggap boleh
-                    if (skuCustom) {
-                        return false;
-                    }
-
-                    // SKU biasa harus tersedia
-                    return item.tersedia !== true;
-
-                });
-
-
-                // Jika ada SKU biasa yang stoknya kurang
-                if (adaKurangNonCustom) {
-
-                    checkbox.prop('checked', false);
-
-                    row.removeClass('table-active');
-
-                    updateButtonPengambil();
-
-                    return;
-                }
-
-
-                // =====================================================
-                // KLIK CHECKBOX LANGSUNG
-                // =====================================================
                 if ($(e.target).is('.item-checkbox')) {
-
                     row.toggleClass(
                         'table-active',
                         checkbox.prop('checked')
@@ -1089,14 +1105,9 @@
                     return;
                 }
 
-
-                // =====================================================
-                // KLIK AREA ROW
-                // =====================================================
+                // Klik area row
                 const checked = !checkbox.prop('checked');
-
                 checkbox.prop('checked', checked);
-
                 row.toggleClass(
                     'table-active',
                     checked
