@@ -27,6 +27,7 @@ class ResiImportController extends Controller
 
     public function preview(Request $request)
     {
+        
         $request->validate([
             'marketplace' => 'required|in:Shopee,Tiktok',
             'id_toko' => 'required|exists:toko,id_toko',
@@ -83,7 +84,6 @@ class ResiImportController extends Controller
             );
 
             $pages = $pdf->getPages();
-
         } catch (\Throwable $e) {
             File::delete($tempPath);
 
@@ -108,7 +108,6 @@ class ResiImportController extends Controller
         }
 
         $preview = [];
-
         foreach ($pages as $index => $page) {
             $halaman = $index + 1;
 

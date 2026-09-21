@@ -8,7 +8,6 @@
             </div>
         </div>
 
-
         <!-- Inventory Stock Table Section -->
         <section id="stockTableSection" class="card border-0 shadow-sm rounded-4 overflow-hidden mb-0 pb-0">
             <!-- Table Header Bar -->

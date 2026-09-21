@@ -37,12 +37,12 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('123456')
         ]);
 
-        User::factory()->create([
-            'name' => 'rico',
-            'role' => 'editor',
-            'email' => 'rico@gmail.com',
-            'password' => Hash::make('rico2345')
-        ]);
+        // User::factory()->create([
+        //     'name' => 'rico',
+        //     'role' => 'editor',
+        //     'email' => 'rico@gmail.com',
+        //     'password' => Hash::make('rico2345')
+        // ]);
 
         $this->call([
             // KategorisSeeder::class,

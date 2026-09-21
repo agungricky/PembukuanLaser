@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Exporter extends Model
 {
-    protected $fillable = ['user_id','role','status', 'source_type', 'exporter_id'];
+    protected $fillable = ['user_id','role','status', 'source_type', 'keterangan'];
 
     public function user(){
         return $this->belongsTo(User::class, 'user_id', 'id');
