@@ -492,23 +492,25 @@
                 }
 
                 table = $('#orderlist').DataTable({
-                    ajax: {
-                        url: "{{ route('sku.json') }}",
-                        dataSrc: ''
-                    },
+                    processing: true,
+                    serverSide: true,
 
                     pageLength: 10,
-                    lengthChange: false,
-                    lengthMenu: [10, 20, 25, 50, 100],
                     searching: true,
+                    lengthChange: false,
                     autoWidth: false,
 
+                    ajax: {
+                        url: "{{ route('produk.json') }}",
+                        type: "GET"
+                    },
+
                     columns: [{
-                            data: null,
-                            className: 'text-center',
-                            render: function(data, type, row, meta) {
-                                return meta.row + 1;
-                            }
+                            data: 'DT_RowIndex',
+                            name: 'DT_RowIndex',
+                            orderable: false,
+                            searchable: false,
+                            className: 'text-center'
                         },
                         {
                             data: null,

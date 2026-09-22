@@ -46,8 +46,8 @@
                     </div>
 
                     <select id="per_page" class="form-select form-select-sm" style="width: auto;">
-                        <option value="10">10</option>
-                        <option value="20" selected>20</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
@@ -81,64 +81,6 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @php
-                            $no = 1;
-                        @endphp
-                        @foreach ($produk as $item)
-                            <tr class="{{ $item->status == 'nonaktif' ? 'row-nonactive' : '' }}">
-                                <td class="py-3 px-4 text-center">{{ $no++ }}</td>
-
-                                <td class="py-3 px-4 text-start">
-                                    <div class="fw-bold text-success fs-6">
-                                        {{ $item->nama_produk }}
-                                    </div>
-
-                                    <small class="text-muted">Sku : {{ $item?->sku }}</small>
-                                </td>
-
-                                <td class="py-3 px-4 text-center">
-                                    {{ $item->variasi }}
-                                </td>
-
-                                <td class="py-3 px-4 text-center">{{ $item->kategori->nama_kategori ?? '' }}</td>
-
-                                <td class="py-3 px-4 text-center">
-                                    <div class="fw-bold text-success fs-6">
-                                        Rp {{ number_format($item->hpp, 0, ',', '.') }}
-                                    </div>
-
-                                    <small class="text-muted">/ Item</small>
-                                </td>
-
-                                @php
-                                    $stok = $item->stok_produk->jumlah_tersedia ?? 0;
-                                @endphp
-
-                                <td class="py-3 px-4 text-center">
-                                    <span
-                                        class="badge 
-                                         {{ $stok < 5 ? 'bg-danger' : ($stok == 5 ? 'bg-warning text-dark' : 'bg-success') }}">
-                                        {{ $stok }}
-                                    </span>
-                                </td>
-
-                                <td class="py-3 px-4 text-center">
-                                    <button type="button"
-                                        class="btn btn-success btn-sm btnupdate 
-                                        {{ $item->status === 'aktif' ? '' : 'disabled' }}"
-                                        data-sku="{{ $item->sku }}" data-btn="add">
-                                        <i class="fa-solid fa-plus"></i>
-                                    </button>
-
-                                    <button type="button"
-                                        class="btn btn-warning btn-sm btnupdate 
-                                        {{ $item->status == 'aktif' ? '' : 'disabled' }}"
-                                        data-sku="{{ $item->sku }}" data-btn="edit">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -336,10 +278,140 @@
         $(document).ready(function() {
 
             const table = new DataTable('#orderlist', {
+                processing: true,
+                serverSide: true,
+
                 pageLength: 10,
                 searching: true,
                 lengthChange: false,
-                autoWidth: false
+                autoWidth: false,
+
+                ajax: {
+                    url: "{{ route('produk.json') }}",
+                    type: "GET"
+                },
+
+                columns: [{
+                        data: 'DT_RowIndex',
+                        name: 'DT_RowIndex',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center'
+                    },
+
+                    {
+                        data: 'nama_produk',
+                        name: 'nama_produk',
+
+                        render: function(data, type, row) {
+                            return `
+                                <div class="fw-bold text-success fs-6">
+                                    ${data ?? ''}
+                                </div>
+
+                                <small class="text-muted">
+                                    Sku : ${row.sku ?? ''}
+                                </small>
+                            `;
+                        }
+                    },
+
+                    {
+                        data: 'variasi',
+                        name: 'variasi',
+                        className: 'text-center'
+                    },
+
+                    {
+                        data: 'kategori_nama',
+                        name: 'kategori.nama_kategori',
+                        className: 'text-center'
+                    },
+
+                    {
+                        data: 'hpp',
+                        name: 'hpp',
+                        className: 'text-center',
+
+                        render: function(data) {
+                            const harga = Number(data ?? 0)
+                                .toLocaleString('id-ID');
+
+                            return `
+                                <div class="fw-bold text-success fs-6">
+                                    Rp ${harga}
+                                </div>
+
+                                <small class="text-muted">
+                                    / Item
+                                </small>
+                            `;
+                        }
+                    },
+
+                    {
+                        data: 'stok',
+                        name: 'stok',
+                        className: 'text-center',
+                        orderable: false,
+                        searchable: false,
+                        render: function(data) {
+                            const stok = Number(data ?? 0);
+                            let badge = 'bg-success';
+                            if (stok < 5) {
+                                badge = 'bg-danger';
+                            } else if (stok === 5) {
+                                badge = 'bg-warning text-dark';
+                            }
+                            return `
+                                <span class="badge ${badge}">
+                                    ${stok}
+                                </span>
+                            `;
+                        }
+                    },
+
+                    {
+                        data: null,
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center',
+
+                        render: function(data, type, row) {
+
+                            const disabled =
+                                row.status === 'aktif' ?
+                                '' :
+                                'disabled';
+
+                            return `
+                                <button
+                                    type="button"
+                                    class="btn btn-success btn-sm btnupdate ${disabled}"
+                                    data-sku="${row.sku}"
+                                    data-btn="add"
+                                >
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="btn btn-warning btn-sm btnupdate ${disabled}"
+                                    data-sku="${row.sku}"
+                                    data-btn="edit"
+                                >
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                            `;
+                        }
+                    }
+                ],
+
+                createdRow: function(row, data) {
+                    if (data.status === 'nonaktif') {
+                        row.classList.add('row-nonactive');
+                    }
+                }
             });
 
             $('#per_page').val(10);
