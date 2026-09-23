@@ -26,6 +26,7 @@ use App\Http\Controllers\rotatorController;
 use App\Http\Controllers\SkuController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\UserController;
+use App\Services\Gudang\TransaksiService;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth'])->group(function () {
@@ -266,9 +267,13 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::post('/tasks/{id}/selesai', [ProduksiController::class, 'taskdone'])->name('penugasan.done');
     });
 
+    Route::middleware(['role:gudang,pegawai'])->group(function () {
+        Route::get('/kategori-produk/{id}', [GudangController::class, 'kategorishow'])->name('gudang.kategori.json');
+        Route::get('/produk-sku', [ProdukController::class, 'produkshow'])->name('produk.json');
+    });
+
 });
 
-Route::get('/kategori-produk/{id}', [GudangController::class, 'kategorishow'])->name('gudang.kategori.json');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
@@ -305,4 +310,3 @@ Route::get('/cs/redirect', function () {
 
 Route::get('/dashboard/admin-cs', [rotatorController::class, 'index'])->name('rotator.index');
 Route::redirect('/', '/login');
-// Login

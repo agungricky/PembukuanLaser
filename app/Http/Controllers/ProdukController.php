@@ -12,8 +12,9 @@ use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
+use Yajra\DataTables\Facades\DataTables;
 
 class ProdukController extends Controller
 {
@@ -275,10 +276,9 @@ class ProdukController extends Controller
                 $produk = Produk::where('sku', $item['sku'])
                     ->lockForUpdate()
                     ->first();
-                
+
                 $kategoriBaru = kategori::where('nama_kategori', $item['kategori_baru'])->value('id');
 
-                
                 if (! $kategoriBaru) {
                     throw new \Exception(
                         'Kategori "'.$item['kategori_baru'].
@@ -306,7 +306,7 @@ class ProdukController extends Controller
 
                 $produk->update([
                     'hpp' => $item['hpp_baru'],
-                    'kategori_id' => $kategoriBaru
+                    'kategori_id' => $kategoriBaru,
                 ]);
 
                 $jumlahUpdate++;
@@ -330,5 +330,20 @@ class ProdukController extends Controller
                 'message' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function produkshow()
+    {
+        $produk = Produk::query()->with('kategori', 'stok_produk');
+        
+        return DataTables::eloquent($produk)
+        ->addIndexColumn()
+        ->addColumn('stok', function ($item) {
+            return $item->stok_produk->jumlah_tersedia ?? 0;
+        })
+        ->addColumn('kategori_nama', function ($item) {
+            return $item->kategori->nama_kategori ?? '';
+        })
+        ->toJson();
     }
 }

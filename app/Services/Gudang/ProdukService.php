@@ -19,9 +19,7 @@ class ProdukService
 {
     public function produk()
     {
-        $produk = Produk::with('stok_produk', 'kategori')->get();
-
-        return view('gudang.produk', compact('produk'));
+        return view('gudang.produk');
     }
 
     public function produkShow($id)
