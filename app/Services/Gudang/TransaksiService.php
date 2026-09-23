@@ -58,18 +58,24 @@ class TransaksiService
                 'toko',
             ])
             ->where('status', 'proses')
+
+            // Harus punya minimal 1 produk yang masih perlu diproses
             ->whereHas('pesanan_per_produk', function ($query) {
                 $query
                     ->where('status_pesanan', '0')
                     ->whereNull('mutasi_stok_id');
             })
+
+            // Kalau ada custom = 1, seluruh pesanan jangan ditampilkan
             ->whereDoesntHave('pesanan_per_produk', function ($query) {
-                $query->where('status_pesanan', '1');
+                $query->where('custom', 1);
             })
+
             ->whereBetween('tanggal', [
                 $tanggalAwal,
                 $tanggalAkhir,
             ])
+
             ->orderByRaw('batas_kirim_at IS NULL ASC')
             ->orderBy('batas_kirim_at', 'ASC');
 
@@ -90,6 +96,9 @@ class TransaksiService
                 'ppp.no_pesanan'
             )
             ->where('p.status', 'proses')
+            ->where('ppp.status_pesanan', '0')
+            ->where('ppp.custom', 0)
+            ->whereNull('ppp.mutasi_stok_id')
             ->whereBetween('p.tanggal', [
                 $tanggalAwal,
                 $tanggalAkhir,
@@ -101,9 +110,17 @@ class TransaksiService
                 'ppp.jumlah',
                 'p.batas_kirim_at',
             ])
-            ->orderByRaw('p.batas_kirim_at IS NULL ASC')
-            ->orderBy('p.batas_kirim_at', 'ASC')
-            ->orderBy('ppp.id_per_produk', 'ASC')
+            ->orderByRaw(
+                'p.batas_kirim_at IS NULL ASC'
+            )
+            ->orderBy(
+                'p.batas_kirim_at',
+                'ASC'
+            )
+            ->orderBy(
+                'ppp.id_per_produk',
+                'ASC'
+            )
             ->get();
 
         // STOK
@@ -205,6 +222,24 @@ class TransaksiService
                         ->toArray();
                 }
             )
+
+            ->filterColumn('input_at', function ($query, $keyword) {
+                $keyword = trim($keyword);
+
+                $query->where(function ($q) use ($keyword) {
+                    $q->where(
+                        'pesanan.no_pesanan',
+                        'like',
+                        '%'.$keyword.'%'
+                    )
+                        ->orWhere(
+                            'pesanan.input_at',
+                            'like',
+                            '%'.$keyword.'%'
+                        );
+                });
+            })
+
             ->filterColumn(
                 'pesanan_per_produk',
                 function ($query, $keyword) {
@@ -290,6 +325,11 @@ class TransaksiService
                         );
                 }
             )
+
+            ->orderColumn('input_at', function ($query, $order) {
+                $query->reorder()
+                    ->orderBy('pesanan.input_at', $order);
+            })
 
             ->toJson();
     }

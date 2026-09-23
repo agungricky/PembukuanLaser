@@ -168,6 +168,10 @@ class GudangController extends Controller
         return $this->customService->produkcustom();
     }
 
+    public function custom_data(){
+        return $this->customService->custom_data();
+    }
+
     // ==================================================//
     // ================== PRODUK ========================//
     // ==================================================//

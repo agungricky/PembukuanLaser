@@ -703,9 +703,9 @@
 
                     // PESANAN
                     {
-                        data: 'no_pesanan',
-                        name: 'no_pesanan',
-                        orderable: false,
+                        data: 'input_at',
+                        name: 'input_at',
+                        orderable: true,
                         searchable: true,
                         className: 'px-3 py-2',
                         render: function(data, type, row) {
@@ -723,8 +723,39 @@
 
                                         <span class="fw-bold text-dark"
                                             style="font-size: 14px;">
-                                            ${data ?? '-'}
+                                            ${row.no_pesanan ?? '-'}
                                         </span>
+                                    </div>
+
+                                    <div class="d-flex flex-column">
+                                        <div class="d-flex align-items-center gap-2 text-nowrap">
+
+                                            <span class="text-muted fw-semibold"
+                                                style="font-size: 10px;">
+                                                <i class="fa-solid fa-file-import me-1"></i>
+                                                Tanggal Import
+                                            </span>
+
+                                            <span class="fw-semibold text-primary"
+                                                style="font-size: 11px;">
+
+                                                ${
+                                                    data
+                                                        ? new Date(data)
+                                                            .toLocaleString('id-ID', {
+                                                                day: '2-digit',
+                                                                month: 'short',
+                                                                year: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit',
+                                                                hour12: false
+                                                            })
+                                                        : '-'
+                                                }
+
+                                            </span>
+
+                                        </div>
                                     </div>
 
                                     <div class="d-flex flex-column">
@@ -762,17 +793,17 @@
                                     ${
                                         terlambat
                                             ? `
-                                                                                                                                                                                                                                <div class="mt-1">
-                                                                                                                                                                                                                                    <span
-                                                                                                                                                                                                                                        class="badge bg-danger text-white"
-                                                                                                                                                                                                                                        style="font-size: 9px;">
+                                                                                                                                                                                                                                                        <div class="mt-1">
+                                                                                                                                                                                                                                                            <span
+                                                                                                                                                                                                                                                                class="badge bg-danger text-white"
+                                                                                                                                                                                                                                                                style="font-size: 9px;">
 
-                                                                                                                                                                                                                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                                                                                                                                                                                                                                        Terlambat
+                                                                                                                                                                                                                                                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                                                                                                                                                                                                                                                Terlambat
 
-                                                                                                                                                                                                                                    </span>
-                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                            `
+                                                                                                                                                                                                                                                            </span>
+                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                    `
                                             : ''
                                     }
                                 </div>
@@ -891,12 +922,12 @@
                                             ${
                                                 item.variasi
                                                     ? `
-                                                                                                                                                                                                            <span
-                                                                                                                                                                                                                class="badge bg-light text-dark border fw-normal"
-                                                                                                                                                                                                                style="font-size:10px;">
-                                                                                                                                                                                                                ${item.variasi}
-                                                                                                                                                                                                            </span>
-                                                                                                                                                                                                        `
+                                                                                                                                                                                                                                    <span
+                                                                                                                                                                                                                                        class="badge bg-light text-dark border fw-normal"
+                                                                                                                                                                                                                                        style="font-size:10px;">
+                                                                                                                                                                                                                                        ${item.variasi}
+                                                                                                                                                                                                                                    </span>
+                                                                                                                                                                                                                                `
                                                     : ''
                                             }
 
@@ -977,17 +1008,17 @@
                                         ${
                                             tersedia
                                                 ? `
-                                                                                    <span class="status-stok stok-tersedia">
-                                                                                        <i class="fa-solid fa-circle-check"></i>
-                                                                                        Tersedia
-                                                                                    </span>
-                                                                                `
+                                                                                                            <span class="status-stok stok-tersedia">
+                                                                                                                <i class="fa-solid fa-circle-check"></i>
+                                                                                                                Tersedia
+                                                                                                            </span>
+                                                                                                        `
                                                 : `
-                                                                                    <span class="status-stok stok-kurang">
-                                                                                        <i class="fa-solid fa-triangle-exclamation"></i>
-                                                                                        Kurang
-                                                                                    </span>
-                                                                                `
+                                                                                                            <span class="status-stok stok-kurang">
+                                                                                                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                                                                                                Kurang
+                                                                                                            </span>
+                                                                                                        `
                                         }
 
                                     </div>
@@ -1248,7 +1279,6 @@
             let pesananExport = [];
             let kebutuhanExport = [];
 
-
             // Buka Modal Cetak Resi
             $('#cetakResi').on('click', function() {
 
@@ -1269,7 +1299,7 @@
                 // Ambil semua no pesanan yang dicentang
                 pesananExport = selected
                     .map(function() {
-                        return $(this).data('no-pesanan');
+                        return String($(this).attr('data-no-pesanan'));
                     })
                     .get();
 
@@ -1323,154 +1353,182 @@
                     `);
 
                 $.ajax({
-    type: "POST",
+                    type: "POST",
+                    url: "{{ route('transaksi.cetak-resi') }}",
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
 
-    url: "{{ route('transaksi.cetak-resi') }}",
+                    contentType: "application/json",
+                    dataType: "json",
+                    data: JSON.stringify({
+                        pesanan: pesananExport,
+                        kebutuhan: kebutuhanExport,
+                        alasan_export: alasanExport
+                    }),
 
-    headers: {
-        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-    },
+                    beforeSend: function() {
+                        Swal.fire({
+                            title: 'Memproses Resi',
+                            html: `
+                                <div class="text-muted">
+                                    Sedang menggabungkan beberapa resi...
+                                </div>
+                            `,
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            showConfirmButton: false,
 
-    contentType: "application/json",
-    dataType: "json",
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+                    },
+                    success: function(response) {
+                        const modalEl = document.getElementById('modalAlasanExport');
+                        const modal = bootstrap.Modal.getInstance(modalEl);
 
-    data: JSON.stringify({
-        pesanan: pesananExport,
-        kebutuhan: kebutuhanExport,
-        alasan_export: alasanExport
-    }),
+                        modal?.hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: response.message ??
+                                'Resi berhasil diproses.'
+                        });
 
-    beforeSend: function() {
-        Swal.fire({
-            title: 'Memproses Resi',
-            html: `
-                <div class="text-muted">
-                    Sedang menggabungkan beberapa resi...
-                </div>
-            `,
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            showConfirmButton: false,
+                        if (response.success && response.preview_url) {
+                            window.open(
+                                response.preview_url,
+                                '_blank'
+                            );
 
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-    },
+                            return;
+                        }
+                    },
+                    error: function(xhr) {
+                        const response = xhr.responseJSON;
+                        if (xhr.status === 422 && response?.data) {
+                            const rows = response.data
+                                .map((item, index) => `
+                                    <tr>
+                                        <td>${index + 1}</td>
+                                        <td>${item ?? '-'}</td>
+                                        ${index === 0 ? `
+                                                        <td rowspan="${response.data.length}" class="text-center align-middle">
+                                                            <button
+                                                                type="button"
+                                                                id="copy-pesanan"
+                                                                class="btn btn-primary btn-sm">
+                                                                Copy Semua No. Pesanan
+                                                            </button>
+                                                        </td>
+                                                    ` : ''}
+                                    </tr>
+                                `)
+                                .join('');
 
-    success: function(response) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Pemberitahuan',
+                                width: 700,
 
-        const modalEl =
-            document.getElementById('modalAlasanExport');
+                                html: `
+                                    <div class="text-center mb-3">
+                                        ${response.message ?? 'Beberapa pesanan belum memiliki resi.'}
+                                    </div>
 
-        const modal =
-            bootstrap.Modal.getInstance(modalEl);
+                                    <div class="table-responsive">
+                                        <table
+                                            id="table-pesanan-belum-resi"
+                                            class="table table-bordered table-striped table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:60px;">No</th>
+                                                    <th>No. Pesanan</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${rows}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                `,
 
-        modal?.hide();
+                                confirmButtonText: 'OK',
+                                didOpen: () => {
+                                    $('#copy-pesanan').on('click', function() {
+                                        let nomorPesanan = [];
+                                        $('#table-pesanan-belum-resi tbody tr')
+                                            .each(function() {
+                                                let nomor = $(this)
+                                                    .find('td:eq(1)')
+                                                    .text()
+                                                    .trim();
+                                                if (nomor) {
+                                                    nomorPesanan.push(
+                                                        nomor);
+                                                }
 
-        Swal.fire({
-            icon: 'success',
-            title: 'Berhasil',
-            text: response.message ??
-                'Resi berhasil diproses.'
-        });
+                                            });
 
-        if (
-            response.success &&
-            response.preview_url
-        ) {
-            window.open(
-                response.preview_url,
-                '_blank'
-            );
+                                        let text = nomorPesanan.join('\n');
+                                        if (!text) {
+                                            alert(
+                                                'Data nomor pesanan kosong'
+                                            );
+                                            return;
+                                        }
 
-            return;
-        }
-    },
+                                        // Event copy sementara
+                                        const copyHandler = function(e) {
+                                            e.preventDefault();
+                                            e.clipboardData.setData(
+                                                'text/plain',
+                                                text
+                                            );
 
-    error: function(xhr) {
+                                        };
 
-        const response = xhr.responseJSON;
+                                        document.addEventListener('copy',
+                                            copyHandler);
 
-        if (
-            xhr.status === 422 &&
-            response?.data
-        ) {
+                                        const berhasil = document
+                                            .execCommand('copy');
 
-            const rows = response.data
-                .map((item, index) => `
-                    <tr>
-                        <td>${index + 1}</td>
-                        <td>${item ?? '-'}</td>
-                    </tr>
-                `)
-                .join('');
+                                        document.removeEventListener('copy',
+                                            copyHandler);
 
-            Swal.fire({
-                icon: 'warning',
-                title: 'Pemberitahuan',
-                width: 700,
+                                        if (berhasil) {
+                                            $(this)
+                                                .removeClass('btn-primary')
+                                                .addClass('btn-success')
+                                                .text('Berhasil Dicopy');
+                                        } else {
+                                            alert('Gagal copy');
+                                        }
+                                    });
+                                }
+                            });
 
-                html: `
-                    <div class="text-center mb-3">
-
-                        ${
-                            response.message ??
-                            'Beberapa pesanan belum memiliki resi.'
+                            return;
                         }
 
-                    </div>
-
-                    <div class="table-responsive">
-
-                        <table
-                            class="table table-bordered table-striped table-sm">
-
-                            <thead>
-                                <tr>
-                                    <th style="width:60px;">
-                                        No
-                                    </th>
-
-                                    <th>
-                                        No. Pesanan
-                                    </th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                ${rows}
-                            </tbody>
-
-                        </table>
-
-                    </div>
-                `,
-
-                confirmButtonText: 'OK'
-            });
-
-            return;
-        }
-
-        Swal.fire({
-            icon: 'error',
-            title: 'Gagal',
-            text: response?.message ??
-                'Terjadi kesalahan saat memproses resi.'
-        });
-    },
-
-    complete: function() {
-
-        button
-            .prop('disabled', false)
-            .html(`
-                <i class="fa-solid fa-file-export me-1"></i>
-                Export Resi
-            `);
-    }
-});
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: response?.message ??
+                                'Terjadi kesalahan saat memproses resi.'
+                        });
+                    },
+                    complete: function() {
+                        button
+                            .prop('disabled', false)
+                            .html(`
+                                <i class="fa-solid fa-file-export me-1"></i>
+                                Export Resi
+                            `);
+                    }
+                });
 
             });
 

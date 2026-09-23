@@ -453,16 +453,14 @@
                                         <div class="d-flex align-items-center gap-2 text-nowrap">
                                             <span class="text-muted fw-semibold"
                                                 style="font-size: 10px;">
-
-                                                <i class="fa-solid fa-truck me-1"></i>
-                                                Batas Kirim
+                                                <i class="fa-solid fa-dolly me-1"></i>
+                                                Diambil
                                             </span>
-
-                                            <span class="fw-semibold text-danger"
+                                            <span class="fw-semibold text-success"
                                                 style="font-size: 11px;">
                                                 ${
-                                                    batasKirim
-                                                        ? batasKirim.toLocaleString('id-ID', {
+                                                    updatedAtTerbaru
+                                                        ? updatedAtTerbaru.toLocaleString('id-ID', {
                                                             day: '2-digit',
                                                             month: 'short',
                                                             year: 'numeric',
@@ -479,14 +477,16 @@
                                         <div class="d-flex align-items-center gap-2 text-nowrap">
                                             <span class="text-muted fw-semibold"
                                                 style="font-size: 10px;">
-                                                <i class="fa-solid fa-dolly me-1"></i>
-                                                Diambil
+
+                                                <i class="fa-solid fa-truck me-1"></i>
+                                                Batas Kirim
                                             </span>
-                                            <span class="fw-semibold text-success"
+
+                                            <span class="fw-semibold text-danger"
                                                 style="font-size: 11px;">
                                                 ${
-                                                    updatedAtTerbaru
-                                                        ? updatedAtTerbaru.toLocaleString('id-ID', {
+                                                    batasKirim
+                                                        ? batasKirim.toLocaleString('id-ID', {
                                                             day: '2-digit',
                                                             month: 'short',
                                                             year: 'numeric',
@@ -657,6 +657,8 @@
                             const produk = row.pesanan_per_produk?.[0];
                             const adminGudang = produk?.mutasi?.gudang?.name ?? '-';
                             const pengambilBarang = produk?.mutasi?.admin_penjualan?.name ?? '-';
+
+                            console.log(produk)
                             return `
                                 <div class="d-flex flex-column gap-2 py-2">
 
@@ -706,9 +708,6 @@
                         checked
                     );
                 });
-
-                updateButtonPengambil();
-                updateStokLive();
             });
 
             // Klik Row
@@ -732,9 +731,6 @@
                         checkbox.prop('checked')
                     );
 
-                    updateButtonPengambil();
-                    updateStokLive();
-
                     return;
                 }
 
@@ -747,9 +743,6 @@
                     'table-active',
                     checked
                 );
-
-                updateButtonPengambil();
-                updateStokLive();
             });
 
             // Logic jika filter ganti maka hapus checklist
@@ -762,14 +755,6 @@
 
                 // Hapus highlight row
                 $('#orderlist tbody tr').removeClass('table-active');
-
-                // Update tombol
-                updateButtonPengambil();
-
-                // Update card stok live kalau kamu pakai
-                if (typeof updateStokLive === 'function') {
-                    updateStokLive();
-                }
             }
         });
     </script>

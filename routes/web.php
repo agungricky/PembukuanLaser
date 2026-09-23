@@ -26,7 +26,6 @@ use App\Http\Controllers\rotatorController;
 use App\Http\Controllers\SkuController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\UserController;
-use App\Services\Gudang\TransaksiService;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth'])->group(function () {
@@ -105,8 +104,6 @@ Route::middleware(['web', 'auth'])->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-        // Detail Pesanan
-
         // Pesanan
         Route::prefix('pesanan')
             ->controller(PesananController::class)
@@ -184,7 +181,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 
         // SKU
         Route::resource('sku', SkuController::class)->only(['index', 'store', 'edit', 'update', 'destroy', 'show']);
-        Route::get('sku-json', [SkuController::class, 'skudata'])->name('sku.json');
+        // Route::get('sku-json', [SkuController::class, 'skudata'])->name('sku.json');
         Route::post('/sku-view', [SkuController::class, 'viewstore'])->name('sku.viewstore');
 
         // Iklan
@@ -216,7 +213,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         // Transaksi
         Route::resource('/transaksi', GudangController::class)->parameters([
             'transaksi' => 'page',
-        ]);        
+        ]);
         Route::get('/show/{filter}', [GudangController::class, 'showdata'])->name('showdata.json');
         Route::post('/transaksi/update-status', [GudangController::class, 'updateStatus'])->name('transaksi.updatestatus');
         Route::post('/cetak-resi/transaksi', [GudangController::class, 'cetakResi'])->name('transaksi.cetak-resi');
@@ -225,7 +222,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 
         // Produk
         Route::get('/semua-produk', [GudangController::class, 'produk'])->name('gudang.produk');
-        Route::get('/semua-produk/{sku}', [GudangController::class, 'produkShow'])->name('produkshow.json');
+        // Route::get('/semua-produk/{sku}', [GudangController::class, 'produkShow'])->name('produkshow.json');
         Route::patch('/update-stok/{sku}', [GudangController::class, 'updatestok'])->name('updatestok.json');
         Route::get('/stok/export', [GudangController::class, 'stokExport'])->name('gudang.stok.export');
         Route::post('/stok/import', [GudangController::class, 'stokImport'])->name('gudang.stok.import');
@@ -242,6 +239,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 
         // Produk Custom
         Route::get('/produk-custom', [GudangController::class, 'produkcustom'])->name('produk-custom.index');
+        Route::get('/produk-custom/json', [GudangController::class, 'custom_data'])->name('produk-custom.json');
 
         // Kategori
         Route::get('/kategori-produk', [GudangController::class, 'kategori'])->name('gudang.kategori');
@@ -274,7 +272,6 @@ Route::middleware(['web', 'auth'])->group(function () {
 
 });
 
-
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -304,7 +301,7 @@ Route::get('/cs/redirect', function () {
     $pesan = urlencode('Halo admin bila, saya ingin beli banner sound custom jaring...');
 
     return redirect()->away(
-        'https://wa.me/6285334778790?text=' . $pesan
+        'https://wa.me/6285334778790?text='.$pesan
     );
 })->name('redirect.cs');
 
