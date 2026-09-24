@@ -27,7 +27,6 @@ class ResiImportController extends Controller
 
     public function preview(Request $request)
     {
-        
         $request->validate([
             'marketplace' => 'required|in:Shopee,Tiktok',
             'id_toko' => 'required|exists:toko,id_toko',
@@ -38,7 +37,7 @@ class ResiImportController extends Controller
             ->where('marketplace', $request->marketplace)
             ->first();
 
-        if (!$tokoDipilih) {
+        if (! $tokoDipilih) {
             return back()
                 ->withInput()
                 ->with('error', 'Toko tidak sesuai dengan marketplace.');
@@ -48,7 +47,7 @@ class ResiImportController extends Controller
 
         if (
             $previewLama &&
-            !empty($previewLama['temp_path']) &&
+            ! empty($previewLama['temp_path']) &&
             File::exists($previewLama['temp_path'])
         ) {
             File::delete($previewLama['temp_path']);
@@ -64,7 +63,7 @@ class ResiImportController extends Controller
             $tempDirectory
         );
 
-        $tempName = Str::uuid() . '.pdf';
+        $tempName = Str::uuid().'.pdf';
 
         $request->file('file_resi')->move(
             $tempDirectory,
@@ -72,12 +71,12 @@ class ResiImportController extends Controller
         );
 
         $tempPath =
-            $tempDirectory .
-            DIRECTORY_SEPARATOR .
+            $tempDirectory.
+            DIRECTORY_SEPARATOR.
             $tempName;
 
         try {
-            $parser = new Parser();
+            $parser = new Parser;
 
             $pdf = $parser->parseFile(
                 $tempPath
@@ -91,7 +90,7 @@ class ResiImportController extends Controller
                 ->withInput()
                 ->with(
                     'error',
-                    'PDF gagal dibaca: ' .
+                    'PDF gagal dibaca: '.
                     $e->getMessage()
                 );
         }
@@ -152,7 +151,7 @@ class ResiImportController extends Controller
                     ->withInput()
                     ->with(
                         'error',
-                        'PDF TikTok gagal dinormalisasi: ' .
+                        'PDF TikTok gagal dinormalisasi: '.
                         $e->getMessage()
                     );
             }
@@ -190,7 +189,7 @@ class ResiImportController extends Controller
             'resi_preview'
         );
 
-        if (!$dataPreview) {
+        if (! $dataPreview) {
             return redirect()
                 ->route('resi.import')
                 ->with(
@@ -208,7 +207,7 @@ class ResiImportController extends Controller
 
         if (
             empty($dataPreview['temp_path']) ||
-            !File::exists(
+            ! File::exists(
                 $dataPreview['temp_path']
             )
         ) {
@@ -247,8 +246,7 @@ class ResiImportController extends Controller
                 ];
             })
             ->filter(
-                fn ($page) =>
-                    $page['no_pesanan'] !== ''
+                fn ($page) => $page['no_pesanan'] !== ''
             )
             ->values();
 
@@ -271,17 +269,16 @@ class ResiImportController extends Controller
             ->values();
 
         $pesanan = Pesanan::whereIn(
-                'no_pesanan',
-                $orderNumbers
-            )
+            'no_pesanan',
+            $orderNumbers
+        )
             ->where(
                 'id_toko',
                 $dataPreview['id_toko']
             )
             ->get()
             ->keyBy(
-                fn ($item) =>
-                    (string) $item->no_pesanan
+                fn ($item) => (string) $item->no_pesanan
             );
 
         $existingMappedOrders =
@@ -289,13 +286,12 @@ class ResiImportController extends Controller
                 'no_pesanan',
                 $orderNumbers
             )
-            ->pluck('no_pesanan')
-            ->map(
-                fn ($value) =>
-                    (string) $value
-            )
-            ->unique()
-            ->flip();
+                ->pluck('no_pesanan')
+                ->map(
+                    fn ($value) => (string) $value
+                )
+                ->unique()
+                ->flip();
 
         $validPages = [];
         $errors = [];
@@ -305,7 +301,7 @@ class ResiImportController extends Controller
             $noPesanan =
                 (string) $page['no_pesanan'];
 
-            if (!$pesanan->has($noPesanan)) {
+            if (! $pesanan->has($noPesanan)) {
                 $errors[] =
                     "Halaman {$page['halaman']}: Pesanan {$noPesanan} tidak ditemukan pada toko ini.";
 
@@ -331,35 +327,24 @@ class ResiImportController extends Controller
                 ($urutan[$noPesanan] ?? 0)
                 + 1;
 
-            $deadline = $dataPreview['marketplace'] === 'Shopee'
-                ? $this->getShopeeDeadlineFromOrder($order)
-                : $this->normalizeDeadlinePayload(
-                    (array) ($detectedPages->get($page['halaman']) ?? [])
-                );
+            $deadline = $this->normalizeDeadlinePayload(
+                (array) (
+                    $detectedPages->get($page['halaman'])
+                    ?? []
+                )
+            );
 
             $validPages[] = [
-                'halaman' =>
-                    $page['halaman'],
-
-                'no_pesanan' =>
-                    $noPesanan,
-
-                'no_resi' =>
-                    $page['no_resi'] !== ''
+                'halaman' => $page['halaman'],
+                'no_pesanan' => $noPesanan,
+                'no_resi' => $page['no_resi'] !== ''
                         ? $page['no_resi']
                         : (string) $order->no_resi,
 
-                'urutan' =>
-                    $urutan[$noPesanan],
-
-                'batas_kirim_at' =>
-                    $deadline['batas_kirim_at'],
-
-                'batas_kirim_source' =>
-                    $deadline['batas_kirim_source'],
-
-                'batas_kirim_raw' =>
-                    $deadline['batas_kirim_raw'],
+                'urutan' => $urutan[$noPesanan],
+                'batas_kirim_at' => $deadline['batas_kirim_at'],
+                'batas_kirim_source' => $deadline['batas_kirim_source'],
+                'batas_kirim_raw' => $deadline['batas_kirim_raw'],
             ];
         }
 
@@ -376,14 +361,14 @@ class ResiImportController extends Controller
         }
 
         $directory =
-            'resi/' .
-            now()->format('Y') .
-            '/' .
+            'resi/'.
+            now()->format('Y').
+            '/'.
             now()->format('m');
 
         $fullDirectory =
             storage_path(
-                'app/private/' .
+                'app/private/'.
                 $directory
             );
 
@@ -392,17 +377,17 @@ class ResiImportController extends Controller
         );
 
         $newName =
-            Str::uuid() .
+            Str::uuid().
             '.pdf';
 
         $relativePath =
-            $directory .
-            '/' .
+            $directory.
+            '/'.
             $newName;
 
         $fullPath =
-            $fullDirectory .
-            DIRECTORY_SEPARATOR .
+            $fullDirectory.
+            DIRECTORY_SEPARATOR.
             $newName;
 
         try {
@@ -414,59 +399,30 @@ class ResiImportController extends Controller
             DB::beginTransaction();
 
             $import = ResiImport::create([
-                'nama_file' =>
-                    $dataPreview['original_name'],
-
-                'path_file' =>
-                    $relativePath,
-
-                'jumlah_halaman' =>
-                    $dataPreview['jumlah_halaman'],
-
-                'marketplace' =>
-                    $dataPreview['marketplace'],
-
-                'id_toko' =>
-                    $dataPreview['id_toko'],
-
-                'user_id' =>
-                    Auth::id(),
+                'nama_file' => $dataPreview['original_name'],
+                'path_file' => $relativePath,
+                'jumlah_halaman' => $dataPreview['jumlah_halaman'],
+                'marketplace' => $dataPreview['marketplace'],
+                'id_toko' => $dataPreview['id_toko'],
+                'user_id' => Auth::id(),
             ]);
 
             foreach ($validPages as $page) {
                 ResiPage::create([
-                    'resi_import_id' =>
-                        $import->id,
-
-                    'no_pesanan' =>
-                        $page['no_pesanan'],
-
-                    'no_resi' =>
-                        $page['no_resi'],
-
-                    'halaman' =>
-                        $page['halaman'],
-
-                    'urutan' =>
-                        $page['urutan'],
+                    'resi_import_id' => $import->id,
+                    'no_pesanan' => $page['no_pesanan'],
+                    'no_resi' => $page['no_resi'],
+                    'halaman' => $page['halaman'],
+                    'urutan' => $page['urutan'],
                 ]);
 
-                if (!empty($page['batas_kirim_at'])) {
-                    Pesanan::where(
-                        'no_pesanan',
-                        $page['no_pesanan']
-                    )
-                        ->where(
-                            'id_toko',
-                            $dataPreview['id_toko']
-                        )
+                if (! empty($page['batas_kirim_at'])) {
+                    Pesanan::where('no_pesanan', $page['no_pesanan'])
+                        ->where('id_toko', $dataPreview['id_toko'])
                         ->update([
-                            'batas_kirim_at' =>
-                                $page['batas_kirim_at'],
-                            'batas_kirim_source' =>
-                                $page['batas_kirim_source'],
-                            'batas_kirim_raw' =>
-                                $page['batas_kirim_raw'],
+                            'batas_kirim_at' => $page['batas_kirim_at'],
+                            'batas_kirim_source' => $page['batas_kirim_source'],
+                            'batas_kirim_raw' => $page['batas_kirim_raw'],
                         ]);
                 }
             }
@@ -475,7 +431,7 @@ class ResiImportController extends Controller
 
             if (strcasecmp((string) $dataPreview['marketplace'], 'Tiktok') === 0) {
                 @file_put_contents(
-                    $fullPath . '.fpdi14',
+                    $fullPath.'.fpdi14',
                     now()->format('Y-m-d H:i:s')
                 );
             }
@@ -488,7 +444,7 @@ class ResiImportController extends Controller
                 ->route('resi.import')
                 ->with(
                     'success',
-                    count($validPages) .
+                    count($validPages).
                     ' halaman resi berhasil disimpan.'
                 )
                 ->with(
@@ -507,7 +463,7 @@ class ResiImportController extends Controller
 
             return back()->with(
                 'error',
-                'Gagal menyimpan PDF resi: ' .
+                'Gagal menyimpan PDF resi: '.
                 $e->getMessage()
             );
         }
@@ -531,6 +487,7 @@ class ResiImportController extends Controller
             );
         }
 
+        // TIKTOK - TIDAK DIUBAH
         if ($marketplace === 'Tiktok') {
             return array_merge(
                 $this->detectTikTokPage(
@@ -541,33 +498,16 @@ class ResiImportController extends Controller
             );
         }
 
+        // SHOPEE
         $hasil = $this->detectShopeePage(
             $text,
             $idToko
         );
 
-        if (!empty($hasil['no_pesanan'])) {
-            $order = Pesanan::where(
-                'no_pesanan',
-                $hasil['no_pesanan']
-            )
-                ->where(
-                    'id_toko',
-                    $idToko
-                )
-                ->first();
-
-            if ($order) {
-                $hasil = array_merge(
-                    $hasil,
-                    $this->getShopeeDeadlineFromOrder($order)
-                );
-            }
-        }
-
         return array_merge(
             $this->emptyDeadlinePayload(),
-            $hasil
+            $hasil,
+            $this->extractShopeeDeadline($text)
         );
     }
 
@@ -610,25 +550,23 @@ class ResiImportController extends Controller
         $noPesanan = '';
         $noResi = '';
 
-        if (!empty($orderCandidates)) {
+        if (! empty($orderCandidates)) {
             $matchedOrders =
                 Pesanan::where(
                     'id_toko',
                     $idToko
                 )
-                ->whereIn(
-                    'no_pesanan',
-                    $orderCandidates
-                )
-                ->get()
-                ->keyBy(
-                    fn ($item) =>
-                        (string) $item->no_pesanan
-                );
+                    ->whereIn(
+                        'no_pesanan',
+                        $orderCandidates
+                    )
+                    ->get()
+                    ->keyBy(
+                        fn ($item) => (string) $item->no_pesanan
+                    );
 
             foreach (
-                $orderCandidates
-                as $candidate
+                $orderCandidates as $candidate
             ) {
                 if (
                     $matchedOrders->has(
@@ -650,32 +588,30 @@ class ResiImportController extends Controller
         }
 
         if (
-            !$pesanan &&
-            !empty($trackingCandidates)
+            ! $pesanan &&
+            ! empty($trackingCandidates)
         ) {
             $matchedTracking =
                 Pesanan::where(
                     'id_toko',
                     $idToko
                 )
-                ->whereIn(
-                    'no_resi',
-                    $trackingCandidates
-                )
-                ->get()
-                ->keyBy(
-                    fn ($item) =>
-                        strtoupper(
+                    ->whereIn(
+                        'no_resi',
+                        $trackingCandidates
+                    )
+                    ->get()
+                    ->keyBy(
+                        fn ($item) => strtoupper(
                             trim(
                                 (string)
                                 $item->no_resi
                             )
                         )
-                );
+                    );
 
             foreach (
-                $trackingCandidates
-                as $candidate
+                $trackingCandidates as $candidate
             ) {
                 $key = strtoupper(
                     trim($candidate)
@@ -704,7 +640,7 @@ class ResiImportController extends Controller
             }
         }
 
-        if (!$pesanan) {
+        if (! $pesanan) {
             $noPesanan =
                 $orderCandidates[0] ?? '';
 
@@ -714,14 +650,11 @@ class ResiImportController extends Controller
                 );
 
             return [
-                'no_pesanan' =>
-                    $noPesanan,
+                'no_pesanan' => $noPesanan,
 
-                'no_resi' =>
-                    $noResi,
+                'no_resi' => $noResi,
 
-                'status' =>
-                    'not_found',
+                'status' => 'not_found',
             ];
         }
 
@@ -744,18 +677,15 @@ class ResiImportController extends Controller
                 'no_pesanan',
                 $pesanan->no_pesanan
             )
-            ->exists();
+                ->exists();
 
         return [
-            'no_pesanan' =>
-                (string)
+            'no_pesanan' => (string)
                 $pesanan->no_pesanan,
 
-            'no_resi' =>
-                $noResi,
+            'no_resi' => $noResi,
 
-            'status' =>
-                $sudahAda
+            'status' => $sudahAda
                     ? 'existing'
                     : 'matched',
         ];
@@ -774,9 +704,9 @@ class ResiImportController extends Controller
         // 1. Prioritas pertama: cocokkan No. Pesanan secara exact.
         if ($noPesanan !== '') {
             $pesanan = Pesanan::where(
-                    'no_pesanan',
-                    $noPesanan
-                )
+                'no_pesanan',
+                $noPesanan
+            )
                 ->where(
                     'id_toko',
                     $idToko
@@ -788,18 +718,18 @@ class ResiImportController extends Controller
         // Kadang text layer PDF memotong 1 karakter terakhir No. Pesanan.
         // Prefix hanya dipakai jika hasilnya TEPAT satu pesanan agar aman.
         if (
-            !$pesanan &&
+            ! $pesanan &&
             $noPesanan !== '' &&
             strlen($noPesanan) >= 10
         ) {
             $kandidatPesanan = Pesanan::where(
-                    'id_toko',
-                    $idToko
-                )
+                'id_toko',
+                $idToko
+            )
                 ->where(
                     'no_pesanan',
                     'like',
-                    $noPesanan . '%'
+                    $noPesanan.'%'
                 )
                 ->limit(2)
                 ->get();
@@ -812,13 +742,13 @@ class ResiImportController extends Controller
 
         // 3. Jika No. Pesanan tidak cocok, cari dari No. Resi.
         if (
-            !$pesanan &&
+            ! $pesanan &&
             $noResi !== ''
         ) {
             $pesanan = Pesanan::where(
-                    'no_resi',
-                    $noResi
-                )
+                'no_resi',
+                $noResi
+            )
                 ->where(
                     'id_toko',
                     $idToko
@@ -830,7 +760,7 @@ class ResiImportController extends Controller
             }
         }
 
-        if (!$pesanan) {
+        if (! $pesanan) {
             return [
                 'no_pesanan' => $noPesanan,
                 'no_resi' => $noResi,
@@ -846,9 +776,9 @@ class ResiImportController extends Controller
         }
 
         $sudahAda = ResiPage::where(
-                'no_pesanan',
-                $pesanan->no_pesanan
-            )
+            'no_pesanan',
+            $pesanan->no_pesanan
+        )
             ->exists();
 
         return [
@@ -875,20 +805,17 @@ class ResiImportController extends Controller
 
         $parsed = $this->parseDeadlineValue($raw);
 
-        if (!$parsed) {
+        if (! $parsed) {
             return [
                 'batas_kirim_at' => null,
-                'batas_kirim_source' =>
-                    'shopee_estimated_ship_out_date',
+                'batas_kirim_source' => 'shopee_estimated_ship_out_date',
                 'batas_kirim_raw' => $raw,
             ];
         }
 
         return [
-            'batas_kirim_at' =>
-                $parsed->format('Y-m-d H:i:s'),
-            'batas_kirim_source' =>
-                'shopee_estimated_ship_out_date',
+            'batas_kirim_at' => $parsed->format('Y-m-d H:i:s'),
+            'batas_kirim_source' => 'shopee_estimated_ship_out_date',
             'batas_kirim_raw' => $raw,
         ];
     }
@@ -940,18 +867,62 @@ class ResiImportController extends Controller
             'batas_kirim_at' => $parsed
                 ? $parsed->format('Y-m-d H:i:s')
                 : null,
-            'batas_kirim_source' =>
-                'tiktok_in_transit_by',
+            'batas_kirim_source' => 'tiktok_in_transit_by',
             'batas_kirim_raw' => $raw,
         ];
     }
 
-    private function normalizeTikTokPdf(string $sourcePath, string $directory): string {
+    private function extractShopeeDeadline(
+        string $text
+    ): array {
+        $normalized = str_replace(
+            ["\r\n", "\r"],
+            "\n",
+            $text
+        );
+
+        $raw = '';
+
+        if (
+            preg_match(
+                '/Batas\s*Kirim\s*:\s*(\d{1,2}-\d{1,2}-\d{4})/i',
+                $normalized,
+                $match
+            )
+        ) {
+            $raw = trim($match[1]);
+        }
+
+        if ($raw === '') {
+            return $this->emptyDeadlinePayload();
+        }
+
+        try {
+            $parsed = Carbon::createFromFormat(
+                'd-m-Y',
+                $raw
+            )->endOfDay();
+        } catch (\Throwable $e) {
+            $parsed = null;
+        }
+
+        return [
+            'batas_kirim_at' => $parsed
+                ? $parsed->format('Y-m-d H:i:s')
+                : null,
+
+            'batas_kirim_source' => 'shopee_batas_kirim',
+            'batas_kirim_raw' => $raw,
+        ];
+    }
+
+    private function normalizeTikTokPdf(string $sourcePath, string $directory): string
+    {
         $normalizedPath =
-            $directory .
-            DIRECTORY_SEPARATOR .
-            'normalized_' .
-            Str::uuid() .
+            $directory.
+            DIRECTORY_SEPARATOR.
+            'normalized_'.
+            Str::uuid().
             '.pdf';
 
         $ghostscript = env(
@@ -960,8 +931,8 @@ class ResiImportController extends Controller
         );
 
         if (
-            !is_file($ghostscript) ||
-            !is_executable($ghostscript)
+            ! is_file($ghostscript) ||
+            ! is_executable($ghostscript)
         ) {
             throw new \Exception(
                 'Ghostscript tidak tersedia di server.'
@@ -969,17 +940,17 @@ class ResiImportController extends Controller
         }
 
         $command =
-            escapeshellarg($ghostscript) .
-            ' -q' .
-            ' -dNOPAUSE' .
-            ' -dBATCH' .
-            ' -sDEVICE=pdfwrite' .
-            ' -dCompatibilityLevel=1.4' .
-            ' -dAutoRotatePages=/None' .
-            ' -sOutputFile=' .
-            escapeshellarg($normalizedPath) .
-            ' ' .
-            escapeshellarg($sourcePath) .
+            escapeshellarg($ghostscript).
+            ' -q'.
+            ' -dNOPAUSE'.
+            ' -dBATCH'.
+            ' -sDEVICE=pdfwrite'.
+            ' -dCompatibilityLevel=1.4'.
+            ' -dAutoRotatePages=/None'.
+            ' -sOutputFile='.
+            escapeshellarg($normalizedPath).
+            ' '.
+            escapeshellarg($sourcePath).
             ' 2>&1';
 
         $output = [];
@@ -993,13 +964,13 @@ class ResiImportController extends Controller
 
         if (
             $exitCode !== 0 ||
-            !File::exists($normalizedPath) ||
+            ! File::exists($normalizedPath) ||
             File::size($normalizedPath) <= 0
         ) {
             File::delete($normalizedPath);
 
             throw new \Exception(
-                'Gagal memproses PDF TikTok dengan Ghostscript. ' .
+                'Gagal memproses PDF TikTok dengan Ghostscript. '.
                 implode(' ', $output)
             );
         }
@@ -1031,7 +1002,7 @@ class ResiImportController extends Controller
         foreach ($formats as $format) {
             try {
                 $date = Carbon::createFromFormat(
-                    '!' . $format,
+                    '!'.$format,
                     $value,
                     $timezone
                 );
@@ -1052,7 +1023,7 @@ class ResiImportController extends Controller
                     continue;
                 }
 
-                if (!preg_match('/\d{1,2}:\d{2}/', $value)) {
+                if (! preg_match('/\d{1,2}:\d{2}/', $value)) {
                     $date->endOfDay();
                 }
 
@@ -1067,7 +1038,7 @@ class ResiImportController extends Controller
                 $timezone
             );
 
-            if (!preg_match('/\d{1,2}:\d{2}/', $value)) {
+            if (! preg_match('/\d{1,2}:\d{2}/', $value)) {
                 $date->endOfDay();
             }
 
@@ -1081,12 +1052,9 @@ class ResiImportController extends Controller
         array $data
     ): array {
         return [
-            'batas_kirim_at' =>
-                $data['batas_kirim_at'] ?? null,
-            'batas_kirim_source' =>
-                $data['batas_kirim_source'] ?? null,
-            'batas_kirim_raw' =>
-                $data['batas_kirim_raw'] ?? null,
+            'batas_kirim_at' => $data['batas_kirim_at'] ?? null,
+            'batas_kirim_source' => $data['batas_kirim_source'] ?? null,
+            'batas_kirim_raw' => $data['batas_kirim_raw'] ?? null,
         ];
     }
 
@@ -1192,8 +1160,7 @@ class ResiImportController extends Controller
             )
         ) {
             foreach (
-                $matches[1]
-                as $value
+                $matches[1] as $value
             ) {
                 $candidates[] =
                     trim($value);
@@ -1231,8 +1198,7 @@ class ResiImportController extends Controller
                 )
             ) {
                 foreach (
-                    $matches[1] ?? []
-                    as $value
+                    $matches[1] ?? [] as $value
                 ) {
                     $candidates[] =
                         strtoupper(
@@ -1250,8 +1216,7 @@ class ResiImportController extends Controller
             )
         ) {
             foreach (
-                $matches[0]
-                as $value
+                $matches[0] as $value
             ) {
                 $value =
                     strtoupper(
@@ -1259,11 +1224,11 @@ class ResiImportController extends Controller
                     );
 
                 if (
-                    !preg_match(
+                    ! preg_match(
                         '/[A-Z]/',
                         $value
                     ) ||
-                    !preg_match(
+                    ! preg_match(
                         '/\d/',
                         $value
                     )
@@ -1298,8 +1263,7 @@ class ResiImportController extends Controller
         }
 
         foreach (
-            $candidates
-            as $candidate
+            $candidates as $candidate
         ) {
             if (
                 strtoupper(
@@ -1318,8 +1282,7 @@ class ResiImportController extends Controller
         array $candidates
     ): string {
         foreach (
-            $candidates
-            as $candidate
+            $candidates as $candidate
         ) {
             if (
                 preg_match(
