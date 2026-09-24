@@ -87,7 +87,8 @@ class GudangController extends Controller
     public function show(string $page)
     {
         if ($page === 'siapkan') {
-            return view('gudang.siapkan', compact('page'));
+            $kategori = kategori::all();
+            return view('gudang.siapkan', compact('page', 'kategori'));
         } elseif ($page === 'diambil') {
             return view('gudang.diambil', compact('page'));
         }
