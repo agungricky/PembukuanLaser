@@ -54,7 +54,7 @@ class TransaksiService
         // QUERY UTAMA DATATABLE
         $data = Pesanan::query()
             ->with([
-                'pesanan_per_produk',
+                'pesanan_per_produk.produk.kategori',
                 'toko',
             ])
             ->where('status', 'proses')
@@ -85,6 +85,19 @@ class TransaksiService
             $data->whereHas('toko', function ($query) use ($marketplace) {
                 $query->where('marketplace', $marketplace);
             });
+        }
+
+         $kategori = request('kategori');
+        if (! empty($kategori)) {
+            $data->whereHas(
+                'pesanan_per_produk.produk',
+                function ($query) use ($kategori) {
+                    $query->where(
+                        'kategori_id',
+                        $kategori
+                    );
+                }
+            );
         }
 
         // ANTRIAN STOK - QUERY RINGAN
