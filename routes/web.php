@@ -222,7 +222,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 
         // Produk
         Route::get('/semua-produk', [GudangController::class, 'produk'])->name('gudang.produk');
-        // Route::get('/semua-produk/{sku}', [GudangController::class, 'produkShow'])->name('produkshow.json');
+        Route::get('/semua-produk/{sku}', [GudangController::class, 'produkShow'])->name('produkshow.json');
         Route::patch('/update-stok/{sku}', [GudangController::class, 'updatestok'])->name('updatestok.json');
         Route::get('/stok/export', [GudangController::class, 'stokExport'])->name('gudang.stok.export');
         Route::post('/stok/import', [GudangController::class, 'stokImport'])->name('gudang.stok.import');
