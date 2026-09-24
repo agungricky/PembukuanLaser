@@ -3,7 +3,7 @@
     <main class="flex-grow-1 overflow-auto p-3 p-lg-4">
         <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
             <div>
-                <h1 class="h3 fw-bold text-dark mb-1">Produk Perlu Disiapkan</h1>
+                <h1 class="h3 fw-bold text-dark mb-1">Produk Reguler</h1>
                 <p class="text-muted small mb-0">
                     <span class="text-muted">
                         <i class="fa-solid fa-arrow-right-arrow-left"></i>

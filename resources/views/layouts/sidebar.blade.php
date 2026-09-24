@@ -375,7 +375,12 @@
                             class="sidebar-sublink {{ request()->route('page') === 'siapkan' ? 'active' : '' }}">
 
                             <i class="fa-solid fa-box"></i>
-                            <small>Perlu Disiapkan</small>
+                            <small>Produk Reguler</small>
+                        </a>
+                        <a href="{{ route('produk-custom.index') }}"
+                            class="sidebar-sublink {{ Route::is('produk-custom.index') ? 'active' : '' }}">
+                            <i class="fa-solid fa-pen-ruler"></i>
+                            <small>Produk Custom</small>
                         </a>
                         <a href="{{ route('transaksi.show', ['page' => 'diambil']) }}"
                             class="sidebar-sublink {{ request()->route('page') === 'diambil' ? 'active' : '' }}">
@@ -394,12 +399,6 @@
                             class="sidebar-sublink {{ Route::is('gudang.sampel') ? 'active' : '' }}">
                             <i class="fa-solid fa-vial"></i>
                             <small>Barang Sampel</small>
-                        </a>
-
-                        <a href="{{ route('produk-custom.index') }}"
-                            class="sidebar-sublink {{ Route::is('produk-custom.index') ? 'active' : '' }}">
-                            <i class="fa-solid fa-pen-ruler"></i>
-                            <small>Produk Custom</small>
                         </a>
                     </div>
                 </div>

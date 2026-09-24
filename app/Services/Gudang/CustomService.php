@@ -2,6 +2,7 @@
 
 namespace App\Services\Gudang;
 
+use App\Models\kategori;
 use App\Models\Pesanan;
 use App\Models\Produk;
 use App\Models\stok_produk;
@@ -12,7 +13,9 @@ class CustomService
 {
     public function produkcustom()
     {
-        return view('gudang.produk_custom');
+        $kategori = kategori::all();
+
+        return view('gudang.produk_custom', compact('kategori'));
     }
 
     public function custom_data()
@@ -23,7 +26,7 @@ class CustomService
         // QUERY UTAMA DATATABLE
         $data = Pesanan::query()
             ->with([
-                'pesanan_per_produk',
+                'pesanan_per_produk.produk.kategori',
                 'toko',
             ])
             ->where('status', 'proses')
@@ -50,6 +53,19 @@ class CustomService
             $data->whereHas('toko', function ($query) use ($marketplace) {
                 $query->where('marketplace', $marketplace);
             });
+        }
+
+        $kategori = request('kategori');
+        if (! empty($kategori)) {
+            $data->whereHas(
+                'pesanan_per_produk.produk',
+                function ($query) use ($kategori) {
+                    $query->where(
+                        'kategori_id',
+                        $kategori
+                    );
+                }
+            );
         }
 
         // ANTRIAN STOK - QUERY RINGAN
@@ -146,21 +162,15 @@ class CustomService
             array_filter($statusPesanan)
         );
 
+        // dd($data->take(30)->get()->toArray());
+
         // DATATABLE
         return DataTables::eloquent($data)
-            ->editColumn(
-                'pesanan_per_produk',
-                function ($pesanan) use (
-                    $alokasiStok,
-                    $stokProduk
-                ) {
-
+            ->editColumn('pesanan_per_produk',
+                function ($pesanan) use ($alokasiStok, $stokProduk) {
                     return $pesanan
                         ->pesanan_per_produk
-                        ->map(function ($item) use (
-                            $alokasiStok,
-                            $stokProduk
-                        ) {
+                        ->map(function ($item) use ($alokasiStok, $stokProduk) {
                             $alokasi =
                                 $alokasiStok[
                                     $item->id_per_produk
@@ -203,7 +213,6 @@ class CustomService
                     );
                 }
             )
-
             ->filterColumn(
                 'no_resi',
                 function ($query, $keyword) {
@@ -227,7 +236,6 @@ class CustomService
                     });
                 }
             )
-
             ->orderColumn(
                 'status_stok',
                 function (
@@ -272,7 +280,10 @@ class CustomService
                         );
                 }
             )
-
+            ->orderColumn('input_at', function ($query, $order) {
+                $query->reorder()
+                    ->orderBy('pesanan.input_at', $order);
+            })
             ->toJson();
     }
 }

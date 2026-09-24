@@ -641,7 +641,7 @@ class PesananController extends Controller
                     'total_admin' => 0,
                     'pencairan' => null,
                     'notes' => null,
-                    'batas_kirim_at' => $batasKirimAt,
+                    // 'batas_kirim_at' => $batasKirimAt,
                     'batas_kirim_raw' => $batasKirimRaw,
                     'batas_kirim_source' => $batasKirimSource,
                 ]);
