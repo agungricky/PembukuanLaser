@@ -6,6 +6,7 @@ use App\Imports\PesananExcelService;
 use App\Models\Pesanan;
 use App\Models\Toko;
 use App\Services\EditorPartService;
+use App\Services\Pesanan\CetakResiService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,14 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class PesananController extends Controller
 {
+    protected CetakResiService $cetakResiService;
+
+    public function __construct(
+        CetakResiService $cetakResiService
+    ) {
+        $this->cetakResiService = $cetakResiService;
+    }
+
     public function index(Request $request)
     {
         $allowed = [10, 20, 25, 50, 100];
@@ -849,5 +858,8 @@ class PesananController extends Controller
         }
     }
 
+    public function cetakResi(Request $request) {
+        return $this->cetakResiService->cetakResi($request);
+    }
     
 }

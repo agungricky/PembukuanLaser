@@ -256,10 +256,7 @@
                             Cetak Resi Pertama
                         </option>
                         <option value="Cetak Ulang Resi">
-                            Cetak Ulang Resi
-                        </option>
-                        <option value="Resi Rusak">
-                            Resi Rusak
+                            Pengecekan Resi
                         </option>
                         <option value="Resi Hilang">
                             Resi Hilang
@@ -613,7 +610,6 @@
             let table;
             let kebutuhan = [];
 
-            
             $('#filterKategori').select2({
                 theme: 'bootstrap-5',
                 width: '30%',
@@ -905,36 +901,24 @@
                         orderable: false,
                         searchable: true,
                         className: 'px-3 py-0 produk-cell',
-
                         render: function(data, type, row) {
-
                             let html = '';
-
                             const barang = Array.isArray(row.pesanan_per_produk) ?
                                 row.pesanan_per_produk : [];
 
                             barang.forEach(function(item, index) {
-
                                 const border = index > 0 ? 'border-top' : '';
-
                                 html += `
                                     <div class="product-row-sync produk-item ${border} py-2">
-
                                         <div class="d-flex align-items-center flex-wrap gap-2 w-100">
-
                                             <span class="product-sku d-inline-flex align-items-center fw-semibold text-dark">
-
                                                 <i
                                                     class="fa-solid fa-cube text-primary me-1"
                                                     style="font-size:10px;">
                                                 </i>
-
                                                 ${item.sku ?? '-'}
-
                                             </span>
-
                                             <span class="text-muted">•</span>
-
                                             <span class="product-name text-secondary">
                                                 ${
                                                     item.nama_produk
@@ -1202,7 +1186,6 @@
                     const barang = Array.isArray(rowData.pesanan_per_produk) ?
                         rowData.pesanan_per_produk : [];
 
-
                     barang.forEach(function(item) {
                         const sku = item.sku ?? '-';
                         if (!rekap[sku]) {
@@ -1243,6 +1226,11 @@
                         item.stok_awal - item.kebutuhan
                     );
 
+                    const stokAwal = Math.max(
+                        0,
+                        item.stok_awal
+                    );
+
                     html += `
                         <tr>
                             <td class="px-4">
@@ -1271,7 +1259,7 @@
                                     class="text-muted mt-1"
                                     style="font-size:10px;"
                                 >
-                                    Awal ${item.stok_awal}
+                                    Awal ${stokAwal}
                                 </div>
                             </td>
                             <td class="px-4 text-center">
@@ -1313,20 +1301,15 @@
 
             // Buka Modal Cetak Resi
             $('#cetakResi').on('click', function() {
-
                 const selected = $('.item-checkbox:checked');
-
                 if (selected.length === 0) {
-
                     Swal.fire({
                         icon: 'warning',
                         title: 'Belum Ada Barang',
                         text: 'Silakan pilih barang terlebih dahulu.'
                     });
-
                     return;
                 }
-
 
                 // Ambil semua no pesanan yang dicentang
                 pesananExport = selected
@@ -1335,22 +1318,18 @@
                     })
                     .get();
 
-
                 // Ambil kebutuhan saat ini
                 kebutuhanExport = kebutuhan;
-
 
                 // Reset pilihan alasan
                 $('#alasanExport')
                     .val('')
                     .removeClass('is-invalid');
 
-
                 // Tampilkan jumlah pesanan jika diperlukan
                 $('#jumlahPesananExport').text(
                     pesananExport.length
                 );
-
 
                 // Buka modal
                 const modal = new bootstrap.Modal(

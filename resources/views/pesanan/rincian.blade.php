@@ -33,6 +33,10 @@
                         </button>
                     </form>
                 @endif
+                <button type="button" id="cetakResi" class="btn btn-danger btn-sm text-nowrap">
+                    <i class="fa-solid fa-print me-1"></i>
+                    Cetak Resi
+                </button>
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="badge rounded-pill bg-{{ $statusBadge }} px-3 py-2">
@@ -934,5 +938,6 @@
                 }
             @endif
         });
+
     </script>
 @endpush
