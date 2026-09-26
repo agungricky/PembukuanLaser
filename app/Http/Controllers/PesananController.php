@@ -858,6 +858,10 @@ class PesananController extends Controller
         }
     }
 
+    public function previewResi($token){
+        return $this->cetakResiService->previewResi($token);
+    }
+
     public function cetakResi(Request $request) {
         return $this->cetakResiService->cetakResi($request);
     }

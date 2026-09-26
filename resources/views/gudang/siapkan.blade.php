@@ -128,6 +128,12 @@
                     </div>
 
                     <div class="d-flex justify-content-end align-items-center gap-2 w-100">
+                        <div class="btn btn-warning btn-sm d-flex align-items-center justify-content-center gap-2 flex-grow-1 fw-semibold d-none"
+                            id="data-terpilih">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Data dipilih:</span>
+                            <span id="jumlahTerpilih">0</span>
+                        </div>
                         <button type="button" id="cetakResi" class="btn btn-danger btn-sm text-nowrap">
                             <i class="fa-solid fa-print me-1"></i>
                             Cetak Resi
@@ -609,6 +615,7 @@
             let cekDetail = [];
             let table;
             let kebutuhan = [];
+            let totalTercentang;
 
             $('#filterKategori').select2({
                 theme: 'bootstrap-5',
@@ -617,7 +624,7 @@
                 allowClear: true
             });
 
-            
+
             $('#per_page').val(10);
             $('#per_page').on('change', function() {
                 resetChecklist();
@@ -821,17 +828,17 @@
                                     ${
                                         terlambat
                                             ? `
-                                                                                                                                                                                                                                                                <div class="mt-1">
-                                                                                                                                                                                                                                                                    <span
-                                                                                                                                                                                                                                                                        class="badge bg-danger text-white"
-                                                                                                                                                                                                                                                                        style="font-size: 9px;">
+                                                                                                                                                                                                                                                                                        <div class="mt-1">
+                                                                                                                                                                                                                                                                                            <span
+                                                                                                                                                                                                                                                                                                class="badge bg-danger text-white"
+                                                                                                                                                                                                                                                                                                style="font-size: 9px;">
 
-                                                                                                                                                                                                                                                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                                                                                                                                                                                                                                                                        Terlambat
+                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                                                                                                                                                                                                                                                                                Terlambat
 
-                                                                                                                                                                                                                                                                    </span>
-                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                            `
+                                                                                                                                                                                                                                                                                            </span>
+                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                    `
                                             : ''
                                     }
                                 </div>
@@ -938,12 +945,12 @@
                                             ${
                                                 item.variasi
                                                     ? `
-                                                                                                                                                                                                                                            <span
-                                                                                                                                                                                                                                                class="badge bg-light text-dark border fw-normal"
-                                                                                                                                                                                                                                                style="font-size:10px;">
-                                                                                                                                                                                                                                                ${item.variasi}
-                                                                                                                                                                                                                                            </span>
-                                                                                                                                                                                                                                        `
+                                                                                                                                                                                                                                                                    <span
+                                                                                                                                                                                                                                                                        class="badge bg-light text-dark border fw-normal"
+                                                                                                                                                                                                                                                                        style="font-size:10px;">
+                                                                                                                                                                                                                                                                        ${item.variasi}
+                                                                                                                                                                                                                                                                    </span>
+                                                                                                                                                                                                                                                                `
                                                     : ''
                                             }
 
@@ -1024,17 +1031,17 @@
                                         ${
                                             tersedia
                                                 ? `
-                                                                                                                    <span class="status-stok stok-tersedia">
-                                                                                                                        <i class="fa-solid fa-circle-check"></i>
-                                                                                                                        Tersedia
-                                                                                                                    </span>
-                                                                                                                `
+                                                                                                                                            <span class="status-stok stok-tersedia">
+                                                                                                                                                <i class="fa-solid fa-circle-check"></i>
+                                                                                                                                                Tersedia
+                                                                                                                                            </span>
+                                                                                                                                        `
                                                 : `
-                                                                                                                    <span class="status-stok stok-kurang">
-                                                                                                                        <i class="fa-solid fa-triangle-exclamation"></i>
-                                                                                                                        Kurang
-                                                                                                                    </span>
-                                                                                                                `
+                                                                                                                                            <span class="status-stok stok-kurang">
+                                                                                                                                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                                                                                                                                Kurang
+                                                                                                                                            </span>
+                                                                                                                                        `
                                         }
 
                                     </div>
@@ -1126,9 +1133,10 @@
                     );
                 });
 
+                totalTercentang = $('.item-checkbox:checked').length;
+
                 updateButtonPengambil();
                 updateStokLive();
-
             });
 
             // Klik Row
@@ -1160,6 +1168,7 @@
                     checked
                 );
 
+                totalTercentang = $('.item-checkbox:checked').length;
                 updateButtonPengambil();
                 updateStokLive();
 
@@ -1214,6 +1223,7 @@
                 // Kalau tidak ada pesanan yang dipilih
                 if (data.length === 0) {
                     $('#stokCard').addClass('d-none');
+                    $('#data-terpilih').addClass('d-none');
                     $('#stokLiveBody').empty();
                     return;
                 }
@@ -1273,6 +1283,8 @@
 
                 $('#stokLiveBody').html(html);
                 $('#stokCard').removeClass('d-none');
+                $('#data-terpilih').removeClass('d-none');
+                $('#jumlahTerpilih').text(totalTercentang)
             }
 
             // Logic jika filter ganti maka hapus checklist
@@ -1425,15 +1437,15 @@
                                         <td>${index + 1}</td>
                                         <td>${item ?? '-'}</td>
                                         ${index === 0 ? `
-                                                                <td rowspan="${response.data.length}" class="text-center align-middle">
-                                                                    <button
-                                                                        type="button"
-                                                                        id="copy-pesanan"
-                                                                        class="btn btn-primary btn-sm">
-                                                                        Copy Semua No. Pesanan
-                                                                    </button>
-                                                                </td>
-                                                            ` : ''}
+                                                                                        <td rowspan="${response.data.length}" class="text-center align-middle">
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                id="copy-pesanan"
+                                                                                                class="btn btn-primary btn-sm">
+                                                                                                Copy Semua No. Pesanan
+                                                                                            </button>
+                                                                                        </td>
+                                                                                    ` : ''}
                                     </tr>
                                 `)
                                 .join('');
