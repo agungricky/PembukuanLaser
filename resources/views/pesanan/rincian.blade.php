@@ -939,5 +939,98 @@
             @endif
         });
 
+        
+        $(document).ready(function() {
+
+            $('#cetakResi').on('click', function() {
+                const pesanan = "{{ $pesanan->no_pesanan }}";
+                if (!pesanan) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Pesanan Tidak Ditemukan',
+                        text: 'Nomor pesanan tidak tersedia.'
+                    });
+
+                    return;
+                }
+
+                const alasanExport = "Cetak Ulang Resi (Pesanan Selesai Ditangani)";
+                const button = $(this);
+                button
+                    .prop('disabled', true)
+                    .html(`
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                        Memproses...
+                    `);
+
+                $.ajax({
+                    type: "POST",
+                    url: "{{ route('pesanan.cetak-resi') }}",
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+
+                    contentType: "application/json",
+                    dataType: "json",
+                    data: JSON.stringify({
+                        pesanan: [pesanan],
+                        alasan_export: alasanExport
+                    }),
+
+                    beforeSend: function() {
+                        Swal.fire({
+                            title: 'Memproses Resi',
+                            html: `
+                                <div class="text-muted">
+                                    Sedang memproses resi...
+                                </div>
+                            `,
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            showConfirmButton: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+                    },
+
+                    success: function(response) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: response.message ??
+                                'Resi berhasil diproses.'
+                        });
+
+                        if (response.success && response.preview_url) {
+                            window.open(
+                                response.preview_url,
+                                '_blank'
+                            );
+                        }
+                    },
+
+                    error: function(xhr) {
+                        const response = xhr.responseJSON;
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: response?.message ??
+                                'Terjadi kesalahan saat memproses resi.'
+                        });
+                    },
+
+                    complete: function() {
+                        button
+                            .prop('disabled', false)
+                            .html(`
+                                <i class="fa-solid fa-print me-1"></i>
+                                Cetak Resi
+                            `);
+                    }
+                });
+            });
+
+        });
     </script>
 @endpush

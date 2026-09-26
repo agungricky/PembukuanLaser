@@ -113,7 +113,7 @@ class CetakResiService
 
         $this->resi = $resi;
         $this->pdf = $pdf;
-        $this->produkPerPesanan = $produkPerPesanan;
+        // $this->produkPerPesanan = $produkPerPesanan;
 
         // Proses Pencarian Resi
         $this->prosesResi();
@@ -126,7 +126,7 @@ class CetakResiService
         return response()->json([
             'success' => true,
             'message' => 'Resi berhasil diproses.',
-            'preview_url' => route('transaksi.preview-resi', ['token' => $token]),
+            'preview_url' => route('pesanan.preview-resi', ['token' => $token]),
         ]);
     }
 

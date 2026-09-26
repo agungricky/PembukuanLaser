@@ -128,6 +128,12 @@
                     </div>
 
                     <div class="d-flex justify-content-end align-items-center gap-2 w-100">
+                        <div class="btn btn-warning btn-sm d-flex align-items-center justify-content-center gap-2 flex-grow-1 fw-semibold d-none"
+                            id="data-terpilih">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Data dipilih:</span>
+                            <span id="jumlahTerpilih">0</span>
+                        </div>
                         <button type="button" id="cetakResi" class="btn btn-danger btn-sm text-nowrap">
                             <i class="fa-solid fa-print me-1"></i>
                             Cetak Resi
@@ -612,6 +618,7 @@
             let cekDetail = [];
             let table;
             let kebutuhan = [];
+            let totalTercentang;
 
             $('#filterKategori').select2({
                 theme: 'bootstrap-5',
@@ -1140,6 +1147,8 @@
                     );
                 });
 
+                totalTercentang = $('.item-checkbox:checked').length;
+
                 updateButtonPengambil();
                 updateStokLive();
 
@@ -1173,6 +1182,8 @@
                     'table-active',
                     checked
                 );
+
+                totalTercentang = $('.item-checkbox:checked').length;
 
                 updateButtonPengambil();
                 updateStokLive();
@@ -1229,6 +1240,7 @@
                 // Kalau tidak ada pesanan yang dipilih
                 if (data.length === 0) {
                     $('#stokCard').addClass('d-none');
+                    $('#data-terpilih').addClass('d-none');
                     $('#stokLiveBody').empty();
                     return;
                 }
@@ -1283,6 +1295,8 @@
 
                 $('#stokLiveBody').html(html);
                 $('#stokCard').removeClass('d-none');
+                $('#data-terpilih').removeClass('d-none');
+                $('#jumlahTerpilih').text(totalTercentang)
             }
 
             // Logic jika filter ganti maka hapus checklist
