@@ -33,7 +33,7 @@
                         </button>
                     </form>
                 @endif
-                <button type="button" id="cetakResi" class="btn btn-danger btn-sm text-nowrap">
+                <button type="button" id="cetakResi" class="btn btn-danger btn-sm text-nowrap {{ empty($pesanan->batas_kirim_at) ? 'disabled' : '' }}">
                     <i class="fa-solid fa-print me-1"></i>
                     Cetak Resi
                 </button>
