@@ -84,13 +84,16 @@ class GudangController extends Controller
     // ==================================================//
     // ================== TRANSAKSI =====================//
     // ==================================================//
-    public function show(string $page)
+    public function show(string $page, Request $request)
     {
         if ($page === 'siapkan') {
             $kategori = kategori::all();
             return view('gudang.siapkan', compact('page', 'kategori'));
         } elseif ($page === 'diambil') {
-            return view('gudang.diambil', compact('page'));
+            $sesi = $request->sesi;
+            $tanggal = $request->tanggal;
+            $kategori = kategori::all();
+            return view('gudang.diambil', compact('page', 'sesi', 'tanggal', 'kategori'));
         }
     }
 
@@ -99,9 +102,9 @@ class GudangController extends Controller
         return $this->transaksiService->detailpesanan($filter, $sku);
     }
 
-    public function showdata($filter)
+    public function showdata($filter, Request $request)
     {
-        return $this->transaksiService->showdata($filter);
+        return $this->transaksiService->showdata($filter, $request);
     }
 
     public function store(Request $request)
@@ -127,6 +130,10 @@ class GudangController extends Controller
     public function cetakResi(Request $request)
     {
         return $this->transaksiService->cetakResi($request);
+    }
+
+    public function diselesaikanView(){
+        return $this->transaksiService->diselesaikanView();
     }
 
     // ==================================================//

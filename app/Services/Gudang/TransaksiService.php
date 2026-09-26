@@ -8,6 +8,7 @@ use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
 use App\Models\ResiPage;
 use App\Models\stok_produk;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -87,7 +88,7 @@ class TransaksiService
             });
         }
 
-         $kategori = request('kategori');
+        $kategori = request('kategori');
         if (! empty($kategori)) {
             $data->whereHas(
                 'pesanan_per_produk.produk',
@@ -218,8 +219,8 @@ class TransaksiService
                                 'id_per_produk' => $item->id_per_produk,
                                 'no_pesanan' => $item->no_pesanan,
                                 'sku' => $item->sku,
-                                'nama_produk' => $item->nama_produk,
-                                'variasi' => $item->variasi,
+                                'nama_produk' => $item->produk?->nama_produk,
+                                'variasi' => $item->produk?->variasi,
                                 'jumlah' => $item->jumlah,
                                 'stok_total' => (int) (
                                     $stokProduk[
@@ -229,6 +230,7 @@ class TransaksiService
                                 'stok_awal' => $alokasi['stok_awal'] ?? 0,
                                 'stok_sisa' => $alokasi['stok_sisa'] ?? 0,
                                 'tersedia' => $alokasi['tersedia'] ?? false,
+                                'produk' => $item->produk,
                             ];
                         })
                         ->values()
@@ -347,7 +349,7 @@ class TransaksiService
             ->toJson();
     }
 
-    private function diambil()
+    private function diambil($request)
     {
         $tanggalAwal = now()->subDays(30)->startOfDay();
         $tanggalAkhir = now()->endOfDay();
@@ -359,7 +361,6 @@ class TransaksiService
                 'toko',
             ])
 
-            // Harus punya produk status 1 dan sudah mutasi
             ->whereIn('no_pesanan', function ($query) {
                 $query->select('no_pesanan')
                     ->from('pesanan_per_produk')
@@ -367,27 +368,57 @@ class TransaksiService
                     ->whereNotNull('mutasi_stok_id');
             })
 
-            // Kalau ada satu saja status 0, buang pesanan tersebut
             ->whereNotIn('no_pesanan', function ($query) {
                 $query->select('no_pesanan')
                     ->from('pesanan_per_produk')
                     ->where('status_pesanan', '0');
             })
+
             ->whereBetween('tanggal', [
                 $tanggalAwal,
                 $tanggalAkhir,
-            ])
+            ]);
 
-            // Urut berdasarkan updated_at terbaru dari pesanan_per_produk
-            ->orderByDesc(
-                PesananPerProduk::selectRaw('MAX(updated_at)')
-                    ->whereColumn(
-                        'pesanan_per_produk.no_pesanan',
-                        'pesanan.no_pesanan'
-                    )
-            );
+        // FILTER TANGGAL + SESI
+        $tanggal = $request->tanggal;
+        $sesi = $request->sesi;
+        if (! empty($tanggal)) {
+            $data->whereHas('pesanan_per_produk', function ($query) use (
+                $tanggal,
+                $sesi
+            ) {
 
-        $marketplace = request('marketplace');
+                $query->whereDate('updated_at', $tanggal);
+
+                if ($sesi === 'Pagi') {
+                    $query->whereTime(
+                        'updated_at',
+                        '<',
+                        '12:00:00'
+                    );
+                }
+
+                if ($sesi === 'Siang') {
+                    $query->whereTime(
+                        'updated_at',
+                        '>=',
+                        '12:00:00'
+                    );
+                }
+            });
+        }
+
+        // ORDER
+        $data->orderByDesc(
+            PesananPerProduk::selectRaw('MAX(updated_at)')
+                ->whereColumn(
+                    'pesanan_per_produk.no_pesanan',
+                    'pesanan.no_pesanan'
+                )
+        );
+
+        // MARKETPLACE
+        $marketplace = $request->marketplace;
         if (! empty($marketplace)) {
             $data->whereHas('toko', function ($query) use ($marketplace) {
                 $query->where(
@@ -397,13 +428,20 @@ class TransaksiService
             });
         }
 
-        // =========================================================
-        // DATATABLE
-        // =========================================================
+        $kategori = request('kategori');
+        if (! empty($kategori)) {
+            $data->whereHas(
+                'pesanan_per_produk.produk',
+                function ($query) use ($kategori) {
+                    $query->where(
+                        'kategori_id',
+                        $kategori
+                    );
+                }
+            );
+        }
+
         return DataTables::eloquent($data)
-            // =====================================================
-            // SEARCH SKU
-            // =====================================================
             ->filterColumn(
                 'pesanan_per_produk',
                 function ($query, $keyword) {
@@ -416,16 +454,11 @@ class TransaksiService
                                 'like',
                                 $keyword.'%'
                             );
-
                         }
                     );
-
                 }
             )
 
-            // =====================================================
-            // SEARCH TOKO
-            // =====================================================
             ->filterColumn(
                 'no_resi',
                 function ($query, $keyword) {
@@ -438,7 +471,6 @@ class TransaksiService
                                 'like',
                                 '%'.$keyword.'%'
                             );
-
                         }
                     );
                 }
@@ -446,12 +478,12 @@ class TransaksiService
             ->toJson();
     }
 
-    public function showdata($filter)
+    public function showdata($filter, $request)
     {
         if ($filter === 'siapkan') {
             return $this->siapkan();
         } elseif ($filter === 'diambil') {
-            return $this->diambil();
+            return $this->diambil($request);
         }
     }
 
@@ -478,9 +510,7 @@ class TransaksiService
                         $sku = $item->sku;
                         $jumlah = $item->jumlah;
 
-                        // =========================
                         // KUMPULKAN TOTAL PER SKU
-                        // =========================
                         if (isset($kebutuhan[$sku])) {
                             $kebutuhan[$sku]['jumlah'] += $jumlah;
                             $kebutuhan[$sku]['perproduk_ids'][] = $item->id_per_produk;
@@ -495,9 +525,7 @@ class TransaksiService
                 }
             }
 
-            // =========================
             // BUAT MUTASI STOK
-            // =========================
             foreach ($kebutuhan as $sku => $data) {
                 $mutasi = mutasi_stok::create([
                     'stok_produk_id' => $data['stok_produk_id'],
@@ -507,9 +535,7 @@ class TransaksiService
                     'keterangan' => '',
                 ]);
 
-                // =========================
                 // UPDATE PESANAN PER PRODUK
-                // =========================
                 PesananPerProduk::whereIn('id_per_produk', $data['perproduk_ids'])
                     ->update([
                         'status_pesanan' => '1',
@@ -1212,5 +1238,35 @@ class TransaksiService
             throw $th;
         }
 
+    }
+
+    public function diselesaikanView()
+    {
+        $data = PesananPerProduk::where('status_pesanan', '1')
+            ->where('updated_at', '>=', Carbon::now()->subMonth())
+            ->selectRaw('DATE(updated_at) as tanggal')
+            ->selectRaw("
+                    CASE
+                        WHEN HOUR(updated_at) < 12 THEN 'Pagi'
+                        ELSE 'Siang'
+                    END as sesi
+                ")
+            ->groupByRaw("
+                    DATE(updated_at),
+                    CASE
+                        WHEN HOUR(updated_at) < 12 THEN 'Pagi'
+                        ELSE 'Siang'
+                    END
+                ")
+            ->orderBy('tanggal', 'DESC')
+            ->orderByRaw("
+                CASE
+                    WHEN sesi = 'Pagi' THEN 1
+                    ELSE 2
+                END
+            ")
+            ->get();
+
+        return view('gudang.diselesaikan', compact('data'));
     }
 }

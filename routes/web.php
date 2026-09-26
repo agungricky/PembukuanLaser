@@ -219,6 +219,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::post('/cetak-resi/transaksi', [GudangController::class, 'cetakResi'])->name('transaksi.cetak-resi');
         Route::get('/transaksi/preview-resi/{token}', [GudangController::class, 'previewResi'])->name('transaksi.preview-resi');
         Route::post('/update/pesanan-selesai', [GudangController::class, 'updateselesai'])->name('transaksi.update.selesai');
+        Route::get('/riwayat-pesanan/diselesaikan', [GudangController::class, 'diselesaikanView'])->name('gudang.diselesaikan');
 
         // Produk
         Route::get('/semua-produk', [GudangController::class, 'produk'])->name('gudang.produk');
@@ -268,6 +269,8 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::middleware(['role:gudang,pegawai'])->group(function () {
         Route::get('/kategori-produk/{id}', [GudangController::class, 'kategorishow'])->name('gudang.kategori.json');
         Route::get('/produk-sku', [ProdukController::class, 'produkshow'])->name('produk.json');
+        Route::post('/cetak-resi/pesanan', [PesananController::class, 'cetakResi'])->name('pesanan.cetak-resi');
+        Route::get('/pesanan/preview-resi/{token}', [PesananController::class, 'previewResi'])->name('pesanan.preview-resi');
     });
 
 });

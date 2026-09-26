@@ -368,7 +368,7 @@
                         <i class="fa-solid fa-chevron-down small"></i>
                     </a>
 
-                    <div class="collapse {{ request()->routeIs('transaksi.*', 'gudang.sampel', 'gudang.retur', 'produk-custom.*') ? 'show' : '' }}"
+                    <div class="collapse {{ request()->routeIs('transaksi.*', 'gudang.sampel', 'gudang.retur', 'produk-custom.*', 'gudang.diselesaikan') ? 'show' : '' }}"
                         id="transaksiMenu">
 
                          <a href="{{ route('transaksi.show', ['page' => 'siapkan']) }}"
@@ -382,13 +382,11 @@
                             <i class="fa-solid fa-pen-ruler"></i>
                             <small>Produk Custom</small>
                         </a>
-                        <a href="{{ route('transaksi.show', ['page' => 'diambil']) }}"
-                            class="sidebar-sublink {{ request()->route('page') === 'diambil' ? 'active' : '' }}">
-
+                        <a href="{{ route('gudang.diselesaikan') }}"
+                            class="sidebar-sublink {{ Route::is('gudang.diselesaikan') ? 'active' : '' }}">
                             <i class="fa-solid fa-circle-check"></i>
                             <small>Pesanan Keluar</small>
                         </a>
-
                         <a href="{{ route('gudang.retur') }}"
                             class="sidebar-sublink {{ Route::is('gudang.retur') ? 'active' : '' }}">
                             <i class="fa-solid fa-rotate-left"></i>

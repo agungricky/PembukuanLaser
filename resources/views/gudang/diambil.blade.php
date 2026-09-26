@@ -3,7 +3,7 @@
     <main class="flex-grow-1 overflow-auto p-3 p-lg-4">
         <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
             <div>
-                <h1 class="h3 fw-bold text-dark mb-1">Pesanan Selesai & Keluar Gudang</h1>
+                <h1 class="h3 fw-bold text-dark mb-1">Riwayat Pesanan Selesai & Keluar Gudang</h1>
                 <p class="text-muted small mb-0">
                     <span class="text-muted">
                         <i class="fa-solid fa-arrow-right-arrow-left"></i>
@@ -20,15 +20,11 @@
         {{-- Filter Yang Aktif --}}
         <div class="alert alert-light border d-flex align-items-center gap-2 py-2 px-3 mb-3" style="font-size: 12px;">
             <i class="fa-solid fa-magnifying-glass text-primary"></i>
-            <div class="border-end pe-3 me-2">
+            <div class="pe-3 me-2">
                 <span class="fw-semibold text-dark">Pencarian aktif:</span>
                 <span class="badge bg-primary ms-1">No Pesanan</span>
                 <span class="badge bg-primary ms-1">Nama Toko</span>
                 <span class="badge bg-primary ms-1">SKU</span>
-            </div>
-            <div class="">
-                <span class="fw-semibold text-dark">Data Tampil :</span>
-                <span class="badge bg-primary ms-1">1 Bulan Terakhir</span>
             </div>
         </div>
 
@@ -94,26 +90,45 @@
                     </p>
                 </div>
                 <!-- Controls: Filters & Table Search -->
-                <div class="d-flex flex-nowrap align-items-center gap-2">
-                    <div class="input-group input-group-sm" style="max-width: 240px;">
-                        <span class="input-group-text bg-light border-end-0">
-                            <i class="fa-solid fa-magnifying-glass text-muted"></i>
-                        </span>
-                        <input type="text" id="searchTable" placeholder="Search"
-                            class="form-control form-control-sm border-start-0 bg-light" />
+                <div class="d-flex flex-column align-items-center gap-2">
+                    <div class="d-flex justify-content-center align-items-center gap-2 flex-nowrap">
+                        <div class="input-group input-group-sm" style="width: 240px;">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                            </span>
+
+                            <input type="text" id="searchTable" placeholder="Search"
+                                class="form-control form-control-sm border-start-0 bg-light" />
+                        </div>
+
+                        <select id="filterKategori" data-placeholder="Pilih Kategori" class="form-select form-select-sm"
+                            style="width: 140px;">
+                            <option value="">Semua Kategori</option>
+                            @foreach ($kategori as $item)
+                                <option value="{{ $item->id }}">{{ $item->nama_kategori }}</option>
+                            @endforeach
+                        </select>
+
+                        <select id="filterMarketplace" class="form-select form-select-sm" style="width: 140px;">
+                            <option value="">Semua Toko</option>
+                            <option value="Shopee">Shopee</option>
+                            <option value="TikTok">TikTok</option>
+                        </select>
+
+                        <select id="per_page" class="form-select form-select-sm" style="width: 80px;">
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
                     </div>
-                    <select id="filterMarketplace" class="form-select form-select-sm"
-                        style="width: auto; min-width: 140px;">
-                        <option value="">Semua Toko</option>
-                        <option value="Shopee">Shopee</option>
-                        <option value="TikTok">TikTok</option>
-                    </select>
-                    <select id="per_page" class="form-select form-select-sm" style="width: auto;">
-                        <option value="10" selected>10</option>
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
+
+                    <div class="d-flex justify-content-end align-items-center gap-2 w-100">
+                        <button type="button" id="cetakResi" class="btn btn-danger btn-sm text-nowrap">
+                            <i class="fa-solid fa-print me-1"></i>
+                            Cetak Ulang Resi
+                        </button>
+                    </div>
                 </div>
             </div>
             <!-- Table Container -->
@@ -307,11 +322,18 @@
     <script>
         $(document).ready(function() {
             let filter = "{{ $page }}";
+            let sesi = "{{ $sesi }}"
+            let tanggal = "{{ $tanggal }}"
             let selected = [];
-            let pengambilbarang = null;
-            let cekDetail = [];
             let table;
-            let kebutuhan = [];
+            let pesananExport = [];
+
+            $('#filterKategori').select2({
+                theme: 'bootstrap-5',
+                width: '30%',
+                placeholder: $('#filterKategori').data('placeholder'),
+                allowClear: true
+            });
 
             $('#per_page').val(10);
             $('#per_page').on('change', function() {
@@ -329,6 +351,13 @@
             });
 
             $('#filterMarketplace').on('change', function() {
+                resetChecklist();
+                if (table) {
+                    table.ajax.reload();
+                }
+            });
+
+            $('#filterKategori').on('change', function() {
                 resetChecklist();
                 if (table) {
                     table.ajax.reload();
@@ -384,10 +413,14 @@
                 processing: true,
                 serverSide: true,
                 ajax: {
-                    url: "{{ route('showdata.json', ':filter') }}".replace(':filter', filter),
+                    url: "{{ route('showdata.json', ':filter') }}"
+                        .replace(':filter', filter) +
+                        '?sesi=' + encodeURIComponent(sesi) +
+                        '&tanggal=' + encodeURIComponent(tanggal),
                     type: "GET",
                     data: function(d) {
                         d.marketplace = $('#filterMarketplace').val();
+                        d.kategori = $('#filterKategori').val();
                     }
                 },
                 pageLength: 10,
@@ -598,12 +631,12 @@
                                             ${
                                                 item.variasi
                                                     ? `
-                                                                                                                                                                                                                            <span
-                                                                                                                                                                                                                                class="badge bg-light text-dark border fw-normal"
-                                                                                                                                                                                                                                style="font-size:10px;">
-                                                                                                                                                                                                                                ${item.variasi}
-                                                                                                                                                                                                                            </span>
-                                                                                                                                                                                                                        `
+                                                                                                                                                                                                                                                <span
+                                                                                                                                                                                                                                                    class="badge bg-light text-dark border fw-normal"
+                                                                                                                                                                                                                                                    style="font-size:10px;">
+                                                                                                                                                                                                                                                    ${item.variasi}
+                                                                                                                                                                                                                                                </span>
+                                                                                                                                                                                                                                            `
                                                     : ''
                                             }
 
@@ -657,8 +690,6 @@
                             const produk = row.pesanan_per_produk?.[0];
                             const adminGudang = produk?.mutasi?.gudang?.name ?? '-';
                             const pengambilBarang = produk?.mutasi?.admin_penjualan?.name ?? '-';
-
-                            console.log(produk)
                             return `
                                 <div class="d-flex flex-column gap-2 py-2">
 
@@ -756,6 +787,223 @@
                 // Hapus highlight row
                 $('#orderlist tbody tr').removeClass('table-active');
             }
+
+            // Proses Cetak Resi
+            $('#cetakResi').on('click', function() {
+                const selected = $('.item-checkbox:checked');
+                if (selected.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Belum Ada Barang',
+                        text: 'Silakan pilih barang terlebih dahulu.'
+                    });
+                    return;
+                }
+                
+                const alasanExport = "Cetak Ulang Resi (Pesanan Selesai Ditangani)";
+                // Validasi alasan
+                if (!alasanExport) {
+                    $('#alasanExport')
+                        .addClass('is-invalid')
+                        .focus();
+
+                    return;
+                }
+
+                // Ambil semua no pesanan yang dicentang
+                pesananExport = selected
+                    .map(function() {
+                        return String($(this).attr('data-no-pesanan'));
+                    })
+                    .get();
+
+                $('#alasanExport').removeClass('is-invalid');
+                const button = $(this);
+
+                // Disable tombol saat proses
+                button
+                    .prop('disabled', true)
+                    .html(`
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                        Memproses...
+                    `);
+
+                $.ajax({
+                    type: "POST",
+                    url: "{{ route('pesanan.cetak-resi') }}",
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    contentType: "application/json",
+                    dataType: "json",
+                    data: JSON.stringify({
+                        pesanan: pesananExport,
+                        alasan_export: alasanExport
+                    }),
+                    beforeSend: function() {
+                        Swal.fire({
+                            title: 'Memproses Resi',
+                            html: `
+                                <div class="text-muted">
+                                    Sedang menggabungkan beberapa resi...
+                                </div>
+                            `,
+                            allowOutsideClick: false,
+                            allowEscapeKey: false,
+                            showConfirmButton: false,
+
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+                    },
+                    success: function(response) {
+                        const modalEl = document.getElementById('modalAlasanExport');
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+
+                        modal?.hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Berhasil',
+                            text: response.message ??
+                                'Resi berhasil diproses.'
+                        });
+
+                        if (response.success && response.preview_url) {
+                            window.open(
+                                response.preview_url,
+                                '_blank'
+                            );
+
+                            return;
+                        }
+                    },
+                    error: function(xhr) {
+                        const response = xhr.responseJSON;
+                        if (xhr.status === 422 && response?.data) {
+                            const rows = response.data
+                                .map((item, index) => `
+                                    <tr>
+                                        <td>${index + 1}</td>
+                                        <td>${item ?? '-'}</td>
+                                        ${index === 0 ? `
+                                                                        <td rowspan="${response.data.length}" class="text-center align-middle">
+                                                                            <button
+                                                                                type="button"
+                                                                                id="copy-pesanan"
+                                                                                class="btn btn-primary btn-sm">
+                                                                                Copy Semua No. Pesanan
+                                                                            </button>
+                                                                        </td>
+                                                                    ` : ''}
+                                    </tr>
+                                `)
+                                .join('');
+
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Pemberitahuan',
+                                width: 700,
+
+                                html: `
+                                    <div class="text-center mb-3">
+                                        ${response.message ?? 'Beberapa pesanan belum memiliki resi.'}
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table
+                                            id="table-pesanan-belum-resi"
+                                            class="table table-bordered table-striped table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:60px;">No</th>
+                                                    <th>No. Pesanan</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${rows}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                `,
+
+                                confirmButtonText: 'OK',
+                                didOpen: () => {
+                                    $('#copy-pesanan').on('click', function() {
+                                        let nomorPesanan = [];
+                                        $('#table-pesanan-belum-resi tbody tr')
+                                            .each(function() {
+                                                let nomor = $(this)
+                                                    .find('td:eq(1)')
+                                                    .text()
+                                                    .trim();
+                                                if (nomor) {
+                                                    nomorPesanan.push(
+                                                        nomor);
+                                                }
+
+                                            });
+
+                                        let text = nomorPesanan.join('\n');
+                                        if (!text) {
+                                            alert(
+                                                'Data nomor pesanan kosong'
+                                            );
+                                            return;
+                                        }
+
+                                        // Event copy sementara
+                                        const copyHandler = function(e) {
+                                            e.preventDefault();
+                                            e.clipboardData.setData(
+                                                'text/plain',
+                                                text
+                                            );
+
+                                        };
+
+                                        document.addEventListener('copy',
+                                            copyHandler);
+
+                                        const berhasil = document
+                                            .execCommand('copy');
+
+                                        document.removeEventListener('copy',
+                                            copyHandler);
+
+                                        if (berhasil) {
+                                            $(this)
+                                                .removeClass('btn-primary')
+                                                .addClass('btn-success')
+                                                .text('Berhasil Dicopy');
+                                        } else {
+                                            alert('Gagal copy');
+                                        }
+                                    });
+                                }
+                            });
+
+                            return;
+                        }
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal',
+                            text: response?.message ??
+                                'Terjadi kesalahan saat memproses resi.'
+                        });
+                    },
+                    complete: function() {
+                        button
+                            .prop('disabled', false)
+                            .html(`
+                                <i class="fa-solid fa-file-export me-1"></i>
+                                Export Resi
+                            `);
+                    }
+                });
+
+            });
         });
     </script>
 @endpush

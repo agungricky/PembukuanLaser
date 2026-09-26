@@ -300,17 +300,18 @@
                     },
 
                     {
-                        data: 'nama_produk',
-                        name: 'nama_produk',
-
+                        data: 'sku',
+                        name: 'sku',
+                        orderable: false,
+                        searchable: true,
                         render: function(data, type, row) {
                             return `
                                 <div class="fw-bold text-success fs-6">
-                                    ${data ?? ''}
+                                    ${row.nama_produk ?? ''}
                                 </div>
 
                                 <small class="text-muted">
-                                    Sku : ${row.sku ?? ''}
+                                    Sku : ${data ?? ''}
                                 </small>
                             `;
                         }
@@ -356,7 +357,7 @@
                         orderable: false,
                         searchable: false,
                         render: function(data) {
-                            const stok = Number(data ?? 0);
+                            const stok = Math.max(0, Number(data ?? 0));
                             let badge = 'bg-success';
                             if (stok < 5) {
                                 badge = 'bg-danger';

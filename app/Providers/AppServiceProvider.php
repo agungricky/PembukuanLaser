@@ -37,7 +37,7 @@ class AppServiceProvider extends ServiceProvider
 
             $reguler = Exporter::where('user_id', Auth::id())
                 ->where('status', 'proses')
-                ->where('source_type', 'reguler')
+                // ->where('source_type', 'reguler')
                 ->first();
 
             $jumlahReguler = $reguler
@@ -48,7 +48,7 @@ class AppServiceProvider extends ServiceProvider
 
             $stok = Exporter::where('user_id', Auth::id())
                 ->where('status', 'proses')
-                ->where('source_type', 'stok')
+                // ->where('source_type', 'stok')
                 ->first();
 
             $jumlahStok = $stok ? stok_produk::where('exporter_id', $stok->id)
