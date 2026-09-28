@@ -4,7 +4,6 @@ namespace App\Services\Gudang;
 
 use App\Models\kategori;
 use App\Models\Pesanan;
-use App\Models\Produk;
 use App\Models\stok_produk;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
@@ -14,6 +13,7 @@ class CustomService
     public function produkcustom()
     {
         $kategori = kategori::all();
+
         return view('gudang.produk_custom', compact('kategori'));
     }
 
@@ -31,6 +31,7 @@ class CustomService
                         ->where('status_pesanan', '0')
                         ->whereNull('mutasi_stok_id');
                 },
+                'pesanan_per_produk.produk.kategori',
                 'toko',
             ])
             ->where('status', 'proses')
@@ -161,6 +162,7 @@ class CustomService
                 $statusPesanan
             )
         );
+
         return DataTables::eloquent($data)
             ->editColumn('pesanan_per_produk',
                 function ($pesanan) use ($alokasiStok, $stokProduk) {
@@ -184,6 +186,7 @@ class CustomService
                                     'stok_awal' => $alokasi['stok_awal'] ?? 0,
                                     'stok_sisa' => $alokasi['stok_sisa'] ?? 0,
                                     'tersedia' => $alokasi['tersedia'] ?? false,
+                                    'produk' => $item->produk,
                                 ];
                             }
                         )
@@ -196,9 +199,9 @@ class CustomService
                 function ($query, $keyword) {
                     $keyword = trim($keyword);
                     $query->where(function ($q) use ($keyword) {
-                            $q->where('pesanan.no_pesanan', 'like', $keyword.'%')
+                        $q->where('pesanan.no_pesanan', 'like', $keyword.'%')
                             ->orWhere('pesanan.input_at', 'like', '%'.$keyword.'%');
-                        }
+                    }
                     );
                 }
             )
@@ -221,7 +224,7 @@ class CustomService
                             $q->where('pesanan.no_resi', 'like', $keyword.'%')
                                 ->orWhereHas('toko',
                                     function ($toko) use ($keyword) {
-                                        $toko->where('nama_toko', 'like', '%'.$keyword.'%'); 
+                                        $toko->where('nama_toko', 'like', '%'.$keyword.'%');
                                     }
                                 );
                         }
@@ -233,7 +236,7 @@ class CustomService
                     $order = strtolower($order) === 'desc' ? 'DESC' : 'ASC';
                     $query->reorder();
                     if (! empty($pesananTersedia)) {
-                        $placeholders = 
+                        $placeholders =
                             implode(
                                 ',',
                                 array_fill(

@@ -700,6 +700,7 @@ class TransaksiService
         ]);
     }
 
+    // Halaman Laporan Resi
     private function viewResi($request)
     {
         $daftarPesanan = collect($request->pesanan);
@@ -741,9 +742,7 @@ class TransaksiService
                     'resi_import_id' => $item->resi_import_id,
                     'halaman' => $item->halaman,
                     'urutan' => $item->urutan,
-
                     'path_file' => $item->resi_imports?->path_file,
-
                     'nama_file' => $item->resi_imports?->nama_file,
                 ];
             });
@@ -786,30 +785,50 @@ class TransaksiService
 
         // HALAMAN PERTAMA LAPORAN
         $pdf->AddPage('P', [150, 105]);
-        $pdf->SetFont('Courier', 'B', 12);
+        $pdf->SetFont('Helvetica', 'B', 10);
         $pdf->Cell(0, 7, 'LAPORAN CETAK RESI', 0, 1, 'C');
 
         // Garis Pemisah ( ========= )
-        $pdf->SetFont('Courier', '', 8);
+        $pdf->SetFont('Courier', 'B', 8);
         $pdf->Cell(0, 4, str_repeat('=', 88), 0, 1, 'L');
 
-        // INFORMASI CETAK
-        $pdf->SetFont('Courier', '', 8);
+        $yInfo = $pdf->GetY();
 
-        // TANGGAL
+        // INFORMASI CETAK KIRI
+        $pdf->SetFont('Helvetica', '', 8);
+
         $pdf->Cell(25, 5, 'TANGGAL', 0, 0);
         $pdf->Cell(0, 5, ': '.now()->format('d-m-Y H:i'), 0, 1);
 
-        // CETAK BY
         $pdf->Cell(25, 5, 'CETAK BY', 0, 0);
         $pdf->Cell(0, 5, ': '.strtoupper(Auth::user()->name ?? '-'), 0, 1);
 
-        // KETERANGAN
         $pdf->Cell(25, 5, 'KETERANGAN', 0, 0);
         $pdf->Cell(0, 5, ': '.strtoupper($request->alasan_export ?? '-'), 0, 1);
 
-        // GARIS (---------------------)
-        $pdf->Cell(0, 4, str_repeat('-', 88), 0, 1, 'L');
+        if ($request->typeCetak && $request->typeCetak != 'clear') {
+
+            // STEMPEL KANAN
+            $lebarStempel = 28;
+            $tinggiStempel = 13;
+
+            $xStempel = $pdf->GetPageWidth() - $lebarStempel - 5;
+            $yStempel = $yInfo + 1;
+            $pdf->SetLineWidth(0.4);
+
+            // kotak stempel
+            $pdf->Rect($xStempel, $yStempel, $lebarStempel, $tinggiStempel);
+            $pdf->SetFont('Helvetica', 'B', 7);
+            $textStempel = 'CETAK PRODUK '.strtoupper($request->typeCetak);
+            $tinggiBaris = 4;
+            $pdf->SetXY($xStempel, $yStempel + 2.5);
+            $pdf->MultiCell($lebarStempel, $tinggiBaris, $textStempel, 0, 'C');
+            $pdf->SetY($yInfo + 15);
+        }
+
+        // GARIS
+        $pdf->SetFont('Courier', '', 6);
+        $pdf->Cell(0, 3, str_repeat('-', 110), 0, 1, 'L');
 
         // HEADER TABEL
         $drawTableHeader();
@@ -818,26 +837,41 @@ class TransaksiService
         $pdf->SetFont('Courier', '', 8);
         $totalKebutuhan = 0;
         foreach ($request->kebutuhan as $index => $item) {
-            // Nama Produk
+            // NAMA PRODUK
             $kata = preg_split('/\s+/', trim(strtoupper($item['nama_produk'])));
             $barisNama = array_chunk($kata, 4);
-            $namaProduk = implode("\n", array_map(fn ($row) => implode(' ', $row), $barisNama));
+            $namaProduk = implode(
+                "\n",
+                array_map(
+                    fn ($row) => implode(' ', $row),
+                    $barisNama
+                )
+            );
 
-            // Variasi
+            // VARIASI
             $variasi = trim(strtoupper($item['variasi'] ?? ''));
 
-            // HITUNG TINGGI ROW
+            // PENGATURAN TINGGI
             $tinggiNama = 4;
             $tinggiVariasi = 4;
+            $jarakVariasi = 1;
+            $paddingBawah = 1;
             $jumlahBarisNama = max(count($barisNama), 1);
-            $tinggiRow = ($jumlahBarisNama * $tinggiNama) + ($variasi !== '' ? $tinggiVariasi : 0);
-            $tinggiRow += 1;
+            $tinggiTotalNama = $jumlahBarisNama * $tinggiNama;
+            $tinggiRow = $tinggiTotalNama;
 
-            // CEK APAKAH ROW MASIH MUAT
+            if ($variasi !== '') {
+                $tinggiRow += $jarakVariasi;
+                $tinggiRow += $tinggiVariasi;
+            }
+
+            // jarak sebelum garis pemisah
+            $tinggiRow += $paddingBawah;
+
+            // CEK PAGE BREAK
             $tinggiGaris = 3;
             $batasBawah = $pdf->GetPageHeight() - 4;
             $posisiAkhirRow = $pdf->GetY() + $tinggiRow + $tinggiGaris;
-
             if ($posisiAkhirRow > $batasBawah) {
                 $addContinuationPage();
             }
@@ -855,40 +889,45 @@ class TransaksiService
 
             // NO
             $pdf->SetXY($x, $y);
-            $pdf->SetFont('Courier', '', 8);
+            $pdf->SetFont('Helvetica', '', 8);
             $pdf->Cell($lebarNo, $tinggiRow, $index + 1, 0, 0, 'C');
 
             // SKU
             $pdf->SetXY($x + $lebarNo, $y);
-            $pdf->SetFont('Courier', 'B', 8);
+            $pdf->SetFont('Helvetica', 'B', 8);
             $pdf->Cell($lebarSku, $tinggiRow, $item['sku'], 0, 0, 'L');
 
             // NAMA PRODUK
             $xNama = $x + $lebarNo + $lebarSku;
-            $pdf->SetXY($xNama, $y);
-            $pdf->SetFont('Courier', 'B', 8);
-            $pdf->MultiCell($lebarNama, $tinggiNama, $namaProduk, 0, 'L');
+            $pdf->SetFont('Helvetica', 'B', 8);
+            foreach ($barisNama as $i => $rowNama) {
+                $teksBaris = implode(' ', $rowNama);
+                $pdf->SetXY($xNama, $y + ($i * $tinggiNama));
+                $pdf->Cell($lebarNama, $tinggiNama, $teksBaris, 0, 0, 'L');
+            }
 
             // VARIASI
             if ($variasi !== '') {
-                $yVariasi = $y + ($jumlahBarisNama * $tinggiNama);
+                $jarakVariasi = 1;
+                $yVariasi = $y + ($jumlahBarisNama * $tinggiNama) + $jarakVariasi;
                 $pdf->SetXY($xNama, $yVariasi);
-                $pdf->SetFont('Courier', '', 7);
+                $pdf->SetFont('Helvetica', '', 7);
                 $pdf->Cell($lebarNama, $tinggiVariasi, '- '.$variasi, 0, 0, 'L');
             }
 
             // SISA STOK
             $xStok = $x + $lebarNo + $lebarSku + $lebarNama;
             $pdf->SetXY($xStok, $y);
-            $pdf->SetFont('Courier', '', 8);
+            $pdf->SetFont('Helvetica', '', 8);
             $pdf->Cell($lebarStok, $tinggiRow, max(0, $item['stok_awal'] - $item['kebutuhan']), 0, 0, 'C');
 
             // KEBUTUHAN
             $xButuh = $xStok + $lebarStok;
             $pdf->SetXY($xButuh, $y);
+            $pdf->SetFont('Helvetica', '', 8);
             $pdf->Cell($lebarButuh, $tinggiRow, $item['kebutuhan'], 0, 0, 'C');
 
-            // GARIS PEMISAH ROW ( ----------- )
+            // GARIS PEMISAH ROW
             $yBawah = $y + $tinggiRow;
             $pdf->SetXY($x, $yBawah);
             $pdf->SetFont('Courier', '', 6);
@@ -906,55 +945,59 @@ class TransaksiService
         $tinggiFooter = 20;
         if (($pdf->GetY() + $tinggiFooter) > ($pdf->GetPageHeight() - 4)) {
             $pdf->AddPage('P', [150, 105]);
-            $pdf->SetFont('Courier', 'B', 10);
+            $pdf->SetFont('Helvetica', 'B', 10);
             $pdf->Cell(0, 6, 'LAPORAN CETAK RESI - RINGKASAN', 0, 1, 'C');
-            $pdf->SetFont('Courier', '', 7);
+            $pdf->SetFont('Helvetica', '', 7);
             $pdf->Cell(0, 3, str_repeat('=', 88), 0, 1, 'L');
         }
 
         // TOTAL LAPORAN
-        $pdf->SetFont('Courier', 'B', 7);
+        $pdf->SetFont('Helvetica', 'B', 7);
         $pdf->SetX(0);
 
         $marginKiri = 0;
         $marginKanan = 3;
         $lebarArea = $pdf->GetPageWidth() - $marginKiri - $marginKanan;
-        $lebarTotal = $lebarArea / 2;
+        $lebarTotal = $lebarArea / 3;
 
-        // TOTAL SKU
         $pdf->Cell($lebarTotal, 6, 'TOTAL SKU : '.count($request->kebutuhan), 0, 0, 'C');
+        $pdf->Cell($lebarTotal, 6, 'TOTAL KEBUTUHAN : '.$totalKebutuhan, 0, 0, 'C');
+        $pdf->Cell($lebarTotal, 6, 'TOTAL RESI : '.$request->totalResi, 0, 1, 'C');
 
-        // TOTAL KEBUTUHAN
-        $pdf->Cell($lebarTotal, 6, 'TOTAL KEBUTUHAN : '.$totalKebutuhan, 0, 1, 'C');
-
-        // INFO
-        $x = $pdf->GetX();
+        $pdf->Ln(3);
+        $xAwal = $pdf->GetX();
         $y = $pdf->GetY();
 
         $ukuranIcon = 3;
-        $xIcon = $x + 2;
+        $jarakIconText = 2;
+        $pdf->SetFont('Helvetica', '', 7);
+        $textInfo = 'INFO: Stok adalah sisa akhir setelah barang diambil dari gudang.';
+        $lebarText = $pdf->GetStringWidth($textInfo);
+
+        $lebarKonten = $ukuranIcon + $jarakIconText + $lebarText;
+        $x = ($pdf->GetPageWidth() - $lebarKonten) / 2;
+        $xIcon = $x;
         $yIcon = $y;
 
         $pdf->SetLineWidth(0.2);
 
-        // Segitiga
+        // SEGITIGA
         $pdf->Line($xIcon, $yIcon + $ukuranIcon, $xIcon + ($ukuranIcon / 2), $yIcon);
         $pdf->Line($xIcon + ($ukuranIcon / 2), $yIcon, $xIcon + $ukuranIcon, $yIcon + $ukuranIcon);
         $pdf->Line($xIcon + $ukuranIcon, $yIcon + $ukuranIcon, $xIcon, $yIcon + $ukuranIcon);
 
-        // Tanda seru
+        // TANDA SERU
         $pdf->SetFont('Courier', 'B', 5);
-
         $tandaSeru = '!';
         $lebarTandaSeru = $pdf->GetStringWidth($tandaSeru);
         $xTandaSeru = $xIcon + (($ukuranIcon - $lebarTandaSeru) / 2);
         $yTandaSeru = $yIcon + 2.2;
         $pdf->Text($xTandaSeru, $yTandaSeru, $tandaSeru);
 
-        // Text info
-        $pdf->SetFont('Courier', '', 7);
-        $pdf->SetXY($x + $ukuranIcon + 2, $y);
-        $pdf->MultiCell($lebarArea - $ukuranIcon - 2, 4, 'INFO: Stok adalah sisa akhir setelah barang diambil dari gudang.', 0, 'L');
+        // TEXT INFO
+        $pdf->SetFont('Helvetica', '', 7);
+        $pdf->SetXY($xIcon + $ukuranIcon + $jarakIconText, $y);
+        $pdf->Cell($lebarText, 4, $textInfo, 0, 1, 'L');
 
         // GARIS PENUTUP
         $pdf->SetX(0);

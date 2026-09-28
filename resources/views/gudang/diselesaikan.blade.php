@@ -218,11 +218,25 @@
 
 @push('scripts')
     <script>
+        $('#per_page').val(10);
+        $('#per_page').on('change', function() {
+            if (table) {
+                table.page.len(parseInt(this.value)).draw();
+            }
+        });
+
+        $('#searchTable').on('input', function() {
+            if (table) {
+                table.search(this.value).draw();
+            }
+        });
+
         const table = new DataTable('#orderlist', {
             pageLength: 10,
             searching: true,
             lengthChange: false,
-            autoWidth: false
+            autoWidth: false,
+            order: []
         });
     </script>
 @endpush

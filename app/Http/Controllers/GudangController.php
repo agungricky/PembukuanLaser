@@ -132,6 +132,10 @@ class GudangController extends Controller
         return $this->transaksiService->cetakResi($request);
     }
 
+    // ==================================================//
+    // ============== BARANG KELUAR =====================//
+    // ==================================================//
+
     public function diselesaikanView(){
         return $this->transaksiService->diselesaikanView();
     }

@@ -146,6 +146,7 @@
                     </div>
                 </div>
             </div>
+            
             <!-- Table Container -->
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0" id="orderlist">
@@ -616,6 +617,7 @@
             let table;
             let kebutuhan = [];
             let totalTercentang;
+            let type;
 
             $('#filterKategori').select2({
                 theme: 'bootstrap-5',
@@ -928,8 +930,8 @@
                                             <span class="text-muted">•</span>
                                             <span class="product-name text-secondary">
                                                 ${
-                                                    item.nama_produk
-                                                        ? item.nama_produk
+                                                    item.produk?.nama_produk
+                                                        ? item.produk?.nama_produk
                                                             .split(' ')
                                                             .reduce((hasil, kata, index) => {
                                                                 return hasil +
@@ -948,7 +950,7 @@
                                                                                                                                                                                                                                                                     <span
                                                                                                                                                                                                                                                                         class="badge bg-light text-dark border fw-normal"
                                                                                                                                                                                                                                                                         style="font-size:10px;">
-                                                                                                                                                                                                                                                                        ${item.variasi}
+                                                                                                                                                                                                                                                                        ${item.produk?.variasi}
                                                                                                                                                                                                                                                                     </span>
                                                                                                                                                                                                                                                                 `
                                                     : ''
@@ -1063,7 +1065,7 @@
 
             // Check All
             $(document).on('click', '.pilih-checkbox', function() {
-                const type = $(this).data('type');
+                type = $(this).data('type');
                 $('#orderlist tbody tr').each(function() {
 
                     const row = $(this);
@@ -1219,8 +1221,6 @@
 
                 const data = Object.values(rekap);
                 kebutuhan = Object.values(rekap);
-
-                console.log(kebutuhan);
 
                 // Kalau tidak ada pesanan yang dipilih
                 if (data.length === 0) {
@@ -1389,7 +1389,9 @@
                     data: JSON.stringify({
                         pesanan: pesananExport,
                         kebutuhan: kebutuhanExport,
-                        alasan_export: alasanExport
+                        alasan_export: alasanExport,
+                        totalResi: totalTercentang,
+                        typeCetak: type
                     }),
 
                     beforeSend: function() {
