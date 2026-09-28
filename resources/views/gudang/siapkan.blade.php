@@ -1202,7 +1202,7 @@
                                 sku: sku,
                                 nama_produk: item.nama_produk ?? '-',
                                 variasi: item.variasi,
-                                stok_awal: Number(item.stok_total ?? 0),
+                                stok_awal: Math.max(0, Number(item.stok_total ?? 0)),
                                 kebutuhan: 0
                             };
                         }
@@ -1219,6 +1219,8 @@
 
                 const data = Object.values(rekap);
                 kebutuhan = Object.values(rekap);
+
+                console.log(kebutuhan);
 
                 // Kalau tidak ada pesanan yang dipilih
                 if (data.length === 0) {
