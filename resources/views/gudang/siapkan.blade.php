@@ -911,6 +911,7 @@
                         searchable: true,
                         className: 'px-3 py-0 produk-cell',
                         render: function(data, type, row) {
+                            console.log(row);
                             let html = '';
                             const barang = Array.isArray(row.pesanan_per_produk) ?
                                 row.pesanan_per_produk : [];
@@ -930,8 +931,8 @@
                                             <span class="text-muted">•</span>
                                             <span class="product-name text-secondary">
                                                 ${
-                                                    item.produk?.nama_produk
-                                                        ? item.produk?.nama_produk
+                                                    item.nama_produk
+                                                        ? item.nama_produk
                                                             .split(' ')
                                                             .reduce((hasil, kata, index) => {
                                                                 return hasil +
@@ -950,7 +951,7 @@
                                                                                                                                                                                                                                                                     <span
                                                                                                                                                                                                                                                                         class="badge bg-light text-dark border fw-normal"
                                                                                                                                                                                                                                                                         style="font-size:10px;">
-                                                                                                                                                                                                                                                                        ${item.produk?.variasi}
+                                                                                                                                                                                                                                                                        ${item.variasi}
                                                                                                                                                                                                                                                                     </span>
                                                                                                                                                                                                                                                                 `
                                                     : ''
@@ -972,18 +973,12 @@
                         orderable: false,
                         searchable: false,
                         className: 'px-2 py-0 text-center jumlah-cell',
-
                         render: function(data, type, row) {
-
                             let html = '';
-
                             const barang = Array.isArray(row.pesanan_per_produk) ?
                                 row.pesanan_per_produk : [];
-
                             barang.forEach(function(item, index) {
-
                                 const border = index > 0 ? 'border-top' : '';
-
                                 html += `
                                     <div
                                         class="product-row-sync jumlah-item ${border}

@@ -219,8 +219,8 @@ class TransaksiService
                                 'id_per_produk' => $item->id_per_produk,
                                 'no_pesanan' => $item->no_pesanan,
                                 'sku' => $item->sku,
-                                'nama_produk' => $item->produk?->nama_produk,
-                                'variasi' => $item->produk?->variasi,
+                                'nama_produk' => $item->nama_produk,
+                                'variasi' => $item->variasi,
                                 'jumlah' => $item->jumlah,
                                 'stok_total' => (int) (
                                     $stokProduk[

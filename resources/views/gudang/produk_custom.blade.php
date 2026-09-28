@@ -928,8 +928,8 @@
                                             <span class="text-muted">•</span>
                                             <span class="product-name text-secondary">
                                                 ${
-                                                    item.produk?.nama_produk
-                                                        ? item.produk?.nama_produk
+                                                    item.nama_produk
+                                                        ? item.nama_produk
                                                             .split(' ')
                                                             .reduce((hasil, kata, index) => {
                                                                 return hasil +
@@ -1203,7 +1203,7 @@
                         if (!rekap[sku]) {
                             rekap[sku] = {
                                 sku: sku,
-                                nama_produk: item.produk?.nama_produk ?? '-',
+                                nama_produk: item.nama_produk ?? '-',
                                 variasi: item.variasi,
                                 stok_awal: Math.max(0, Number(item.stok_total ?? 0)),
                                 kebutuhan: 0
