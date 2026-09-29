@@ -487,6 +487,7 @@
 
             // ============= Data Tables ================== //
             let table;
+
             function loadSkuTable() {
 
                 if ($.fn.DataTable.isDataTable('#orderlist')) {
@@ -501,7 +502,7 @@
                     searching: true,
                     lengthChange: false,
                     autoWidth: false,
-
+                    order: [],
                     ajax: {
                         url: "{{ route('produk.json') }}",
                         type: "GET"
@@ -542,7 +543,10 @@
                             }
                         },
                         {
-                            data: null,
+                            data: 'sku',
+                            name: 'sku',
+                            orderable: false,
+                            searchable: false,
                             render: function(data, type, row) {
                                 let kategori = row.kategori ?
                                     row.kategori.nama_kategori :
@@ -561,6 +565,9 @@
                         },
                         {
                             data: 'hpp',
+                            name: 'hpp',
+                            orderable: false,
+                            searchable: false,
                             className: 'text-center',
                             render: function(data) {
                                 let hpp = new Intl.NumberFormat('id-ID')
@@ -578,7 +585,10 @@
                             }
                         },
                         {
-                            data: null,
+                            data: 'stok',
+                            name: 'stok',
+                            orderable: true,
+                            searchable: false,
                             className: 'text-center',
                             render: function(data, type, row) {
 

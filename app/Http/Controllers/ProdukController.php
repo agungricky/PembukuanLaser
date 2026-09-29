@@ -8,6 +8,7 @@ use App\Imports\produkImport;
 use App\Models\kategori;
 use App\Models\PesananPerProduk;
 use App\Models\Produk;
+use App\Models\stok_produk;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -342,6 +343,14 @@ class ProdukController extends Controller
                     $q->where('sku', 'like', "%{$keyword}%")
                         ->orWhere('nama_produk', 'like', "%{$keyword}%");
                 });
+            })
+            ->orderColumn('stok', function ($query, $order) {
+                $query->orderBy(
+                    stok_produk::select('jumlah_tersedia')
+                        ->whereColumn('stok_produks.sku_id', 'produk.sku')
+                        ->limit(1),
+                    $order
+                );
             })
             ->addIndexColumn()
             ->addColumn('stok', function ($item) {
