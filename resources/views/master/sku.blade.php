@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('content')
     <main class="flex-grow-1 overflow-auto p-3 p-lg-4">
+
         <!-- Dashboard Title & Pulse Badge -->
         <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
 
@@ -29,6 +30,15 @@
                 </button>
             </div>
 
+        </div>
+
+        <div class="alert alert-light border d-flex align-items-center gap-2 py-2 px-3 mb-3" style="font-size: 12px;">
+            <i class="fa-solid fa-magnifying-glass text-primary"></i>
+            <div class="border-end pe-3 me-2">
+                <span class="fw-semibold text-dark">Pencarian aktif:</span>
+                <span class="badge bg-primary ms-1">Nama Produk</span>
+                <span class="badge bg-primary ms-1">SKU</span>
+            </div>
         </div>
 
         <!-- Inventory Stock Table Section -->

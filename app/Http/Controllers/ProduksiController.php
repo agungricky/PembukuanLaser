@@ -20,58 +20,59 @@ class ProduksiController extends Controller
     // ================================ //
     private function card()
     {
-        // Produk Custom
-        // $reguler = PesananPerProduk::where('custom', false)
-        // ->where('status_pesanan', '0')
-        // ->distance()
-        // ->get();
+        $reguler = PesananPerProduk::where('custom', false)
+            ->where('status_pesanan', '0')
+            ->whereHas('pesanan', function ($query) {
+                $query->where('status', 'proses')
+                    ->where('tanggal', '>=', now()->subDays(7))
+                    ->whereDoesntHave('pesanan_per_produk', function ($q) {
+                        $q->where('status_pesanan', '1');
+                    });
+            })
+            ->distinct()
+            ->count('no_pesanan');
 
-        // dd($reguler);
+        $custom = PesananPerProduk::where('custom', true)
+            ->where('status_pesanan', '0')
+            ->whereHas('pesanan', function ($query) {
+                $query->where('status', 'proses')
+                    ->where('tanggal', '>=', now()->subDays(7));
+            })
+            ->distinct()
+            ->count('no_pesanan');
+        
+        // Produksi Hari ini
+        $dataLogin = Auth::user();
+        $produksiNow = mutasi_stok::where('produksi_id', $dataLogin->id)
+            ->whereDate('created_at', now()->toDateString())
+            ->get();
+        $produksiNow = $produksiNow->sum('jumlah');
 
-
-        // $custom = PesananPerProduk::where('custom', true)->sum('jumlah');
-
-        // dd($custom);
-
-        // // Produk Menipis
-        // $menipis = Produk::with('stok_produk')
-        //     ->whereNotNull('nama_produk')
-        //     ->whereHas('stok_produk', function ($query) {
-        //         $query->where('jumlah_tersedia', '>', 5);
-        //     })->get();
-        // $menipis = $produk->count() - $menipis->count();
 
         // Produk Terlaris
-        // $mutasi = mutasi_stok::with('stok_produk')
-        //     ->where('jenis_mutasi', 'keluar')
-        //     ->whereMonth('created_at', now()->month)
-        //     ->whereYear('created_at', now()->year)
-        //     ->get();
+        $mutasi = mutasi_stok::with('stok_produk')
+            ->where('jenis_mutasi', 'keluar')
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->get();
 
-        // $terlaris = $mutasi
-        //     ->groupBy('stok_produk.sku_id')
-        //     ->map(function ($items, $sku) {
-        //         return [
-        //             'sku' => $sku,
-        //             'jumlah' => $items->sum('jumlah'),
-        //         ];
-        //     })
-        //     ->where('jumlah', '>=', 100)
-        //     ->values();
+        $terlaris = $mutasi
+            ->groupBy('stok_produk.sku_id')
+            ->map(function ($items, $sku) {
+                return [
+                    'sku' => $sku,
+                    'jumlah' => $items->sum('jumlah'),
+                ];
+            })
+            ->where('jumlah', '>=', 100)
+            ->values()
+            ->count();
 
-        // $terlaris = $terlaris->count();
-
-        // Produksi Hari ini
-        // $dataLogin = Auth::user();
-        // $produksiNow = mutasi_stok::where('produksi_id', $dataLogin->id)
-        //     ->whereDate('created_at', now()->toDateString())
-        //     ->get();
-        // $produksiNow = $produksiNow->sum('jumlah');
 
         return [
+            'reguler' => $reguler,
             'custom' => $custom,
-            // 'menipis' => $menipis,
-            // 'terlaris' => $terlaris,
+            'terlaris' => $terlaris,
             // 'produksi' => $produksiNow,
         ];
     }
@@ -503,17 +504,17 @@ class ProduksiController extends Controller
         $data = stok_produk::with('produk')
             ->where('exporter_id', $exporter->id)
             ->get();
-            // ->map(function ($item) {
-            //     return [
-            //         'sku' => $item->sku_id,
-            //         'nama_produk' => $item->produk?->nama_produk,
-            //         'variasi' => $item->produk?->variasi,
-            //         'jumlah_pesanan' => null,
-            //         'stok' => null,
-            //         'jumlah_produksi' => $item->processing,
-            //         'exporter_id' => $item->exporter_id,
-            //     ];
-            // });
+        // ->map(function ($item) {
+        //     return [
+        //         'sku' => $item->sku_id,
+        //         'nama_produk' => $item->produk?->nama_produk,
+        //         'variasi' => $item->produk?->variasi,
+        //         'jumlah_pesanan' => null,
+        //         'stok' => null,
+        //         'jumlah_produksi' => $item->processing,
+        //         'exporter_id' => $item->exporter_id,
+        //     ];
+        // });
 
         dd($data->toArray());
 
