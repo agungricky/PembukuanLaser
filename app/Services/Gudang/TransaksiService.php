@@ -137,6 +137,7 @@ class TransaksiService
             )
             ->get();
 
+
         // STOK
         $semuaSku = $antrian
             ->pluck('sku')
@@ -598,6 +599,7 @@ class TransaksiService
                 ]);
 
                 stok_produk::where('sku_id', $value['sku'])
+                    ->where('jumlah_tersedia', '>=', $value['kebutuhan'])
                     ->decrement(
                         'jumlah_tersedia',
                         $value['kebutuhan']
