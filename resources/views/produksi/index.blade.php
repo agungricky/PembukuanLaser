@@ -23,30 +23,13 @@
             </div>
         </div>
 
-        <!-- Info Notice Banner -->
-        @if ($Card['alert'] != 0)
-            <div
-                class="alert alert-warning border-warning-subtle rounded-4 shadow-xs d-flex align-items-start gap-3 p-3 mb-4">
-                <i class="fa-solid fa-circle-info text-primary mt-0.5"></i>
-                <div class="small">
-                    <strong class="text-warning-emphasis">
-                        Permintaan Produksi :
-                    </strong>
-
-                    Halo Operator Produksi,
-                    terdapat <strong class="text-danger">{{ $Card['alert'] }} produk</strong>
-                    yang belum memiliki stok barang dan perlu segera diproduksi.
-                </div>
-            </div>
-        @endif
-
         <!-- 8 Metric Status Cards Grid -->
         <div class="mb-4">
 
             <!-- Grid Row 1: General Metrics Cards -->
             <div class="row g-3 mb-3">
 
-                <!-- Card 1: Pesanan Custom -->
+                {{-- <!-- Card 1: Pesanan Custom -->
                 <div class="col-12 col-sm-6 col-lg-3">
                     <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
                         <div class="card-body p-1 d-flex flex-column justify-content-between">
@@ -168,12 +151,12 @@
                             </p>
                         </div>
                     </div>
-                </div>
+                </div> --}}
 
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
+        {{-- <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-body">
 
                 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -192,7 +175,7 @@
                 </div>
 
             </div>
-        </div>
+        </div> --}}
     </main>
 
     @include('layouts.footer')
