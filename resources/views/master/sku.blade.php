@@ -476,15 +476,7 @@
             });
 
             // ============= Data Tables ================== //
-            // const table = new DataTable('#orderlist', {
-            //     pageLength: 10,
-            //     searching: true,
-            //     lengthChange: false,
-            //     autoWidth: false
-            // });
-
             let table;
-
             function loadSkuTable() {
 
                 if ($.fn.DataTable.isDataTable('#orderlist')) {
@@ -513,9 +505,11 @@
                             className: 'text-center'
                         },
                         {
-                            data: null,
+                            data: 'sku',
+                            name: 'sku',
+                            orderable: false,
+                            searchable: true,
                             render: function(data, type, row) {
-
                                 let words = (row.nama_produk ?? '')
                                     .trim()
                                     .split(/\s+/);
@@ -532,7 +526,7 @@
                                     </div>
 
                                     <small class="text-muted">
-                                        Sku : ${row.sku ?? ''}
+                                        Sku : ${data ?? ''}
                                     </small>
                                 `;
                             }
@@ -540,7 +534,6 @@
                         {
                             data: null,
                             render: function(data, type, row) {
-
                                 let kategori = row.kategori ?
                                     row.kategori.nama_kategori :
                                     '';
