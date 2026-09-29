@@ -29,7 +29,45 @@
             <!-- Grid Row 1: General Metrics Cards -->
             <div class="row g-3 mb-3">
 
-                {{-- <!-- Card 1: Pesanan Custom -->
+                <!-- Card 1: Pesanan Custom -->
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
+                        <div class="card-body p-1 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
+                                        TOTAL PESANAN REGULER
+                                    </span>
+                                    <div class="bg-light text-dark rounded-circle d-flex align-items-center justify-content-center"
+                                        style="width: 32px; height: 32px;">
+                                        <i class="bi bi-boxes"></i>
+                                    </div>
+                                </div>
+                                <h2 id="cardTotalStock" class="fw-bold text-dark mb-1 d-flex align-items-baseline gap-2">
+
+                                    @if ($Card['reguler'] >= 300)
+                                        <i class="fa-solid fa-triangle-exclamation" style="color: #dc3545;"></i>
+                                    @endif
+
+                                    <span class="{{ $Card['custom'] >= 300 ? 'text-danger' : 'text-dark' }}"
+                                        style="font-size: 2rem; line-height: 1;">
+                                        {{ $Card['reguler'] }}
+                                    </span>
+
+                                    <span class="text-secondary fw-semibold" style="font-size: .95rem;">
+                                        Pcs
+                                    </span>
+                                </h2>
+                            </div>
+                            <p class="text-muted small mb-0 mt-3">
+                                <i class="fa-solid fa-gears me-1"></i>
+                                Pesanan Masuk.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Stok Menipis -->
                 <div class="col-12 col-sm-6 col-lg-3">
                     <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
                         <div class="card-body p-1 d-flex flex-column justify-content-between">
@@ -61,46 +99,14 @@
                             </div>
                             <p class="text-muted small mb-0 mt-3">
                                 <i class="fa-solid fa-gears me-1"></i>
-                                Perlu di Produksi.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 2: Stok Menipis -->
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
-                        <div class="card-body p-1 d-flex flex-column justify-content-between">
-                            <div>
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                                        STOK MENIPIS
-                                    </span>
-                                    <div class="bg-warning-subtle text-success rounded-circle d-flex align-items-center justify-content-center"
-                                        style="width: 32px; height: 32px;">
-                                        <i class="bi bi-exclamation-circle-fill text-warning"></i>
-                                    </div>
-                                </div>
-                                <h2 id="cardTotalStock" class="fw-bold text-dark mb-1 d-flex align-items-baseline gap-2">
-                                    <span style="font-size: 2rem; line-height: 1;">
-                                        {{ $Card['menipis'] }}
-                                    </span>
-
-                                    <span class="text-secondary fw-semibold" style="font-size: .95rem;">
-                                        Produk
-                                    </span>
-                                </h2>
-                            </div>
-                            <p class="text-muted small mb-0 mt-3">
-                                <i class="fa-solid fa-gears me-1"></i>
-                                Memiliki stok menipis.
+                                Pesanan Masuk.
                             </p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Card 3: Stok Keluar Hari Ini -->
-                <div class="col-12 col-sm-6 col-lg-3">
+                {{-- <div class="col-12 col-sm-6 col-lg-3">
                     <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
                         <div class="card-body p-1 d-flex flex-column justify-content-between">
                             <div>
@@ -126,7 +132,7 @@
                             </p>
                         </div>
                     </div>
-                </div>
+                </div> --}}
 
                 <!-- Card 4: Produk Terlaris -->
                 <div class="col-12 col-sm-6 col-lg-3">
@@ -151,7 +157,7 @@
                             </p>
                         </div>
                     </div>
-                </div> --}}
+                </div>
 
             </div>
         </div>

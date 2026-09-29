@@ -335,15 +335,21 @@ class ProdukController extends Controller
     public function produkshow()
     {
         $produk = Produk::query()->with('kategori', 'stok_produk');
-        
+
         return DataTables::eloquent($produk)
-        ->addIndexColumn()
-        ->addColumn('stok', function ($item) {
-            return $item->stok_produk->jumlah_tersedia ?? 0;
-        })
-        ->addColumn('kategori_nama', function ($item) {
-            return $item->kategori->nama_kategori ?? '';
-        })
-        ->toJson();
+            ->filterColumn('sku', function ($query, $keyword) {
+                $query->where(function ($q) use ($keyword) {
+                    $q->where('sku', 'like', "%{$keyword}%")
+                        ->orWhere('nama_produk', 'like', "%{$keyword}%");
+                });
+            })
+            ->addIndexColumn()
+            ->addColumn('stok', function ($item) {
+                return $item->stok_produk->jumlah_tersedia ?? 0;
+            })
+            ->addColumn('kategori_nama', function ($item) {
+                return $item->kategori->nama_kategori ?? '';
+            })
+            ->toJson();
     }
 }
