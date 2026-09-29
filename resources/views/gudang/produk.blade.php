@@ -18,6 +18,15 @@
             </div>
         </div>
 
+        <div class="alert alert-light border d-flex align-items-center gap-2 py-2 px-3 mb-3" style="font-size: 12px;">
+            <i class="fa-solid fa-magnifying-glass text-primary"></i>
+            <div class="border-end pe-3 me-2">
+                <span class="fw-semibold text-dark">Pencarian aktif:</span>
+                <span class="badge bg-primary ms-1">Nama Produk</span>
+                <span class="badge bg-primary ms-1">SKU</span>
+            </div>
+        </div>
+
         <!-- Inventory Stock Table Section -->
         <section id="stockTableSection" class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
             <!-- Table Header Bar -->
@@ -285,6 +294,7 @@
                 searching: true,
                 lengthChange: false,
                 autoWidth: false,
+                order: [],
 
                 ajax: {
                     url: "{{ route('produk.json') }}",
@@ -320,20 +330,25 @@
                     {
                         data: 'variasi',
                         name: 'variasi',
+                        orderable: false,
+                        searchable: false,
                         className: 'text-center'
                     },
 
                     {
                         data: 'kategori_nama',
                         name: 'kategori.nama_kategori',
+                        orderable: false,
+                        searchable: false,
                         className: 'text-center'
                     },
 
                     {
                         data: 'hpp',
                         name: 'hpp',
+                        orderable: false,
+                        searchable: false,
                         className: 'text-center',
-
                         render: function(data) {
                             const harga = Number(data ?? 0)
                                 .toLocaleString('id-ID');
@@ -354,7 +369,7 @@
                         data: 'stok',
                         name: 'stok',
                         className: 'text-center',
-                        orderable: false,
+                        orderable: true,
                         searchable: false,
                         render: function(data) {
                             const stok = Math.max(0, Number(data ?? 0));
@@ -377,7 +392,6 @@
                         orderable: false,
                         searchable: false,
                         className: 'text-center',
-
                         render: function(data, type, row) {
 
                             const disabled =
