@@ -236,6 +236,8 @@ class PesananController extends Controller
             ? $excelService->parseShopee($path)
             : $excelService->parseTikTok($path);
 
+        // dd($data);
+
         if (empty($data)) {
             return response()->json([
                 'status' => 'error',
@@ -294,6 +296,7 @@ class PesananController extends Controller
         foreach ($data as $orderIndex => $order) {
             if (! is_array($order)) {
                 $data[$orderIndex] = ['produk_detail' => []];
+
                 continue;
             }
 
@@ -301,6 +304,7 @@ class PesananController extends Controller
 
             if (! is_array($produkDetail)) {
                 $data[$orderIndex]['produk_detail'] = [];
+
                 continue;
             }
 
@@ -537,8 +541,7 @@ class PesananController extends Controller
 
         $previewByOrder = collect($previewRaw)
             ->filter(
-                fn ($row) =>
-                    is_array($row) &&
+                fn ($row) => is_array($row) &&
                     ! empty($row['no_pesanan'])
             )
             ->keyBy(
@@ -618,6 +621,7 @@ class PesananController extends Controller
 
                 if ($sudahAda) {
                     $skipped[] = $noPesanan;
+
                     continue;
                 }
 
@@ -858,12 +862,13 @@ class PesananController extends Controller
         }
     }
 
-    public function previewResi($token){
+    public function previewResi($token)
+    {
         return $this->cetakResiService->previewResi($token);
     }
 
-    public function cetakResi(Request $request) {
+    public function cetakResi(Request $request)
+    {
         return $this->cetakResiService->cetakResi($request);
     }
-    
 }

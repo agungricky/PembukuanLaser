@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\Produk;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
@@ -24,16 +25,13 @@ class PesananExcelService
         $spreadsheet = $reader->load($uploadedPath);
         $sheet = $spreadsheet->getActiveSheet();
         $rows = $sheet->toArray(null, true, true, true);
-
         if (count($rows) < 2) {
             $this->cleanup($spreadsheet);
-
             return [];
         }
 
         $firstRow = array_shift($rows);
         $header = [];
-
         foreach ($firstRow as $cell) {
             $h = strtolower(trim((string) $cell));
             $h = preg_replace('/[\s.\-]+/u', '_', $h);
@@ -41,7 +39,6 @@ class PesananExcelService
         }
 
         $data = [];
-
         foreach ($rows as $rowCells) {
             $values = array_values($rowCells);
 
@@ -62,7 +59,9 @@ class PesananExcelService
             }
 
             $item = $assoc;
-            $item['no_pesanan'] = trim((string) ($item['order_sn'] ?? ''));
+            $item['no_pesanan'] = trim(
+                (string) ($item['order_sn'] ?? '')
+            );
 
             if ($item['no_pesanan'] === '') {
                 continue;
@@ -72,25 +71,86 @@ class PesananExcelService
             $item['username'] = trim((string) ($item['buyer_user_name'] ?? ''));
             $item['kurir'] = trim((string) ($item['shipping_method'] ?? ''));
             $item['no_resi'] = trim((string) ($item['tracking_number'] ?? ''));
-
             $batasKirimRaw = $item['estimated_ship_out_date'] ?? null;
             $batasKirimRawText = $batasKirimRaw !== null ? trim((string) $batasKirimRaw) : null;
-
             $item['batas_kirim_raw'] = $batasKirimRawText !== '' ? $batasKirimRawText : null;
             $item['batas_kirim_at'] = $this->normalizeDateTime($batasKirimRaw);
-            $item['batas_kirim_source'] = $item['batas_kirim_raw']
-                ? 'shopee_estimated_ship_out_date'
-                : null;
-
-            $item['produk_detail'] = ! empty($item['product_info'])
-                ? $this->parseProductInfo((string) $item['product_info'])
+            $item['batas_kirim_source'] = $item['batas_kirim_raw'] ? 'shopee_estimated_ship_out_date' : null;
+            $produkDetail = ! empty($item['product_info'])
+                ? $this->parseProductInfo(
+                    (string) $item['product_info']
+                )
                 : [];
 
+            $hasilProduk = [];
+            foreach ($produkDetail as $detail) {
+                $skuOriginal = trim(
+                    (string) (
+                        $detail['sku_original']
+                        ?? $detail['sku_asli']
+                        ?? $detail['__sku']
+                        ?? $detail['sku']
+                        ?? ''
+                    )
+                );
+
+                /*
+                | SKU GABUNGAN
+                | Contoh:
+                | EMB1516-EMB1517
+                */
+
+                if (str_contains($skuOriginal, '-')) {
+                    $skuList = array_values(
+                        array_filter(
+                            array_map(
+                                'trim',
+                                explode('-', $skuOriginal)
+                            )
+                        )
+                    );
+
+                    foreach ($skuList as $skuItem) {
+                        $sku = $this->normalizeSku($skuItem) ?? '';
+                        $produk = Produk::where(
+                            'sku',
+                            $sku
+                        )->first();
+
+                        $jumlahPesanan = max(1, (int) ($detail['jumlah_pesanan'] ?? $detail['jumlah'] ?? 1));
+                        $hargaMarketplace = (float) ($detail['harga_original'] ?? $detail['harga'] ?? 0);
+                        $subtotal = (float) ($detail['subtotal'] ?? ($hargaMarketplace * $jumlahPesanan));
+                        $multiplier = $this->getSkuMultiplier($skuItem);
+                        $jumlahReal = $jumlahPesanan * $multiplier;
+                        $hargaJualReal = $multiplier > 0 ? round($hargaMarketplace / $multiplier, 2) : $hargaMarketplace;
+                        $custom = $this->isCustomSku($skuItem);
+                        $hasilProduk[] = [
+                            'sku_original' => $skuItem,
+                            'sku_asli' => $skuItem,
+                            '__sku' => $skuItem,
+                            'sku' => $sku,
+                            'custom' => $custom,
+                            'multiplier' => $multiplier,
+                            'jumlah_pesanan' => $jumlahPesanan,
+                            'jumlah' => $jumlahReal,
+                            'harga_original' => $hargaMarketplace,
+                            'harga' => $hargaJualReal,
+                            'subtotal' => $subtotal,
+                            'nama_produk' => $produk?->nama_produk ?? 'SKU TIDAK DITEMUKAN',
+                            'variasi' => $produk?->variasi ?? 'SKU TIDAK DITEMUKAN',
+                        ];
+                    }
+
+                } else {
+                    $hasilProduk[] = $detail;
+                }
+            }
+
+            $item['produk_detail'] = $hasilProduk;
             $data[] = $item;
         }
 
         $this->cleanup($spreadsheet);
-
         return $data;
     }
 
@@ -130,13 +190,7 @@ class PesananExcelService
             $hargaMarketplace = $jumlahPesanan > 0
                 ? round($subtotal / $jumlahPesanan, 2)
                 : $subtotal;
-
             $skuOriginal = trim((string) ($r['G'] ?? ''));
-            $sku = $this->normalizeSku($skuOriginal) ?? '';
-            $multiplier = $this->getSkuMultiplier($skuOriginal);
-            $jumlahReal = $jumlahPesanan * $multiplier;
-            $hargaJualReal = round($hargaMarketplace / $multiplier, 2);
-            $custom = $this->isCustomSku($skuOriginal);
 
             $item = [
                 'no_pesanan' => trim((string) ($r['A'] ?? '')),
@@ -149,33 +203,88 @@ class PesananExcelService
                 'batas_kirim_source' => null,
             ];
 
-            $item['produk_detail'] = [[
-                'sku_original' => $skuOriginal,
-                'sku_asli' => $skuOriginal,
-                '__sku' => $skuOriginal,
-                'sku' => $sku,
-                'custom' => $custom,
-                'multiplier' => $multiplier,
-                'jumlah_pesanan' => $jumlahPesanan,
-                'jumlah' => $jumlahReal,
-                'Jumlah' => $jumlahReal,
-                'harga_original' => $hargaMarketplace,
-                'Harga_original' => $hargaMarketplace,
-                'harga' => $hargaJualReal,
-                'Harga' => $hargaJualReal,
-                'subtotal' => $subtotal,
-                'Subtotal' => $subtotal,
-                'nama_produk' => trim((string) ($r['H'] ?? '')),
-                'Nama Produk' => trim((string) ($r['H'] ?? '')),
-                'variasi' => trim((string) ($r['I'] ?? '')),
-                'Nama Variasi' => trim((string) ($r['I'] ?? '')),
-            ]];
+            $produkDetail = [];
 
-            $item['sku'] = $sku;
+            /*
+            |--------------------------------------------------------------------------
+            | SKU GABUNGAN
+            |--------------------------------------------------------------------------
+            | Contoh:
+            | EMB1516-EMB1517-EMB1518
+            | Jika ada tanda -, produk dicari dari database.
+            */
+            if (str_contains($skuOriginal, '-')) {
+                $skuList = array_values(
+                    array_filter(
+                        array_map(
+                            'trim',
+                            explode('-', $skuOriginal)
+                        )
+                    )
+                );
+
+                foreach ($skuList as $skuItem) {
+                    $sku = $this->normalizeSku($skuItem) ?? '';
+                    $produk = Produk::where('sku', $sku)->first();
+                    $multiplier = $this->getSkuMultiplier($skuItem);
+                    $jumlahReal = $jumlahPesanan * $multiplier;
+                    $hargaJualReal = $multiplier > 0
+                        ? round($hargaMarketplace / $multiplier, 2)
+                        : $hargaMarketplace;
+                    $custom = $this->isCustomSku($skuItem);
+
+                    $produkDetail[] = [
+                        'sku_original' => $skuItem,
+                        'sku_asli' => $skuItem,
+                        '__sku' => $skuItem,
+                        'sku' => $sku,
+                        'custom' => $custom,
+                        'multiplier' => $multiplier,
+                        'jumlah_pesanan' => $jumlahPesanan,
+                        'jumlah' => $jumlahReal,
+                        'harga_original' => $hargaMarketplace,
+                        'harga' => $hargaJualReal,
+                        'subtotal' => $subtotal,
+                        'nama_produk' => $produk?->nama_produk ?? 'SKU TIDAK DITEMUKAN',
+                        'variasi' => $produk?->variasi ?? 'SKU TIDAK DITEMUKAN',
+                    ];
+                }
+
+            } else {
+
+                $sku = $this->normalizeSku($skuOriginal) ?? '';
+                $multiplier = $this->getSkuMultiplier($skuOriginal);
+                $jumlahReal = $jumlahPesanan * $multiplier;
+                $hargaJualReal = $multiplier > 0
+                    ? round($hargaMarketplace / $multiplier, 2)
+                    : $hargaMarketplace;
+                $custom = $this->isCustomSku($skuOriginal);
+                $produkDetail[] = [
+                    'sku_original' => $skuOriginal,
+                    'sku_asli' => $skuOriginal,
+                    '__sku' => $skuOriginal,
+                    'sku' => $sku,
+                    'custom' => $custom,
+                    'multiplier' => $multiplier,
+                    'jumlah_pesanan' => $jumlahPesanan,
+                    'jumlah' => $jumlahReal,
+                    'harga_original' => $hargaMarketplace,
+                    'harga' => $hargaJualReal,
+                    'subtotal' => $subtotal,
+                    'nama_produk' => trim(
+                        (string) ($r['H'] ?? '')
+                    ),
+                    'variasi' => trim(
+                        (string) ($r['I'] ?? '')
+                    ),
+                ];
+            }
+
+            $item['produk_detail'] = $produkDetail;
+            $item['sku'] = $skuOriginal;
             $item['sku_original'] = $skuOriginal;
             $item['sku_asli'] = $skuOriginal;
             $item['__sku'] = $skuOriginal;
-
             $data[] = $item;
         }
 
