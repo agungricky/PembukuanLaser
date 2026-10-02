@@ -132,75 +132,110 @@
                             p
                         >
                     `,
-                columns: [{
-                        data: 'tanggal',
-                        orderable: true,
-                        searchable: true,
-                        className: 'text-center',
-                        render: function(data, type, row, meta) {
-                            console.log(row);
-                            if (!data) {
-                                return '<span class="text-muted">-</span>';
-                            }
+                columns: [
+                    {
+    data: 'tanggal',
+    orderable: true,
+    searchable: true,
+    className: 'text-center',
+    render: function(data, type, row, meta) {
+        if (!data) {
+            if (type === 'sort' || type === 'type') {
+                return 0;
+            }
 
-                            const tanggal = new Date(data);
-                            let statusBadge = '';
+            return `
+                <div class="d-flex flex-column align-items-center">
+                    <span class="text-muted mb-1">-</span>
 
-                            // Supaya sorting DataTables tetap berdasarkan tanggal asli
-                            if (type === 'sort' || type === 'type') {
-                                return tanggal.getTime();
-                            }
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3 py-1">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                        Berisiko
+                    </span>
+                </div>
+            `;
+        }
 
-                            const tanggalFormat = new Intl.DateTimeFormat('id-ID', {
-                                timeZone: 'Asia/Jakarta',
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric'
-                            }).format(tanggal);
+        const tanggal = new Date(data);
 
-                            const jamFormat = new Intl.DateTimeFormat('id-ID', {
-                                timeZone: 'Asia/Jakarta',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: false
-                            }).format(tanggal);
+        if (isNaN(tanggal.getTime())) {
+            if (type === 'sort' || type === 'type') {
+                return 0;
+            }
 
-                            if (row.status_kirim === 'terlambat') {
-                                statusBadge = `
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1 mt-1">
-                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                                        Terlambat
-                                    </span>
-                                `;
-                            } else {
-                                statusBadge = `
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 mt-1">
-                                        <i class="fa-solid fa-circle-check me-1"></i>
-                                        Aman
-                                    </span>
-                                `;
-                            }
+            return `
+                <div class="d-flex flex-column align-items-center">
+                    <span class="text-muted mb-1">Belum Import Resi</span>
 
-                            return `
-                                <div class="d-flex flex-column align-items-center">
+                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3 py-1">
+                        <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                        Berisiko
+                    </span>
+                </div>
+            `;
+        }
 
-                                    <div class="text-center">
-                                        <div class="text-dark fw-bold" style="font-size: 13px;">
-                                            ${tanggalFormat}
-                                        </div>
+        if (type === 'sort' || type === 'type') {
+            return tanggal.getTime();
+        }
 
-                                        <small class="text-muted" style="font-size: 12px;">
-                                            <i class="fa-regular fa-clock me-1"></i>
-                                            ${jamFormat} WIB
-                                        </small>
-                                    </div>
+        const tanggalFormat = new Intl.DateTimeFormat('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        }).format(tanggal);
 
-                                    ${statusBadge}
+        const jamFormat = new Intl.DateTimeFormat('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(tanggal);
 
-                                </div>
-                            `;
-                        }
-                    },
+        let statusBadge = '';
+
+        if (row.status_kirim === 'berisiko') {
+            statusBadge = `
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-3 py-1 mt-1">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                    Berisiko
+                </span>
+            `;
+        } else if (row.status_kirim === 'terlambat') {
+            statusBadge = `
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1 mt-1">
+                    <i class="fa-solid fa-circle-exclamation me-1"></i>
+                    Terlambat
+                </span>
+            `;
+        } else {
+            statusBadge = `
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 mt-1">
+                    <i class="fa-solid fa-circle-check me-1"></i>
+                    Aman
+                </span>
+            `;
+        }
+
+        return `
+            <div class="d-flex flex-column align-items-center">
+                <div class="text-center">
+                    <div class="text-dark fw-bold" style="font-size: 13px;">
+                        ${tanggalFormat}
+                    </div>
+
+                    <small class="text-muted" style="font-size: 12px;">
+                        <i class="fa-regular fa-clock me-1"></i>
+                        ${jamFormat} WIB
+                    </small>
+                </div>
+
+                ${statusBadge}
+            </div>
+        `;
+    }
+},
                     {
                         data: 'no_pesanan',
                         name: 'no_pesanan',
