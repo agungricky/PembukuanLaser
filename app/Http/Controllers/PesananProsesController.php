@@ -152,17 +152,26 @@ class PesananProsesController extends Controller
     public function perludikirim()
     {
         $today = now()->startOfDay();
-
         $data = Pesanan::with('toko')
-            ->whereBetween('batas_kirim_at', [
-                now()->subDays(6)->startOfDay(),
-                now()->endOfDay(),
-            ])
+            ->where(function ($query) {
+                $query->whereNull('batas_kirim_at')
+                    ->orWhereBetween('batas_kirim_at', [
+                        now()->subDays(6)->startOfDay(),
+                        now()->endOfDay(),
+                    ]);
+            })
             ->where('status', 'proses')
+            ->orderByRaw('batas_kirim_at IS NULL DESC')
             ->orderBy('batas_kirim_at', 'asc')
             ->get();
 
         $data->each(function ($item) use ($today) {
+
+            if (empty($item->batas_kirim_at)) {
+                $item->status_kirim = '-';
+
+                return;
+            }
 
             $batasKirim = Carbon::parse($item->batas_kirim_at)->startOfDay();
 
