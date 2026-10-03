@@ -453,85 +453,31 @@
                         );
                     }
 
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | TERLAMBAT
-                    |--------------------------------------------------------------------------
-                    */
-                    else if (
-                        filterStatusKirim ===
-                        'terlambat'
-                    ) {
-
-                        $('#labelFilterKirim')
-                            .text('Terlambat');
-
-                        icon.addClass(
-                            'fa-circle-exclamation text-danger'
-                        );
+                    else if (filterStatusKirim === 'terlambat') {
+                        $('#labelFilterKirim').text('Terlambat');
+                        icon.addClass('fa-circle-exclamation text-danger');
                     }
 
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | BERISIKO
-                    |--------------------------------------------------------------------------
-                    */
-                    else if (
-                        filterStatusKirim ===
-                        'berisiko'
-                    ) {
-
-                        $('#labelFilterKirim')
-                            .text('Berisiko');
-
-                        icon.addClass(
-                            'fa-triangle-exclamation text-warning'
-                        );
+                    else if (filterStatusKirim === 'berisiko') {
+                        $('#labelFilterKirim').text('Berisiko');
+                        icon.addClass('fa-triangle-exclamation text-warning');
                     }
 
-
-                    /*
-                     * Apply filter
-                     */
                     table.draw();
                 }
             );
 
-
-            /*
-            |--------------------------------------------------------------------------
-            | SEARCH
-            |--------------------------------------------------------------------------
-            */
-
-            $('#searchTable').on(
-                'input',
-                function() {
-
+            $('#searchTable').on('input', function() {
                     table
                         .search(this.value)
                         .draw();
                 }
             );
 
-
-            /*
-            |--------------------------------------------------------------------------
-            | PER PAGE
-            |--------------------------------------------------------------------------
-            */
-
-            $('#per_page').on(
-                'change',
-                function() {
-
+            $('#per_page').on('change', function() {
                     table
                         .page
-                        .len(
-                            parseInt(this.value)
-                        )
+                        .len(parseInt(this.value))
                         .draw();
                 }
             );
