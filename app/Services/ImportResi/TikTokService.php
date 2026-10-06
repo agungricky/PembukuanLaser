@@ -6,8 +6,6 @@ use App\Models\Pesanan;
 use App\Models\ResiPage;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 
 class TikTokService
 {
@@ -351,51 +349,6 @@ class TikTokService
         } catch (\Throwable $e) {
             return null;
         }
-    }
-
-    public function normalizePdf(string $sourcePath, string $directory): string {
-        $normalizedPath = $directory. DIRECTORY_SEPARATOR. 'normalized_'. Str::uuid(). '.pdf';
-        $ghostscript = env('GHOSTSCRIPT_BIN', '/bin/gs');
-
-        if (! is_file($ghostscript) || ! is_executable($ghostscript)) {
-            throw new \Exception(
-                'Ghostscript tidak tersedia di server.'
-            );
-        }
-
-        $command =
-            escapeshellarg(
-                $ghostscript
-            ).
-            ' -q'.
-            ' -dNOPAUSE'.
-            ' -dBATCH'.
-            ' -sDEVICE=pdfwrite'.
-            ' -dCompatibilityLevel=1.4'.
-            ' -dAutoRotatePages=/None'.
-            ' -sOutputFile='.
-            escapeshellarg(
-                $normalizedPath
-            ).
-            ' '.
-            escapeshellarg(
-                $sourcePath
-            ).
-            ' 2>&1';
-
-        $output = [];
-        $exitCode = 0;
-        exec($command, $output, $exitCode);
-        if ($exitCode !== 0 || ! File::exists($normalizedPath) || File::size($normalizedPath) <= 0) {
-            File::delete($normalizedPath);
-
-            throw new \Exception(
-                'Gagal memproses PDF TikTok dengan Ghostscript. '.
-                implode(' ', $output)
-            );
-        }
-
-        return $normalizedPath;
     }
 
     private function emptyDeadlinePayload(): array

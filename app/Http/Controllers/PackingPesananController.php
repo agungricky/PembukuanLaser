@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
-use setasign\Fpdi\Fpdi;
+use App\Services\Pdf\CompatibleFpdi as Fpdi;
 
 class PackingPesananController extends Controller
 {
