@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use setasign\Fpdi\Fpdi;
+use App\Services\Pdf\CompatibleFpdi as Fpdi;
 use Smalot\PdfParser\Parser;
 
 class CetakResiService
