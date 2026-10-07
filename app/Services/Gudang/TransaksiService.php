@@ -8,6 +8,7 @@ use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
 use App\Models\ResiPage;
 use App\Models\stok_produk;
+use App\Services\Pdf\CompatibleFpdi as Fpdi;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
@@ -15,7 +16,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use App\Services\Pdf\CompatibleFpdi as Fpdi;
 use Smalot\PdfParser\Parser;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -136,7 +136,6 @@ class TransaksiService
                 'ASC'
             )
             ->get();
-
 
         // STOK
         $semuaSku = $antrian
@@ -1291,22 +1290,22 @@ class TransaksiService
             ->where('updated_at', '>=', Carbon::now()->subMonth())
             ->selectRaw('DATE(updated_at) as tanggal')
             ->selectRaw("
-                    CASE
-                        WHEN HOUR(updated_at) < 12 THEN 'Pagi'
-                        ELSE 'Siang'
-                    END as sesi
-                ")
+                CASE
+                    WHEN HOUR(updated_at) < 12 THEN 'Pagi'
+                    ELSE 'Siang'
+                END as sesi
+            ")
             ->groupByRaw("
-                    DATE(updated_at),
-                    CASE
-                        WHEN HOUR(updated_at) < 12 THEN 'Pagi'
-                        ELSE 'Siang'
-                    END
-                ")
+                DATE(updated_at),
+                CASE
+                    WHEN HOUR(updated_at) < 12 THEN 'Pagi'
+                    ELSE 'Siang'
+                END
+            ")
             ->orderBy('tanggal', 'DESC')
             ->orderByRaw("
                 CASE
-                    WHEN sesi = 'Pagi' THEN 1
+                    WHEN sesi = 'Siang' THEN 1
                     ELSE 2
                 END
             ")
