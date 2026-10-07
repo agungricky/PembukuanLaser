@@ -20,6 +20,9 @@ class PesananDetailController extends Controller
             'toko',
             'userKirim',
             'resiPrinter',
+            'pesanan_per_produk.exporter.user',
+            'pesanan_per_produk.mutasi.admin_penjualan',
+            'pesanan_per_produk.mutasi.gudang',
         ])->findOrFail($no_pesanan);
 
         $tokos = Toko::orderBy('marketplace')
@@ -258,6 +261,30 @@ class PesananDetailController extends Controller
 
         $dataPlat = $dataPlat === [] ? null : $dataPlat;
 
+        $pengerjaanPesanan = $pesanan->pesanan_per_produk[0];
+        $mutasi = $pengerjaanPesanan->mutasi != null ? true : false;
+        $exported = $pengerjaanPesanan->exporter != null ? true : false; 
+        
+        if ($mutasi == true) {
+            $statusPengerjaan = [
+                'proses' => 'Dikerjakan',
+                'role' => $pengerjaanPesanan?->mutasi?->admin_penjualan?->role == 'pegawai' ? 'Admin Penjualan' : null,
+                'user' => $pengerjaanPesanan?->mutasi?->admin_penjualan?->name,
+            ];
+        }elseif ($exported == true) {
+            $statusPengerjaan = [
+                'proses' => 'Exported',
+                'role' => $pengerjaanPesanan?->exporter?->role == 'gudang' ? 'Gudang' : 'Produksi',
+                'user' => $pengerjaanPesanan?->exporter?->user?->name,
+            ];
+        }else{
+            $statusPengerjaan = [
+                'proses' => null,
+                'role' => null,
+                'user' => null,
+            ];
+        }
+
         return view(
             'pesanan.rincian',
             [
@@ -297,6 +324,7 @@ class PesananDetailController extends Controller
                 'resiPrintCount' => $resiPrintCount,
 
                 'dataPlat' => $dataPlat,
+                'statusPengerjaan' => $statusPengerjaan,
             ]
         );
     }
