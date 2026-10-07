@@ -14,7 +14,6 @@ class SkuController extends Controller
     public function index()
     {
         $kategori = kategori::all();
-
         return view('master.sku', compact('kategori'));
     }
 

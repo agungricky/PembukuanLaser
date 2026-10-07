@@ -333,9 +333,14 @@ class ProdukController extends Controller
         }
     }
 
-    public function produkshow()
+    public function produkshow(Request $request)
     {
-        $produk = Produk::query()->with('kategori', 'stok_produk');
+        $produk = Produk::query()
+            ->with('kategori', 'stok_produk');
+
+        if ($request->filled('kategori_id')) {
+            $produk->where('kategori_id', $request->kategori_id);
+        }
 
         return DataTables::eloquent($produk)
             ->filterColumn('sku', function ($query, $keyword) {
