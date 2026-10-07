@@ -4,13 +4,18 @@ namespace App\Exports;
 
 use App\Models\Produk;
 use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Concerns\WithStrictNullComparison;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\Cell;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-class produkExport implements FromArray, WithEvents, WithTitle
+class produkExport extends DefaultValueBinder implements FromArray, WithCustomValueBinder, WithEvents, WithStrictNullComparison, WithTitle
 {
     protected $produk;
 
@@ -22,11 +27,21 @@ class produkExport implements FromArray, WithEvents, WithTitle
     {
         $this->id = $id;
         $this->produk = Produk::with('kategori')
-            ->where('status', 'aktif')
             ->when($id != 0, function ($query) use ($id) {
                 $query->where('kategori_id', $id);
             })
             ->get();
+    }
+
+    public function bindValue(Cell $cell, $value)
+    {
+        if ($cell->getColumn() === 'A') {
+            $cell->setValueExplicit((string) $value, DataType::TYPE_STRING);
+
+            return true;
+        }
+
+        return parent::bindValue($cell, $value);
     }
 
     public function array(): array

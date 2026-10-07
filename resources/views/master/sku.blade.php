@@ -56,35 +56,53 @@
                 </div>
 
                 <!-- Controls: Filters & Table Search -->
-                <div class="d-flex flex-nowrap align-items-center gap-2">
+                <div class="d-flex flex-column gap-2 align-items-end">
 
-                    <div class="input-group input-group-sm" style="max-width: 240px;">
-                        <span class="input-group-text bg-light border-end-0">
-                            <i class="fa-solid fa-magnifying-glass text-muted"></i>
-                        </span>
+                    <!-- FILTER -->
+                    <div class="d-flex flex-nowrap align-items-center gap-2 justify-content-end">
 
-                        <input type="text" id="searchTable" placeholder="Cari SKU / Produk..."
-                            class="form-control form-control-sm border-start-0 bg-light">
+                        <div class="input-group input-group-sm" style="max-width: 240px;">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="fa-solid fa-magnifying-glass text-muted"></i>
+                            </span>
+
+                            <input type="text" id="searchTable" placeholder="Cari SKU / Produk..."
+                                class="form-control form-control-sm border-start-0 bg-light">
+                        </div>
+
+                        <select id="filterKategori" class="form-select form-select-sm" style="width: 300px;">
+                            <option value=""></option>
+                            @foreach ($kategori as $item)
+                                <option value="{{ $item->id }}">
+                                    {{ $item->nama_kategori }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <select id="per_page" class="form-select form-select-sm" style="width: auto;">
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+
                     </div>
 
-                    <select id="per_page" class="form-select form-select-sm" style="width: auto;">
-                        <option value="10">10</option>
-                        <option value="20" selected>20</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
+                    <!-- BUTTON -->
+                    <div class="d-flex align-items-center gap-2 justify-content-end">
+                        <button type="button" class="btn btn-light border text-success btn-sm text-nowrap"
+                            data-bs-toggle="modal" data-bs-target="#importExcelModal">
+                            <i class="fa-solid fa-file-arrow-up me-1"></i>
+                            Import Excel
+                        </button>
 
-                    <button type="button" class="btn btn-light border text-success btn-sm text-nowrap"
-                        data-bs-toggle="modal" data-bs-target="#importExcelModal">
-                        <i class="fa-solid fa-file-arrow-up me-1"></i>
-                        Import Excel
-                    </button>
+                        <button type="button" class="btn btn-light border text-success btn-sm text-nowrap"
+                            data-bs-toggle="modal" data-bs-target="#exportExcelModal">
+                            <i class="fa-solid fa-file-excel me-1"></i>
+                            Export Excel
+                        </button>
+                    </div>
 
-                    <button type="button" class="btn btn-light border text-success btn-sm text-nowrap"
-                        data-bs-toggle="modal" data-bs-target="#exportExcelModal">
-                        <i class="fa-solid fa-file-excel me-1"></i>
-                        Export Excel
-                    </button>
                 </div>
             </div>
 
@@ -469,6 +487,14 @@
     <script>
         $(document).ready(function() {
 
+            $('#filterKategori').select2({
+                theme: 'bootstrap-5',
+                width: '300px',
+                placeholder: 'Semua Kategori',
+                allowClear: true
+            });
+
+
             $('#kategori').select2({
                 theme: 'bootstrap-5',
                 width: '100%',
@@ -505,7 +531,10 @@
                     order: [],
                     ajax: {
                         url: "{{ route('produk.json') }}",
-                        type: "GET"
+                        type: "GET",
+                        data: function(d) {
+                            d.kategori_id = $('#filterKategori').val();
+                        }
                     },
 
                     columns: [{
@@ -640,7 +669,6 @@
                     }
                 });
 
-
                 $('#per_page').val(10);
                 $('#per_page')
                     .off('change')
@@ -652,6 +680,12 @@
                     .off('input')
                     .on('input', function() {
                         table.search(this.value).draw();
+                    });
+
+                $('#filterKategori')
+                    .off('change.produkFilter')
+                    .on('change.produkFilter', function() {
+                        table.ajax.reload();
                     });
             }
 
