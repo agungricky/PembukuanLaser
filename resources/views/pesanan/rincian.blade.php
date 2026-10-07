@@ -33,7 +33,8 @@
                         </button>
                     </form>
                 @endif
-                <button type="button" id="cetakResi" class="btn btn-danger btn-sm text-nowrap {{ empty($pesanan->batas_kirim_at) ? 'disabled' : '' }}">
+                <button type="button" id="cetakResi"
+                    class="btn btn-danger btn-sm text-nowrap {{ empty($pesanan->batas_kirim_at) ? 'disabled' : '' }}">
                     <i class="fa-solid fa-print me-1"></i>
                     Cetak Resi
                 </button>
@@ -92,16 +93,12 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <table class="table table-borderless table-sm mb-0">
+                                <table class="table table-borderless table-sm mb-0 table-row-line">
                                     <tr>
-                                        <td class="text-muted" width="40%">
-                                            No. Pesanan
-                                        </td>
+                                        <td class="text-muted" width="40%">No. Pesanan</td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
-                                                <span class="fw-semibold">
-                                                    {{ $pesanan->no_pesanan }}
-                                                </span>
+                                                <span class="fw-semibold">{{ $pesanan->no_pesanan }}</span>
                                                 <button type="button" class="btn btn-light btn-sm border copy-btn"
                                                     data-copy="{{ $pesanan->no_pesanan }}">
                                                     <i class="bi bi-clipboard"></i>
@@ -110,29 +107,20 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">
-                                            Tanggal Input
-                                        </td>
-                                        <td>
-                                            {{ $tanggalInput }}
-                                        </td>
+                                        <td class="text-muted">Tanggal Input</td>
+                                        <td>{{ $tanggalInput }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">
-                                            Pembeli
-                                        </td>
-                                        <td>
-                                            {{ $pesanan->nama_pembeli ?? '-' }}
-                                        </td>
+                                        <td class="text-muted">Pembeli</td>
+                                        <td>{{ $pesanan->nama_pembeli ?? '-' }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">
-                                            Toko
-                                        </td>
+                                        <td class="text-muted">Toko</td>
                                         <td>
                                             <div class="fw-semibold">
                                                 {{ $pesanan->toko?->nama_toko ?? '-' }}
                                             </div>
+
                                             @if ($pesanan->toko?->marketplace)
                                                 <div class="small text-muted">
                                                     {{ $pesanan->toko->marketplace }}
@@ -144,6 +132,7 @@
                                         <td class="text-muted">
                                             Kurir
                                         </td>
+
                                         <td>
                                             {{ $pesanan->kurir ?? '-' }}
                                         </td>
@@ -152,11 +141,13 @@
                                         <td class="text-muted">
                                             Batas Kirim
                                         </td>
+
                                         <td>
                                             @if ($batasKirim)
                                                 <div class="fw-semibold">
                                                     {{ $batasKirim->format('d/m/Y H:i') }}
                                                 </div>
+
                                                 <div class="mt-1">
                                                     <span
                                                         class="badge bg-{{ $prioritasBadge }} {{ $prioritasBadge === 'warning' ? 'text-dark' : '' }}">
@@ -171,32 +162,51 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">
-                                            Sumber Deadline
+                                        <td class="text-muted align-middle">
+                                            Status Pengerjaan
                                         </td>
-                                        <td>
-                                            {{ $batasKirimSource }}
+
+                                        <td class="align-middle pt-2">
+                                            @if ($statusPengerjaan['proses'] == null)
+                                                <span
+                                                    class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">
+                                                    <i class="fa-solid fa-circle-xmark me-1"></i>
+                                                    Belum di Proses
+                                                </span>
+                                            @else
+                                                <span
+                                                    class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2">
+                                                    <i class="fa-solid fa-circle-check me-1"></i>
+                                                    {{ $statusPengerjaan['proses'] }}, {{ $statusPengerjaan['role'] }} by
+                                                    {{ $statusPengerjaan['user'] }}
+                                                </span>
+                                            @endif
                                         </td>
                                     </tr>
                                 </table>
                             </div>
+
                             <div class="col-md-6">
-                                <table class="table table-borderless table-sm mb-0">
+                                <table class="table table-borderless table-sm mb-0 table-row-line">
                                     <tr>
                                         <td class="text-muted" width="40%">
                                             No. Resi
                                         </td>
+
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
+
                                                 <span class="fw-semibold">
                                                     {{ $pesanan->no_resi ?? '-' }}
                                                 </span>
+
                                                 @if ($pesanan->no_resi)
                                                     <button type="button" class="btn btn-light btn-sm border copy-btn"
                                                         data-copy="{{ $pesanan->no_resi }}">
                                                         <i class="bi bi-clipboard"></i>
                                                     </button>
                                                 @endif
+
                                             </div>
                                         </td>
                                     </tr>
@@ -204,6 +214,7 @@
                                         <td class="text-muted">
                                             Tgl Kirim
                                         </td>
+
                                         <td>
                                             @if ($pesanan->tanggal_kirim)
                                                 @php
@@ -213,10 +224,12 @@
                                                         $tanggalKirim = null;
                                                     }
                                                 @endphp
+
                                                 @if ($tanggalKirim)
                                                     <div>
                                                         {{ $tanggalKirim->format('d/m/Y') }}
                                                     </div>
+
                                                     <div class="small text-muted">
                                                         {{ $tanggalKirim->format('H:i') }}
                                                     </div>
@@ -229,27 +242,19 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">
-                                            Dikirim Oleh
-                                        </td>
-                                        <td>
-                                            {{ $pesanan->userKirim?->name ?? '-' }}
-                                        </td>
+                                        <td class="text-muted">Dikirim Oleh</td>
+                                        <td>{{ $pesanan->userKirim?->name ?? '-' }}</td>
                                     </tr>
-
                                     @if ($dataPlat != [] || $dataPlat != null)
                                         <tr class="{{ $items->contains('nama_kategori', 'PLAT') ? '' : 'd-none' }}">
-                                            <td class="text-muted">
-                                                Cetak Resi
-                                            </td>
+                                            <td class="text-muted">Cetak Resi</td>
                                             <td>
                                                 @if ($resiSudahDicetak)
-                                                    <span class="badge bg-success">
-                                                        SUDAH DICETAK
-                                                    </span>
+                                                    <span class="badge bg-success">SUDAH DICETAK</span>
                                                     <div class="small text-muted mt-1">
                                                         {{ number_format($resiPrintCount, 0, ',', '.') }}x cetak
                                                     </div>
+
                                                     @if ($pesanan->resi_printed_at)
                                                         @php
                                                             try {
@@ -260,6 +265,7 @@
                                                                 $resiPrintedAt = null;
                                                             }
                                                         @endphp
+
                                                         @if ($resiPrintedAt)
                                                             <div class="small text-muted">
                                                                 Pertama:
@@ -267,6 +273,8 @@
                                                             </div>
                                                         @endif
                                                     @endif
+
+
                                                     @if ($pesanan->resiPrinter)
                                                         <div class="small text-muted">
                                                             Oleh:
@@ -277,39 +285,40 @@
                                                     <span class="badge bg-secondary">
                                                         BELUM DICETAK
                                                     </span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endif
 
+                                                @endif
+
+                                            </td>
+
+                                        </tr>
+
+                                    @endif
                                     <tr>
-                                        <td class="text-muted">
-                                            Item
-                                        </td>
-                                        <td>
-                                            {{ number_format($totalItem, 0, ',', '.') }}
-                                        </td>
+                                        <td class="text-muted">Item</td>
+                                        <td>{{ number_format($totalItem, 0, ',', '.') }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">
-                                            Qty
-                                        </td>
+                                        <td class="text-muted">Qty</td>
                                         <td class="fw-semibold">
                                             {{ number_format($totalQty, 0, ',', '.') }}
                                         </td>
                                     </tr>
                                     @if ($pesanan->batas_kirim_raw)
                                         <tr>
-                                            <td class="text-muted">
-                                                Deadline Asli
-                                            </td>
+                                            <td class="text-muted">Deadline Asli</td>
                                             <td>
-                                                <span class="small">
-                                                    {{ $pesanan->batas_kirim_raw }}
-                                                </span>
+                                                <span class="small">{{ $pesanan->batas_kirim_raw }}</span>
                                             </td>
                                         </tr>
                                     @endif
+                                    <tr>
+                                        <td class="text-muted">
+                                            Sumber Deadline
+                                        </td>
+                                        <td>
+                                            {{ $batasKirimSource }}
+                                        </td>
+                                    </tr>
                                 </table>
                             </div>
                         </div>
@@ -828,6 +837,17 @@
         </div>
     </div>
 @endsection
+@push('styles')
+    <style>
+        .table-row-line tr {
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .table-row-line tr:last-child {
+            border-bottom: 0;
+        }
+    </style>
+@endpush
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -939,7 +959,7 @@
             @endif
         });
 
-        
+
         $(document).ready(function() {
 
             $('#cetakResi').on('click', function() {

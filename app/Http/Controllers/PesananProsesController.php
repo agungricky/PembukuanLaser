@@ -166,7 +166,6 @@ class PesananProsesController extends Controller
             ->get();
 
         $data->each(function ($item) use ($today) {
-
             if (empty($item->batas_kirim_at)) {
                 $item->status_kirim = '-';
 
