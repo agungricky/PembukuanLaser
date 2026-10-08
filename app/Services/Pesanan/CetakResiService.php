@@ -5,18 +5,18 @@ namespace App\Services\Pesanan;
 use App\Models\Exporter;
 use App\Models\PesananPerProduk;
 use App\Models\ResiPage;
+use App\Services\Pdf\CompatibleFpdi as Fpdi;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use App\Services\Pdf\CompatibleFpdi as Fpdi;
-use Smalot\PdfParser\Parser;
 
 class CetakResiService
 {
     private $resi;
+
     private $pdf;
 
     public function previewResi($token)
@@ -184,6 +184,12 @@ class CetakResiService
         DB::beginTransaction();
         try {
             $response = $this->viewResi($request);
+
+            if ($request->source) {
+                DB::commit();
+                return $response;
+            }
+
             $exporter = Exporter::create([
                 'user_id' => Auth::id(),
                 'role' => 'gudang',
@@ -194,7 +200,6 @@ class CetakResiService
             PesananPerProduk::whereIn('no_pesanan', $request->pesanan)->update([
                 'exporter_id' => $exporter->id,
             ]);
-
             DB::commit();
 
             return $response;
