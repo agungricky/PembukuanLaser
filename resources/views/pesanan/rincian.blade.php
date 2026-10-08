@@ -989,12 +989,12 @@
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
-
                     contentType: "application/json",
                     dataType: "json",
                     data: JSON.stringify({
                         pesanan: [pesanan],
-                        alasan_export: alasanExport
+                        alasan_export: alasanExport,
+                        source: "admin_penjualan"
                     }),
 
                     beforeSend: function() {
