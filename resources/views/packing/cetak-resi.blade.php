@@ -131,19 +131,9 @@
                             id="formCetakResi">
                             @csrf
 
-                            <input type="hidden"
-                                name="no_pesanan"
-                                id="printNoPesanan">
-
-                            <input type="hidden"
-                                name="allow_reprint"
-                                id="allowReprint"
-                                value="0">
-
-                            <button type="button"
-                                class="btn btn-success px-4"
-                                id="btnCetakResi"
-                                disabled>
+                            <input type="hidden" name="no_pesanan" id="printNoPesanan">
+                            <input type="hidden" name="allow_reprint" id="allowReprint" value="0">
+                            <button type="button" class="btn btn-success px-4" id="btnCetakResi" disabled>
                                 <i class="bi bi-printer me-1"></i>
                                 Cetak Resi
                             </button>
@@ -151,9 +141,7 @@
                     </div>
                 </div>
 
-                <div id="printHint"
-                    class="text-muted small mt-3"
-                    style="display:none;">
+                <div id="printHint" class="text-muted small mt-3" style="display:none;">
                     <i class="bi bi-info-circle me-1"></i>
                     Pastikan semua barang / plat sudah tersedia dan dicentang sebelum mencetak resi.
                 </div>

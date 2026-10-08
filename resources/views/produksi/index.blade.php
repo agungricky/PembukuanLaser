@@ -23,144 +23,78 @@
             </div>
         </div>
 
-        <!-- 8 Metric Status Cards Grid -->
-        <div class="mb-4">
 
-            <!-- Grid Row 1: General Metrics Cards -->
-            <div class="row g-3 mb-3">
+        <div class="row g-3 mb-4">
 
-                <!-- Card 1: Pesanan Custom -->
+            @php
+                $productionCards = [
+                    [
+                        'title' => 'BELUM DIPRODUKSI',
+                        'value' => $Card['belum_produksi'] ?? 0,
+                        'icon' => 'fa-boxes-stacked',
+                        'color' => 'dark',
+                        'description' => 'Menunggu produksi',
+                    ],
+                    [
+                        'title' => 'DALAM PRODUKSI',
+                        'value' => $Card['dalam_produksi'] ?? 0,
+                        'icon' => 'fa-gears',
+                        'color' => 'primary',
+                        'description' => 'Sedang dikerjakan',
+                    ],
+                    [
+                        'title' => 'SELESAI HARI INI',
+                        'value' => $Card['selesai_hari_ini'] ?? 0,
+                        'icon' => 'fa-circle-check',
+                        'color' => 'success',
+                        'description' => 'Selesai diproduksi',
+                    ],
+                    [
+                        'title' => 'MENDEKATI DEADLINE',
+                        'value' => $Card['mendekati_deadline'] ?? 0,
+                        'icon' => 'fa-triangle-exclamation',
+                        'color' => 'danger',
+                        'description' => 'Prioritas produksi',
+                    ],
+                ];
+            @endphp
+
+            @foreach ($productionCards as $item)
                 <div class="col-12 col-sm-6 col-lg-3">
                     <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
                         <div class="card-body p-1 d-flex flex-column justify-content-between">
                             <div>
                                 <div class="d-flex align-items-center justify-content-between mb-2">
                                     <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                                        TOTAL PESANAN REGULER
+                                        {{ $item['title'] }}
                                     </span>
-                                    <div class="bg-light text-dark rounded-circle d-flex align-items-center justify-content-center"
-                                        style="width: 32px; height: 32px;">
-                                        <i class="bi bi-boxes"></i>
+
+                                    <div class="bg-light text-{{ $item['color'] }} rounded-circle d-flex align-items-center justify-content-center"
+                                        style="width: 32px; height: 32px; flex-shrink: 0;">
+                                        <i class="fa-solid {{ $item['icon'] }}"></i>
                                     </div>
                                 </div>
-                                <h2 id="cardTotalStock" class="fw-bold text-dark mb-1 d-flex align-items-baseline gap-2">
 
-                                    @if ($Card['reguler'] >= 300)
-                                        <i class="fa-solid fa-triangle-exclamation" style="color: #dc3545;"></i>
-                                    @endif
-
-                                    <span class="{{ $Card['custom'] >= 300 ? 'text-danger' : 'text-dark' }}"
-                                        style="font-size: 2rem; line-height: 1;">
-                                        {{ $Card['reguler'] }}
+                                <h2 class="fw-bold text-{{ $item['color'] }} mb-1 d-flex align-items-baseline gap-2">
+                                    <span style="font-size: 2rem; line-height: 1;">
+                                        {{ number_format($item['value'], 0, ',', '.') }}
                                     </span>
-
                                     <span class="text-secondary fw-semibold" style="font-size: .95rem;">
                                         Pcs
                                     </span>
                                 </h2>
                             </div>
+
                             <p class="text-muted small mb-0 mt-3">
-                                <i class="fa-solid fa-gears me-1"></i>
-                                Pesanan Masuk.
+                                {{ $item['description'] }}
                             </p>
                         </div>
                     </div>
                 </div>
+            @endforeach
 
-                <!-- Card 2: Stok Menipis -->
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
-                        <div class="card-body p-1 d-flex flex-column justify-content-between">
-                            <div>
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                                        TOTAL PESANAN CUSTOM
-                                    </span>
-                                    <div class="bg-light text-dark rounded-circle d-flex align-items-center justify-content-center"
-                                        style="width: 32px; height: 32px;">
-                                        <i class="bi bi-boxes"></i>
-                                    </div>
-                                </div>
-                                <h2 id="cardTotalStock" class="fw-bold text-dark mb-1 d-flex align-items-baseline gap-2">
-
-                                    @if ($Card['custom'] >= 300)
-                                        <i class="fa-solid fa-triangle-exclamation" style="color: #dc3545;"></i>
-                                    @endif
-
-                                    <span class="{{ $Card['custom'] >= 300 ? 'text-danger' : 'text-dark' }}"
-                                        style="font-size: 2rem; line-height: 1;">
-                                        {{ $Card['custom'] }}
-                                    </span>
-
-                                    <span class="text-secondary fw-semibold" style="font-size: .95rem;">
-                                        Pcs
-                                    </span>
-                                </h2>
-                            </div>
-                            <p class="text-muted small mb-0 mt-3">
-                                <i class="fa-solid fa-gears me-1"></i>
-                                Pesanan Masuk.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card 3: Stok Keluar Hari Ini -->
-                {{-- <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
-                        <div class="card-body p-1 d-flex flex-column justify-content-between">
-                            <div>
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                                        PRODUKSI HARI INI
-                                    </span>
-                                    <div class="bg-light text-dark rounded-circle d-flex align-items-center justify-content-center"
-                                        style="width: 32px; height: 32px;">
-                                        <i class="bi bi-arrow-left-right"></i>
-                                    </div>
-                                </div>
-                                <h2 id="cardMutationCount" class="h2 fw-bold text-dark my-1">
-                                    {{ $Card['produksi'] ?? 0 }}
-                                    <span class="text-secondary fw-semibold" style="font-size: .95rem;">
-                                        Pcs
-                                    </span>
-                                </h2>
-                            </div>
-                            <p class="text-muted small mb-0 mt-3">
-                                <i class="bi bi-box-seam me-1"></i>
-                                Termasuk Stok & Pesanan
-                            </p>
-                        </div>
-                    </div>
-                </div> --}}
-
-                <!-- Card 4: Produk Terlaris -->
-                <div class="col-12 col-sm-6 col-lg-3">
-                    <div class="card border-0 shadow-sm rounded-4 h-100 p-3 hover-shadow">
-                        <div class="card-body p-1 d-flex flex-column justify-content-between">
-                            <div>
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <span class="text-muted fw-bold" style="font-size: 10px; letter-spacing: 0.5px;">
-                                        PRODUK TERLARIS | <span id="mounthTerlaris"></span>
-                                    </span>
-                                    <div class="bg-light text-dark rounded-circle d-flex align-items-center justify-content-center"
-                                        style="width: 32px; height: 32px;">
-                                        <i class="bi bi-trophy-fill text-warning"></i>
-                                    </div>
-                                </div>
-                                <h2 id="cardStockOut" class="h2 fw-bold text-dark my-1">
-                                    {{ $Card['terlaris'] }}
-                                </h2>
-                            </div>
-                            <p class="text-muted small mb-0 mt-3">
-                                Pesanan Produk > 100
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
         </div>
+
 
         {{-- <div class="card border-0 shadow-sm rounded-4 mb-4">
             <div class="card-body">

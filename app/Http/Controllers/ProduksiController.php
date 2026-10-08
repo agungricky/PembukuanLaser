@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\produksiExport;
 use App\Models\Exporter;
 use App\Models\mutasi_stok;
+use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
 use App\Models\Produk;
 use App\Models\stok_produk;
@@ -20,61 +21,11 @@ class ProduksiController extends Controller
     // ================================ //
     private function card()
     {
-        $reguler = PesananPerProduk::where('custom', false)
-            ->where('status_pesanan', '0')
-            ->whereHas('pesanan', function ($query) {
-                $query->where('status', 'proses')
-                    ->where('tanggal', '>=', now()->subDays(7))
-                    ->whereDoesntHave('pesanan_per_produk', function ($q) {
-                        $q->where('status_pesanan', '1');
-                    });
-            })
-            ->distinct()
-            ->count('no_pesanan');
-
-        $custom = PesananPerProduk::where('custom', true)
-            ->where('status_pesanan', '0')
-            ->whereHas('pesanan', function ($query) {
-                $query->where('status', 'proses')
-                    ->where('tanggal', '>=', now()->subDays(7));
-            })
-            ->distinct()
-            ->count('no_pesanan');
-        
-        // Produksi Hari ini
-        $dataLogin = Auth::user();
-        $produksiNow = mutasi_stok::where('produksi_id', $dataLogin->id)
-            ->whereDate('created_at', now()->toDateString())
-            ->get();
-        $produksiNow = $produksiNow->sum('jumlah');
-
-
-        // Produk Terlaris
-        $mutasi = mutasi_stok::with('stok_produk')
-            ->where('jenis_mutasi', 'keluar')
-            ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
+        $pesanan = Pesanan::where('status', 'proses')
+            ->where('tanggal', '>=', now()->subDays(7))
             ->get();
 
-        $terlaris = $mutasi
-            ->groupBy('stok_produk.sku_id')
-            ->map(function ($items, $sku) {
-                return [
-                    'sku' => $sku,
-                    'jumlah' => $items->sum('jumlah'),
-                ];
-            })
-            ->where('jumlah', '>=', 100)
-            ->values()
-            ->count();
-
-
-        return [
-            'reguler' => $reguler,
-            'custom' => $custom,
-            'terlaris' => $terlaris,
-            // 'produksi' => $produksiNow,
-        ];
+        dd($pesanan->toArray());
     }
 
     public function index()
