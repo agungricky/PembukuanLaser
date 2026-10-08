@@ -6,6 +6,7 @@ use App\Models\Pesanan;
 use App\Models\ResiImport;
 use App\Models\ResiPage;
 use App\Models\Toko;
+use App\Services\ImportResi\DeadlineUpdater;
 use App\Services\ImportResi\ShopeeService;
 use App\Services\ImportResi\TikTokService;
 use Illuminate\Http\Request;
@@ -330,27 +331,11 @@ class ResiImportController extends Controller
                         ];
                     }
 
-                    if (! empty($resiPages)) {
-                        ResiPage::insert($resiPages);
+                    foreach (array_chunk($resiPages, 500) as $batch) {
+                        ResiPage::insert($batch);
                     }
 
-                    $deadlineUpdates =
-                        collect($validPages)
-                            ->filter(
-                                fn ($page) => ! empty($page['batas_kirim_at'])
-                            )
-                            ->keyBy('no_pesanan');
-
-                    foreach ($deadlineUpdates as $noPesanan => $page) {
-                        Pesanan::query()
-                            ->where('id_toko', $dataPreview['id_toko'])
-                            ->where('no_pesanan', $noPesanan)
-                            ->update([
-                                'batas_kirim_at' => $page['batas_kirim_at'],
-                                'batas_kirim_source' => $page['batas_kirim_source'],
-                                'batas_kirim_raw' => $page['batas_kirim_raw'],
-                            ]);
-                    }
+                    app(DeadlineUpdater::class)->update((int) $dataPreview['id_toko'], $validPages);
                 }
             );
 

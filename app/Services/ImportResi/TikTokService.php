@@ -38,23 +38,15 @@ class TikTokService
                     trim((string) $item->no_resi)
                 ));
 
-        // Ambil pesanan yang sudah mempunyai PDF resi
-        $orderNumbers = 
-            $this->pesananByOrder
-                ->keys()
-                ->values()
-                ->all();
-
-        if (empty($orderNumbers)) {
-            $this->existingResiPages = collect();
-        } else {
-            $this->existingResiPages =
-                ResiPage::whereIn('no_pesanan', $orderNumbers)
-                    ->pluck('no_pesanan')
-                    ->map(fn ($value) => (string) $value)
-                    ->unique()
-                    ->flip();
-        }
+        // Gunakan subquery agar jumlah placeholder tidak mengikuti jumlah pesanan toko.
+        $this->existingResiPages = ResiPage::whereIn(
+            'no_pesanan',
+            Pesanan::query()->where('id_toko', $idToko)->select('no_pesanan')
+        )
+            ->pluck('no_pesanan')
+            ->map(fn ($value) => (string) $value)
+            ->unique()
+            ->flip();
 
         $this->preparedIdToko = $idToko;
     }

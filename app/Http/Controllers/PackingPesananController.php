@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pesanan;
+use App\Models\PesananPerProduk;
+use App\Services\Pdf\CompatibleFpdi as Fpdi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
-use App\Services\Pdf\CompatibleFpdi as Fpdi;
 
 class PackingPesananController extends Controller
 {
@@ -131,7 +132,7 @@ class PackingPesananController extends Controller
 
     public function scan(Request $request)
     {
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return response()->json([
                 'success' => false,
                 'message' => '❌ Auth error',
@@ -171,7 +172,7 @@ class PackingPesananController extends Controller
             })
             ->first();
 
-        if (!$pesanan) {
+        if (! $pesanan) {
             $pesananLama = Pesanan::where(
                 function ($q) use ($kode) {
                     $q->where(
@@ -188,15 +189,13 @@ class PackingPesananController extends Controller
             if ($pesananLama) {
                 return response()->json([
                     'success' => false,
-                    'message' =>
-                        "⚠ Pesanan {$pesananLama->no_pesanan} sudah berstatus {$pesananLama->status}",
+                    'message' => "⚠ Pesanan {$pesananLama->no_pesanan} sudah berstatus {$pesananLama->status}",
                 ], 409);
             }
 
             return response()->json([
                 'success' => false,
-                'message' =>
-                    '❌ No. Pesanan / Resi tidak ditemukan',
+                'message' => '❌ No. Pesanan / Resi tidak ditemukan',
             ], 404);
         }
 
@@ -241,52 +240,40 @@ class PackingPesananController extends Controller
         return response()->json([
             'success' => true,
 
-            'message' =>
-                "✅ {$pesanan->no_pesanan} berhasil dikirim",
+            'message' => "✅ {$pesanan->no_pesanan} berhasil dikirim",
 
-            'no_pesanan' =>
-                $pesanan->no_pesanan,
+            'no_pesanan' => $pesanan->no_pesanan,
 
-            'no_resi' =>
-                $pesanan->no_resi,
+            'no_resi' => $pesanan->no_resi,
 
-            'scan_time' =>
-                $pesanan
-                    ->tanggal_kirim
-                    ->format('H:i:s'),
+            'scan_time' => $pesanan
+                ->tanggal_kirim
+                ->format('H:i:s'),
 
-            'status' =>
-                'kirim',
+            'status' => 'kirim',
 
-            'ekspedisi' =>
-                $ekspedisi,
+            'ekspedisi' => $ekspedisi,
 
-            'remaining_proses' =>
-                $sisaProses,
+            'remaining_proses' => $sisaProses,
 
-            'hari_ini' =>
-                $hariIni,
+            'hari_ini' => $hariIni,
 
             'kurir_hari_ini' => [
-                'spx' =>
-                    (int) (
-                        $kurirHariIni->spx ?? 0
-                    ),
+                'spx' => (int) (
+                    $kurirHariIni->spx ?? 0
+                ),
 
-                'jnt' =>
-                    (int) (
-                        $kurirHariIni->jnt ?? 0
-                    ),
+                'jnt' => (int) (
+                    $kurirHariIni->jnt ?? 0
+                ),
 
-                'anteraja' =>
-                    (int) (
-                        $kurirHariIni->anteraja ?? 0
-                    ),
+                'anteraja' => (int) (
+                    $kurirHariIni->anteraja ?? 0
+                ),
 
-                'jne' =>
-                    (int) (
-                        $kurirHariIni->jne ?? 0
-                    ),
+                'jne' => (int) (
+                    $kurirHariIni->jne ?? 0
+                ),
             ],
         ]);
     }
@@ -312,32 +299,26 @@ class PackingPesananController extends Controller
             $this->getKurirHariIni();
 
         return response()->json([
-            'hari_ini' =>
-                $hariIni,
+            'hari_ini' => $hariIni,
 
-            'total' =>
-                $totalProses,
+            'total' => $totalProses,
 
             'kurir_hari_ini' => [
-                'spx' =>
-                    (int) (
-                        $kurirHariIni->spx ?? 0
-                    ),
+                'spx' => (int) (
+                    $kurirHariIni->spx ?? 0
+                ),
 
-                'jnt' =>
-                    (int) (
-                        $kurirHariIni->jnt ?? 0
-                    ),
+                'jnt' => (int) (
+                    $kurirHariIni->jnt ?? 0
+                ),
 
-                'anteraja' =>
-                    (int) (
-                        $kurirHariIni->anteraja ?? 0
-                    ),
+                'anteraja' => (int) (
+                    $kurirHariIni->anteraja ?? 0
+                ),
 
-                'jne' =>
-                    (int) (
-                        $kurirHariIni->jne ?? 0
-                    ),
+                'jne' => (int) (
+                    $kurirHariIni->jne ?? 0
+                ),
             ],
         ]);
     }
@@ -348,6 +329,7 @@ class PackingPesananController extends Controller
             'packing.cetak-resi'
         );
     }
+
     public function cariRequest(Request $request)
     {
         $request->validate([
@@ -368,7 +350,7 @@ class PackingPesananController extends Controller
             $noPesanan
         );
 
-        if (!$pesanan) {
+        if (! $pesanan) {
             $pesananLama = Pesanan::select([
                 'no_pesanan',
                 'status',
@@ -382,15 +364,13 @@ class PackingPesananController extends Controller
             if ($pesananLama) {
                 return response()->json([
                     'success' => false,
-                    'message' =>
-                        "Pesanan {$pesananLama->no_pesanan} sudah berstatus {$pesananLama->status}.",
+                    'message' => "Pesanan {$pesananLama->no_pesanan} sudah berstatus {$pesananLama->status}.",
                 ], 409);
             }
 
             return response()->json([
                 'success' => false,
-                'message' =>
-                    "Hasil scan QR {$noPesanan} tidak ditemukan.",
+                'message' => "Hasil scan QR {$noPesanan} tidak ditemukan.",
             ], 404);
         }
 
@@ -398,6 +378,7 @@ class PackingPesananController extends Controller
             $pesanan
         );
     }
+
     private function findPesananUntukCetak(
         string $noPesanan
     ): ?Pesanan {
@@ -448,62 +429,51 @@ class PackingPesananController extends Controller
         return response()->json([
             'success' => true,
             'multiple' => false,
-            'requests' =>
-                $this->buildRequestPayload(
-                    $pesanan
-                ),
+            'requests' => $this->buildRequestPayload(
+                $pesanan
+            ),
             'pesanan' => [
-                'no_pesanan' =>
-                    $pesanan
-                        ->no_pesanan,
-                'no_resi' =>
-                    $pesanan
-                        ->no_resi,
-                'nama_pembeli' =>
-                    $pesanan
-                        ->nama_pembeli,
-                'marketplace' =>
-                    $marketplace,
-                'produk' =>
-                    $this->buildProdukPayload(
-                        $pesanan
-                    ),
-                'pdf_tersedia' =>
-                    $resiPages
-                        ->isNotEmpty(),
-                'jumlah_halaman_resi' =>
-                    $resiPages
-                        ->count(),
-                'sudah_print' =>
-                    !is_null(
-                        $pesanan
-                            ->resi_printed_at
-                    ),
-                'print_count' =>
-                    (int) (
-                        $pesanan
-                            ->resi_print_count ?? 0
-                    ),
-                'first_printed_at' =>
+            'no_pesanan' => $pesanan
+                ->no_pesanan,
+            'no_resi' => $pesanan
+                ->no_resi,
+            'nama_pembeli' => $pesanan
+                ->nama_pembeli,
+            'marketplace' => $marketplace,
+            'produk' => $this->buildProdukPayload(
+                $pesanan
+            ),
+            'pdf_tersedia' => $resiPages
+                ->isNotEmpty(),
+            'jumlah_halaman_resi' => $resiPages
+                ->count(),
+            'sudah_print' => ! is_null(
+                $pesanan
+                    ->resi_printed_at
+            ),
+            'print_count' => (int) (
+                $pesanan
+                    ->resi_print_count ?? 0
+            ),
+            'first_printed_at' => $pesanan
+                ->resi_printed_at
+                ? Carbon::parse(
                     $pesanan
                         ->resi_printed_at
-                        ? Carbon::parse(
-                            $pesanan
-                                ->resi_printed_at
-                        )->format(
-                            'd/m/Y H:i:s'
-                        )
-                        : null,
-                'first_printed_by' =>
-                    $pesanan
+                )->format(
+                    'd/m/Y H:i:s'
+                )
+                    : null,
+            'first_printed_by' => $pesanan
+                ->resiPrinter
+                    ? $pesanan
                         ->resiPrinter
-                        ? $pesanan
-                            ->resiPrinter
-                            ->name
-                        : null,
+                        ->name
+                    : null,
             ],
         ]);
     }
+
     private function buildProdukPayload(
         Pesanan $pesanan
     ) {
@@ -531,20 +501,16 @@ class PackingPesananController extends Controller
             ->get()
             ->map(function ($item) {
                 return [
-                    'id_per_produk' =>
-                        $item->id_per_produk,
-                    'nama_produk' =>
-                        $item->nama_produk ?? '-',
-                    'variasi' =>
-                        $item->variasi ?? '-',
-                    'sku' =>
-                        $item->sku,
-                    'jumlah' =>
-                        (int) $item->jumlah,
+                    'id_per_produk' => $item->id_per_produk,
+                    'nama_produk' => $item->nama_produk ?? '-',
+                    'variasi' => $item->variasi ?? '-',
+                    'sku' => $item->sku,
+                    'jumlah' => (int) $item->jumlah,
                 ];
             })
             ->values();
     }
+
     private function buildRequestPayload(
         Pesanan $pesanan
     ) {
@@ -586,24 +552,15 @@ class PackingPesananController extends Controller
             ->get()
             ->map(function ($editor) {
                 return [
-                    'id' =>
-                        $editor->id,
-                    'id_per_produk' =>
-                        $editor->id_per_produk,
-                    'sku' =>
-                        $editor->sku,
-                    'plat_lengkap' =>
-                        $editor->plat_lengkap,
-                    'nama' =>
-                        $editor->nama,
-                    'tanggal_bulan_tahun' =>
-                        $editor->tanggal_bulan_tahun,
-                    'jumlah' =>
-                        (int) $editor->jumlah_editor,
-                    'status_request' =>
-                        $editor->status_request,
-                    'request_search' =>
-                        $editor->request_search,
+                    'id' => $editor->id,
+                    'id_per_produk' => $editor->id_per_produk,
+                    'sku' => $editor->sku,
+                    'plat_lengkap' => $editor->plat_lengkap,
+                    'nama' => $editor->nama,
+                    'tanggal_bulan_tahun' => $editor->tanggal_bulan_tahun,
+                    'jumlah' => (int) $editor->jumlah_editor,
+                    'status_request' => $editor->status_request,
+                    'request_search' => $editor->request_search,
                 ];
             })
             ->values();
@@ -632,77 +589,37 @@ class PackingPesananController extends Controller
             ->values();
     }
 
-    public function cetakResi(
-        Request $request
-    ) {
+    public function cetakResi(Request $request)
+    {
         $request->validate([
-            'no_pesanan' => [
-                'required',
-                'string',
-                'max:50',
-            ],
-
-            'allow_reprint' => [
-                'nullable',
-                'boolean',
-            ],
+            'no_pesanan' => ['required', 'string', 'max:50'],
+            'allow_reprint' => ['nullable', 'boolean'],
         ]);
 
-        $pesanan = Pesanan::with([
-            'resiPages.import',
-            'resiPrinter',
-            'toko',
-        ])
-            ->where(
-                'no_pesanan',
-                $request->no_pesanan
-            )
-            ->where(
-                'status',
-                'proses'
-            )
-            ->whereHas(
-                'toko',
-                function ($q) {
-                    $q->whereIn(
-                        'marketplace',
-                        self::PACKING_MARKETPLACES
-                    );
-                }
-            )
+        $pesanan = Pesanan::with(['resiPages.import', 'resiPrinter', 'toko'])
+            ->where('no_pesanan', $request->no_pesanan)
+            ->where('status', 'proses')
+            ->whereHas('toko', function ($q) {
+                $q->whereIn('marketplace', self::PACKING_MARKETPLACES);
+            })
             ->first();
 
-        if (!$pesanan) {
+        if (! $pesanan) {
             return back()->with(
                 'error',
                 'Pesanan tidak ditemukan atau sudah tidak berstatus proses.'
             );
         }
 
-        if (
-            $pesanan->resi_printed_at &&
-            !$request->boolean(
-                'allow_reprint'
-            )
-        ) {
+        if ($pesanan->resi_printed_at && ! $request->boolean('allow_reprint')) {
             return back()->with(
                 'error',
                 'Resi sudah pernah dicetak. Konfirmasi cetak ulang diperlukan.'
             );
         }
 
-        $marketplace =
-            (string) (
-                $pesanan
-                    ->toko
-                    ?->marketplace ?? ''
-            );
-
-        $pages =
-            $this->getResiPages(
-                $pesanan
-            );
-
+        $marketplace = (string) ($pesanan->toko?->marketplace ?? '');
+        $pages = $this->getResiPages($pesanan);
         if ($pages->isEmpty()) {
             return back()->with(
                 'error',
@@ -710,150 +627,68 @@ class PackingPesananController extends Controller
             );
         }
 
-        $requestLines =
-            $this->getRequestPdfLines(
-                $pesanan
-            );
-
-        $tempDirectory =
-            storage_path(
-                'app/private/print_temp'
-            );
-
-        File::ensureDirectoryExists(
-            $tempDirectory
-        );
-
-        $safeNoPesanan =
-            preg_replace(
-                '/[^A-Za-z0-9\-_]/',
-                '_',
-                (string) $pesanan
-                    ->no_pesanan
-            );
-
-        $tempPath =
-            $tempDirectory .
-            DIRECTORY_SEPARATOR .
-            'resi_' .
-            $safeNoPesanan .
-            '_' .
-            uniqid() .
-            '.pdf';
+        $requestLines = $this->getRequestPdfLines($pesanan);
+        $tempDirectory = storage_path('app/private/print_temp');
+        File::ensureDirectoryExists($tempDirectory);
+        $safeNoPesanan = preg_replace('/[^A-Za-z0-9\-_]/', '_', (string) $pesanan->no_pesanan);
+        $tempPath = $tempDirectory.DIRECTORY_SEPARATOR.'resi_'.$safeNoPesanan.'_'.uniqid().'.pdf';
 
         try {
-            $pdf = new Fpdi();
-
-            $pdf->SetAutoPageBreak(
-                false
-            );
-
+            $pdf = new Fpdi;
+            $pdf->SetAutoPageBreak(false);
             foreach ($pages as $page) {
-                if (!$page->import) {
+                if (! $page->import) {
                     throw new \Exception(
                         "Data import PDF halaman {$page->halaman} tidak ditemukan."
                     );
                 }
 
-                $sourcePath = storage_path(
-                    'app/private/' .
-                    ltrim(
-                        $page->import->path_file,
-                        '/'
-                    )
-                );
-
-                if (!File::exists($sourcePath)) {
+                $sourcePath = storage_path('app/private/'.ltrim($page->import->path_file, '/'));
+                if (! File::exists($sourcePath)) {
                     throw new \Exception(
                         'File PDF sumber tidak ditemukan.'
                     );
                 }
 
-                $pdf->setSourceFile(
-                    $sourcePath
-                );
-
-                $template =
-                    $pdf->importPage(
-                        (int) $page->halaman
-                    );
-
-                $size =
-                    $pdf->getTemplateSize(
-                        $template
-                    );
-
-                $pdf->AddPage(
-                    $size['orientation'],
+                $pdf->setSourceFile($sourcePath);
+                $template = $pdf->importPage((int) $page->halaman);
+                $size = $pdf->getTemplateSize($template);
+                $pdf->AddPage($size['orientation'],
                     [
                         $size['width'],
                         $size['height'],
                     ]
                 );
 
-                $pdf->useTemplate(
-                    $template
-                );
-
-                if (!empty($requestLines)) {
-                    $this->drawRequestOnPdf(
-                        $pdf,
-                        $size,
-                        $requestLines,
-                        $marketplace
-                    );
+                $pdf->useTemplate($template);
+                if (! empty($requestLines)) {
+                    $this->drawRequestOnPdf($pdf, $size, $requestLines, $marketplace);
                 }
             }
 
-            $pdf->Output(
-                'F',
-                $tempPath
-            );
+            $pdf->Output('F', $tempPath);
+            DB::transaction(function () use ($pesanan) {
+                    $lockedPesanan = Pesanan::where('no_pesanan', $pesanan->no_pesanan)
+                        ->lockForUpdate()
+                        ->first();
 
-            DB::transaction(
-                function () use ($pesanan) {
-                    $lockedPesanan =
-                        Pesanan::where(
-                            'no_pesanan',
-                            $pesanan
-                                ->no_pesanan
-                        )
-                            ->lockForUpdate()
-                            ->first();
-
-                    if (!$lockedPesanan) {
-                        throw new \Exception(
-                            'Pesanan tidak ditemukan.'
-                        );
+                    if (! $lockedPesanan) {
+                        throw new \Exception('Pesanan tidak ditemukan.');
                     }
 
-                    $now =
-                        now();
-
-                    if (
-                        !$lockedPesanan
-                            ->resi_printed_at
-                    ) {
-                        $lockedPesanan
-                            ->resi_printed_at =
-                            $now;
-
-                        $lockedPesanan
-                            ->resi_printed_by =
-                            Auth::id();
+                    $now = now();
+                    if (! $lockedPesanan->resi_printed_at) {
+                        $lockedPesanan->resi_printed_at = $now;
+                        $lockedPesanan->resi_printed_by = Auth::id();
                     }
 
-                    $lockedPesanan
-                        ->resi_last_printed_at =
-                        $now;
+                    $lockedPesanan->resi_last_printed_at = $now;
+                    $lockedPesanan->resi_print_count = ((int) $lockedPesanan->resi_print_count) + 1;
 
-                    $lockedPesanan
-                        ->resi_print_count =
-                        (
-                            (int)
-                            $lockedPesanan
-                                ->resi_print_count
-                        ) + 1;
+                    PesananPerProduk::where('no_pesanan', $pesanan->no_pesanan)->update([
+                        'status_pesanan' => '1',
+                        'exporter_id' => Auth::id(),
+                    ]);
 
                     $lockedPesanan->save();
                 }
@@ -863,19 +698,11 @@ class PackingPesananController extends Controller
                 ->file(
                     $tempPath,
                     [
-                        'Content-Type' =>
-                            'application/pdf',
-
-                        'Content-Disposition' =>
-                            'inline; filename="RESI_' .
-                            $safeNoPesanan .
-                            '.pdf"',
+                        'Content-Type' => 'application/pdf',
+                        'Content-Disposition' => 'inline; filename="RESI_'.$safeNoPesanan.'.pdf"',
                     ]
                 )
-                ->deleteFileAfterSend(
-                    true
-                );
-
+                ->deleteFileAfterSend(true);
         } catch (\Throwable $e) {
             File::delete(
                 $tempPath
@@ -884,55 +711,37 @@ class PackingPesananController extends Controller
             Log::error(
                 'Cetak resi packing gagal.',
                 [
-                    'marketplace' =>
-                        $marketplace,
-
-                    'no_pesanan' =>
-                        $pesanan->no_pesanan,
-
-                    'error' =>
-                        $e->getMessage(),
-
-                    'file' =>
-                        $e->getFile(),
-
-                    'line' =>
-                        $e->getLine(),
+                    'marketplace' => $marketplace,
+                    'no_pesanan' => $pesanan->no_pesanan,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ]
             );
 
             return response(
                 '
-                <div style="
-                    font-family:Arial,sans-serif;
-                    max-width:800px;
-                    margin:40px auto;
-                    padding:30px;
-                ">
-                    <h2 style="color:#dc3545;">
-                        Gagal Cetak Resi
-                    </h2>
-
-                    <p>
-                        <strong>Marketplace:</strong>
-                        ' . e($marketplace) . '
-                    </p>
-
-                    <p>
-                        <strong>No. Pesanan:</strong>
-                        ' . e($pesanan->no_pesanan) . '
-                    </p>
-
-                    <p>
-                        <strong>Error:</strong>
-                        ' . e($e->getMessage()) . '
-                    </p>
-                </div>
+                    <div style="font-family:Arial,sans-serif; max-width:800px; margin:40px auto; padding:30px;">
+                        <h2 style="color:#dc3545;">Gagal Cetak Resi</h2>
+                        <p>
+                            <strong>Marketplace:</strong>'
+                            .e($marketplace).'
+                        </p>
+                        <p>
+                            <strong>No. Pesanan:</strong>
+                            '.e($pesanan->no_pesanan).'
+                        </p>
+                        <p>
+                            <strong>Error:</strong>
+                            '.e($e->getMessage()).'
+                        </p>
+                    </div>
                 ',
                 500
             );
         }
     }
+
     private function getRequestPdfLines(
         Pesanan $pesanan
     ): array {
