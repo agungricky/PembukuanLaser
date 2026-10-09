@@ -1920,52 +1920,20 @@ class EditorController extends Controller
         }
 
         $requests = DB::table('editor_requests as er')
-            ->join(
-                'pesanan_per_produk as pp',
-                'pp.id_per_produk',
-                '=',
-                'er.id_per_produk'
-            )
-            ->leftJoin(
-                'produk as pr',
-                'pr.sku',
-                '=',
-                'pp.sku'
-            )
-            ->leftJoin(
-                'pesanan as p',
-                'pp.no_pesanan',
-                '=',
-                'p.no_pesanan'
-            )
+            ->join('pesanan_per_produk as pp', 'pp.id_per_produk', '=', 'er.id_per_produk')
+            ->leftJoin('produk as pr', 'pr.sku', '=', 'pp.sku')
+            ->leftJoin('pesanan as p', 'pp.no_pesanan', '=', 'p.no_pesanan')
             ->join(
                 'editor_part_items as epi',
                 function ($join) use ($part) {
-                    $join->on(
-                        'epi.id_per_produk',
-                        '=',
-                        'er.id_per_produk'
-                    )
-                        ->where(
-                            'epi.editor_part_id',
-                            '=',
-                            $part->id
-                        );
+                    $join->on('epi.id_per_produk', '=', 'er.id_per_produk')
+                        ->where('epi.editor_part_id', '=', $part->id);
                 }
             )
-            ->where(
-                'er.editor_part_id',
-                $part->id
-            )
-            ->whereNotNull(
-                'er.locked_at'
-            )
-            ->whereIn(
-                'er.status_request',
-                [
-                    'normal',
-                    'random',
-                ]
+            ->where('er.editor_part_id', $part->id)
+            ->whereNotNull('er.locked_at')
+            ->whereIn('er.status_request',
+                ['normal', 'random']
             )
             ->whereRaw("UPPER(TRIM(pp.sku)) <> 'PLT028C'")
             ->select([
@@ -2007,17 +1975,9 @@ class EditorController extends Controller
                     )
                 ) ASC
             ")
-            ->orderByRaw('
-                LOWER(TRIM(pp.sku)) ASC
-            ')
-            ->orderBy(
-                'epi.urutan',
-                'asc'
-            )
-            ->orderBy(
-                'er.id',
-                'asc'
-            )
+            ->orderByRaw('LOWER(TRIM(pp.sku)) ASC')
+            ->orderBy('epi.urutan', 'asc')
+            ->orderBy('er.id', 'asc')
             ->get();
 
         if ($requests->isEmpty()) {
@@ -2064,19 +2024,14 @@ class EditorController extends Controller
             );
 
             $sku = strtoupper(
-                trim(
-                    (string) $request->sku
-                )
+                trim((string) $request->sku)
             );
 
             $svg = $writer->writeString(
                 (string) $request->no_pesanan
             );
 
-            $qrCode =
-                'data:image/svg+xml;base64,'.
-                base64_encode($svg);
-
+            $qrCode = 'data:image/svg+xml;base64,'.base64_encode($svg);
             for ($i = 1; $i <= $jumlah; $i++) {
                 $rows->push([
                     'id_per_produk' => $request->id_per_produk,
@@ -2132,10 +2087,6 @@ class EditorController extends Controller
             'portrait'
         );
 
-        return $pdf->download(
-            'QR_' .
-            $part->kode_part .
-            '.pdf'
-        );
+        return $pdf->download('QR_'.$part->kode_part.'.pdf');
     }
 }

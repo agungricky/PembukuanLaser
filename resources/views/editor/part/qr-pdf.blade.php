@@ -171,7 +171,7 @@
             white-space: nowrap;
         }
 
-        .spasi{
+        .spasi {
             margin-left: 4px;
             margin-right: 3px;
         }
@@ -215,7 +215,7 @@
                                         UNIT {{ $row['unit'] }}/{{ $row['jumlah'] }} <span class="spasi">|</span>
                                     @endif
 
-                                    {{ \Carbon\Carbon::parse($row['batas_kirim'])->format('d/m/Y H:i') }}
+                                    {{ $row['batas_kirim'] ? \Carbon\Carbon::parse($row['batas_kirim'])?->format('d/m/Y H:i') : '-' }}
                                 </div>
                             </td>
                             <td class="product-cell">

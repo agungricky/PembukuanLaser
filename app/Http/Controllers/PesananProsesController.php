@@ -156,7 +156,7 @@ class PesananProsesController extends Controller
             ->where(function ($query) {
                 $query->whereNull('batas_kirim_at')
                     ->orWhereBetween('batas_kirim_at', [
-                        now()->subDays(6)->startOfDay(),
+                        now()->subDays(7)->startOfDay(),
                         now()->endOfDay(),
                     ]);
             })
