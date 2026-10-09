@@ -438,19 +438,13 @@
 
                     if (!filterStatusKirim) {
                         $('#labelFilterKirim').text('Batas Kirim');
-                        icon.addClass(
-                            'fa-filter text-secondary'
-                        );
+                        icon.addClass('fa-filter text-secondary');
                     }
 
 
                     else if (filterStatusKirim === 'aman') {
-                        $('#labelFilterKirim')
-                            .text('Aman');
-
-                        icon.addClass(
-                            'fa-circle-check text-success'
-                        );
+                        $('#labelFilterKirim').text('Aman');
+                        icon.addClass('fa-circle-check text-success');
                     }
 
                     else if (filterStatusKirim === 'terlambat') {

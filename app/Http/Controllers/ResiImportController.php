@@ -232,20 +232,28 @@ class ResiImportController extends Controller
             ->unique()
             ->values();
 
-        $pesanan = Pesanan::query()
-            ->where('id_toko', $dataPreview['id_toko'])
-            ->whereIn('no_pesanan', $orderNumbers)
-            ->get(['no_pesanan', 'no_resi',])
-            ->keyBy(
-                fn ($item) => (string) $item->no_pesanan
+        // Batasi binding setiap query untuk import dengan banyak halaman.
+        $pesanan = collect();
+        $existingMappedOrders = collect();
+
+        foreach ($orderNumbers->chunk(500) as $batch) {
+            $pesanan = $pesanan->concat(
+                Pesanan::query()
+                    ->where('id_toko', $dataPreview['id_toko'])
+                    ->whereIn('no_pesanan', $batch)
+                    ->get(['no_pesanan', 'no_resi'])
             );
 
-        $existingMappedOrders = ResiPage::query()
-            ->whereIn('no_pesanan', $orderNumbers)
-            ->pluck('no_pesanan')
-            ->map(
-                fn ($value) => (string) $value
-            )
+            $existingMappedOrders = $existingMappedOrders->concat(
+                ResiPage::query()
+                    ->whereIn('no_pesanan', $batch)
+                    ->pluck('no_pesanan')
+            );
+        }
+
+        $pesanan = $pesanan->keyBy(fn ($item) => (string) $item->no_pesanan);
+        $existingMappedOrders = $existingMappedOrders
+            ->map(fn ($value) => (string) $value)
             ->unique()
             ->flip();
 
