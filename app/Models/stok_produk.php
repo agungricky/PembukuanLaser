@@ -9,8 +9,6 @@ class stok_produk extends Model
     protected $fillable = [
         'sku_id',
         'jumlah_tersedia',
-        'min_stok',
-        'processing',
         'created_at',
         'updated_at'
     ];

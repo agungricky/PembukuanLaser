@@ -31,41 +31,17 @@ class AppServiceProvider extends ServiceProvider
         Carbon::setLocale('id');
         Paginator::useBootstrapFive();
         View::composer('*', function ($view) {
+            // Data Login Untuk semua Halaman
             $dataLogin = Auth::user();
+
+            // Sidebar untuk menu jumlah sku & Kategori
             $countProduk = Produk::count();
             $countKategori = kategori::count();
-
-            $reguler = Exporter::where('user_id', Auth::id())
-                ->where('status', 'proses')
-                // ->where('source_type', 'reguler')
-                ->first();
-
-            $jumlahReguler = $reguler
-                ? PesananPerProduk::where('exporter_id', $reguler->id)
-                    ->distinct()
-                    ->count('sku')
-                : 0;
-
-            $stok = Exporter::where('user_id', Auth::id())
-                ->where('status', 'proses')
-                // ->where('source_type', 'stok')
-                ->first();
-
-            $jumlahStok = $stok ? stok_produk::where('exporter_id', $stok->id)
-                    ->distinct()
-                    ->count('sku_id')
-                : 0;
-
-            $produksi = [
-                'reguler' => $jumlahReguler,
-                'stok' => $jumlahStok
-            ];
 
             $view->with([
                 'dataLogin' => $dataLogin,
                 'countProduk' => $countProduk,
                 'countKategori' => $countKategori,
-                'produksi' => $produksi,
             ]);
         });
     }

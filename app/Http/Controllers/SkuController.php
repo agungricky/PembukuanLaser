@@ -156,7 +156,6 @@ class SkuController extends Controller
         stok_produk::create([
             'sku_id' => $produk->sku,
             'jumlah_tersedia' => 0,
-            'min_stok'=> 5,
         ]);
 
         return response()->json([
