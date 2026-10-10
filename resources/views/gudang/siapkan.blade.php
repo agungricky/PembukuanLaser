@@ -262,7 +262,7 @@
                         <option value="Cetak Resi Pertama">
                             Cetak Resi Pertama
                         </option>
-                        <option value="Cetak Ulang Resi">
+                        <option value="Pengecekan Resi">
                             Pengecekan Resi
                         </option>
                         <option value="Resi Hilang">
@@ -911,7 +911,6 @@
                         searchable: true,
                         className: 'px-3 py-0 produk-cell',
                         render: function(data, type, row) {
-                            console.log(row);
                             let html = '';
                             const barang = Array.isArray(row.pesanan_per_produk) ?
                                 row.pesanan_per_produk : [];

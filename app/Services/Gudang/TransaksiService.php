@@ -567,7 +567,7 @@ class TransaksiService
 
         try {
             PesananPerProduk::whereIn('no_pesanan', $request->no_pesanan)
-                ->update(['status_pesanan' => '1']);
+                                ->update(['status_pesanan' => '1']);
 
             $kebutuhan = collect($request->input('kebutuhan'));
             $sku = $kebutuhan->pluck('sku');
@@ -614,6 +614,12 @@ class TransaksiService
                     ]);
             }
 
+            Exporter::where('user_id', Auth::id())
+                        ->where('status', 'proses')
+                        ->update([
+                            'status' => 'selesai'
+                        ]);
+
             DB::commit();
 
             return response()->json([
@@ -651,33 +657,6 @@ class TransaksiService
             'message' => 'Data berhasil diupdate',
         ]);
     }
-
-    // private function belumdiImport($noPesanan)
-    // {
-    //     $resiPages = ResiPage::with('resi_imports')->whereIn('no_pesanan', $noPesanan)->get();
-    //     $pesananDitemukan = $resiPages->pluck('no_pesanan')->unique();
-    //     $pesananTidakDitemukan = collect($noPesanan)->diff($pesananDitemukan);
-    //     $tidakDitemukan = Pesanan::join(
-    //         'pesanan_per_produk',
-    //         'pesanan.no_pesanan',
-    //         '=',
-    //         'pesanan_per_produk.no_pesanan'
-    //     )
-    //         ->whereIn('pesanan.no_pesanan', $pesananTidakDitemukan)
-    //         ->get([
-    //             'pesanan.no_pesanan',
-    //             'pesanan.no_resi',
-    //             'pesanan_per_produk.sku',
-    //         ]);
-
-    //     if ($pesananTidakDitemukan->isNotEmpty()) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Terdapat Pesanan yang Resinya Belum di Import.',
-    //             'tidak_ditemukan' => $tidakDitemukan->values(),
-    //         ], 422);
-    //     }
-    // }
 
     public function previewResi($token)
     {
@@ -1262,13 +1241,25 @@ class TransaksiService
         DB::beginTransaction();
         try {
             $response = $this->viewResi($request);
-            $exporter = Exporter::create([
-                'user_id' => Auth::id(),
-                'role' => 'gudang',
-                'source_type' => 'stok',
-                'status' => 'proses',
-                'keterangan' => $request->alasan_export,
-            ]);
+
+            $exportAktif = Exporter::where('user_id', Auth::id())
+                ->where('status', 'proses')
+                ->first();
+            
+            if ($exportAktif != null) {
+                $exporter = Exporter::where('id', $exportAktif->id)->update([
+                    'keterangan' => $request->alasan_export,
+                ]);
+
+                $exporter = $exportAktif;
+            } else {
+                $exporter = Exporter::create([
+                    'user_id' => Auth::id(),
+                    'role' => 'gudang',
+                    'status' => 'proses',
+                    'keterangan' => $request->alasan_export,
+                ]);
+            }
 
             PesananPerProduk::whereIn('no_pesanan', $request->pesanan)->update([
                 'exporter_id' => $exporter->id,
