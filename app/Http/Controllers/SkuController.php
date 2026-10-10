@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\kategori;
 use App\Models\Produk;
+use App\Models\stok_produk;
 use Illuminate\Http\Request;
 
 class SkuController extends Controller
@@ -143,13 +144,19 @@ class SkuController extends Controller
             'hpp' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
         ]);
 
-        Produk::create([
+        $produk = Produk::create([
             'sku' => $request->sku,
             'nama_produk' => $request->nama_produk,
             'variasi' => $request->variasi,
             'hpp' => $request->hpp,
             'status' => 'aktif',
             'kategori_id' => $request->kategori_id,
+        ]);
+
+        stok_produk::create([
+            'sku_id' => $produk->sku,
+            'jumlah_tersedia' => 0,
+            'min_stok'=> 5,
         ]);
 
         return response()->json([
