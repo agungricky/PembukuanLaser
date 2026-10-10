@@ -1327,7 +1327,7 @@
                 // Ambil semua no pesanan yang dicentang
                 pesananExport = selected
                     .map(function() {
-                        return $(this).data('no-pesanan');
+                        return String($(this).attr('data-no-pesanan'));
                     })
                     .get();
 
