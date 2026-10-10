@@ -262,8 +262,8 @@
                         <option value="Cetak Resi Pertama">
                             Cetak Resi Pertama
                         </option>
-                        <option value="Cetak Ulang Resi">
-                            Cetak Ulang Resi
+                        <option value="Pengecekan Resi">
+                            Pengecekan Resi
                         </option>
                         <option value="Resi Rusak">
                             Resi Rusak
