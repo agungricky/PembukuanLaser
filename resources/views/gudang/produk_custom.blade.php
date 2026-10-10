@@ -262,8 +262,8 @@
                         <option value="Cetak Resi Pertama">
                             Cetak Resi Pertama
                         </option>
-                        <option value="Cetak Ulang Resi">
-                            Cetak Ulang Resi
+                        <option value="Pengecekan Resi">
+                            Pengecekan Resi
                         </option>
                         <option value="Resi Rusak">
                             Resi Rusak
@@ -1327,7 +1327,7 @@
                 // Ambil semua no pesanan yang dicentang
                 pesananExport = selected
                     .map(function() {
-                        return $(this).data('no-pesanan');
+                        return String($(this).attr('data-no-pesanan'));
                     })
                     .get();
 

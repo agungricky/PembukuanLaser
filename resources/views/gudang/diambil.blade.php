@@ -838,7 +838,8 @@
                     dataType: "json",
                     data: JSON.stringify({
                         pesanan: pesananExport,
-                        alasan_export: alasanExport
+                        alasan_export: alasanExport,
+                        source: 'cetak ulang resi : Halaman di selesaikan'
                     }),
                     beforeSend: function() {
                         Swal.fire({
