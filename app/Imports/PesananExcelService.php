@@ -258,67 +258,40 @@ class PesananExcelService
                 $jumlahSku = count($skuList);
 
                 if ($jumlahSku > 0) {
-
-                    // Total subtotal marketplace
                     $subtotalMarketplace = (float) $subtotal;
-
-                    // Konversi ke satuan sen agar pembulatan akurat
                     $totalSen = (int) round($subtotalMarketplace * 100);
-
-                    // Pembagian subtotal berdasarkan jumlah SKU
                     $hargaDasarSen = intdiv($totalSen, $jumlahSku);
                     $sisaSen = $totalSen % $jumlahSku;
 
                     foreach ($skuList as $index => $skuItem) {
-
                         $sku = $this->normalizeSku($skuItem) ?? '';
-
                         $produk = Produk::where('sku', $sku)->first();
-
                         $multiplier = $this->getSkuMultiplier($skuItem);
-
                         $jumlahReal = $jumlahPesanan * $multiplier;
-
-                        // Subtotal untuk masing-masing SKU
                         $subtotalSen = $hargaDasarSen;
-
-                        // Sisa pembulatan diberikan ke SKU terakhir
                         if ($index === $jumlahSku - 1) {
                             $subtotalSen += $sisaSen;
                         }
-
                         $subtotalReal = $subtotalSen / 100;
-
-                        // Harga satuan berdasarkan jumlah real
                         $hargaJualReal = $jumlahReal > 0
                             ? round($subtotalReal / $jumlahReal, 2)
                             : 0;
-
                         $custom = $this->isCustomSku($skuItem);
-
                         $produkDetail[] = [
                             'sku_original' => $skuItem,
                             'sku_asli' => $skuItem,
                             '__sku' => $skuItem,
                             'sku' => $sku,
-
                             'custom' => $custom,
                             'multiplier' => $multiplier,
-
                             'jumlah_pesanan' => $jumlahPesanan,
                             'jumlah' => $jumlahReal,
-
-                            // Simpan harga marketplace asli sebagai referensi
                             'harga_paket_original' => $hargaMarketplace,
-
-                            // Harga yang telah dibagi
                             'harga_original' => $hargaJualReal,
                             'harga' => $hargaJualReal,
                             'subtotal' => $subtotalReal,
-
                             'nama_produk' => $produk?->nama_produk
                                 ?? 'SKU TIDAK DITEMUKAN',
-
                             'variasi' => $produk?->variasi
                                 ?? 'SKU TIDAK DITEMUKAN',
                         ];
@@ -326,47 +299,30 @@ class PesananExcelService
                 }
 
             } else {
-
-                /*
-                |--------------------------------------------------------------------------
-                | SKU TUNGGAL
-                |--------------------------------------------------------------------------
-                | Tidak perlu dibagi berdasarkan jumlah SKU.
-                |--------------------------------------------------------------------------
-                */
-
+                // Tidak perlu dibagi berdasarkan jumlah SKU.
                 $sku = $this->normalizeSku($skuOriginal) ?? '';
-
                 $multiplier = $this->getSkuMultiplier($skuOriginal);
-
                 $jumlahReal = $jumlahPesanan * $multiplier;
-
                 $hargaJualReal = $multiplier > 0
                     ? round($hargaMarketplace / $multiplier, 2)
                     : $hargaMarketplace;
 
                 $custom = $this->isCustomSku($skuOriginal);
-
                 $produkDetail[] = [
                     'sku_original' => $skuOriginal,
                     'sku_asli' => $skuOriginal,
                     '__sku' => $skuOriginal,
                     'sku' => $sku,
-
                     'custom' => $custom,
                     'multiplier' => $multiplier,
-
                     'jumlah_pesanan' => $jumlahPesanan,
                     'jumlah' => $jumlahReal,
-
                     'harga_original' => $hargaMarketplace,
                     'harga' => $hargaJualReal,
                     'subtotal' => $subtotal,
-
                     'nama_produk' => trim(
                         (string) ($r['H'] ?? '')
                     ),
-
                     'variasi' => trim(
                         (string) ($r['I'] ?? '')
                     ),
