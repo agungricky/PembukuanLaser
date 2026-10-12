@@ -146,7 +146,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Table Container -->
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0" id="orderlist">
@@ -750,6 +750,9 @@
                                 new Date(row.batas_kirim_at) :
                                 null;
 
+                            const cetakResi = row.pesanan_per_produk[0]?.cetak_resi != null ?
+                                '<i class="fa-solid fa-circle-check text-success" title="Pernah Cetak Resi"></i>' : '';
+
                             const terlambat = batasKirim && new Date() > batasKirim;
                             return `
                                 <div class="d-flex flex-column gap-1">
@@ -760,8 +763,10 @@
 
                                         <span class="fw-bold text-dark"
                                             style="font-size: 14px;">
-                                            ${row.no_pesanan ?? '-'}
+                                            ${row.no_pesanan ?? '-'} 
                                         </span>
+
+                                        ${cetakResi}
                                     </div>
 
                                     <div class="d-flex flex-column">
@@ -830,17 +835,17 @@
                                     ${
                                         terlambat
                                             ? `
-                                                                                                                                                                                                                                                                                        <div class="mt-1">
-                                                                                                                                                                                                                                                                                            <span
-                                                                                                                                                                                                                                                                                                class="badge bg-danger text-white"
-                                                                                                                                                                                                                                                                                                style="font-size: 9px;">
+                                                                                                                                                                                                                                                                                            <div class="mt-1">
+                                                                                                                                                                                                                                                                                                <span
+                                                                                                                                                                                                                                                                                                    class="badge bg-danger text-white"
+                                                                                                                                                                                                                                                                                                    style="font-size: 9px;">
 
-                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                                                                                                                                                                                                                                                                                                Terlambat
+                                                                                                                                                                                                                                                                                                    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                                                                                                                                                                                                                                                                                    Terlambat
 
-                                                                                                                                                                                                                                                                                            </span>
-                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                    `
+                                                                                                                                                                                                                                                                                                </span>
+                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                        `
                                             : ''
                                     }
                                 </div>
@@ -947,12 +952,12 @@
                                             ${
                                                 item.variasi
                                                     ? `
-                                                                                                                                                                                                                                                                    <span
-                                                                                                                                                                                                                                                                        class="badge bg-light text-dark border fw-normal"
-                                                                                                                                                                                                                                                                        style="font-size:10px;">
-                                                                                                                                                                                                                                                                        ${item.variasi}
-                                                                                                                                                                                                                                                                    </span>
-                                                                                                                                                                                                                                                                `
+                                                                                                                                                                                                                                                                        <span
+                                                                                                                                                                                                                                                                            class="badge bg-light text-dark border fw-normal"
+                                                                                                                                                                                                                                                                            style="font-size:10px;">
+                                                                                                                                                                                                                                                                            ${item.variasi}
+                                                                                                                                                                                                                                                                        </span>
+                                                                                                                                                                                                                                                                    `
                                                     : ''
                                             }
 
@@ -1027,17 +1032,17 @@
                                         ${
                                             tersedia
                                                 ? `
-                                                                                                                                            <span class="status-stok stok-tersedia">
-                                                                                                                                                <i class="fa-solid fa-circle-check"></i>
-                                                                                                                                                Tersedia
-                                                                                                                                            </span>
-                                                                                                                                        `
+                                                                                                                                                <span class="status-stok stok-tersedia">
+                                                                                                                                                    <i class="fa-solid fa-circle-check"></i>
+                                                                                                                                                    Tersedia
+                                                                                                                                                </span>
+                                                                                                                                            `
                                                 : `
-                                                                                                                                            <span class="status-stok stok-kurang">
-                                                                                                                                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                                                                                                                                Kurang
-                                                                                                                                            </span>
-                                                                                                                                        `
+                                                                                                                                                <span class="status-stok stok-kurang">
+                                                                                                                                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                                                                                                                                    Kurang
+                                                                                                                                                </span>
+                                                                                                                                            `
                                         }
 
                                     </div>
@@ -1435,15 +1440,15 @@
                                         <td>${index + 1}</td>
                                         <td>${item ?? '-'}</td>
                                         ${index === 0 ? `
-                                                                                        <td rowspan="${response.data.length}" class="text-center align-middle">
-                                                                                            <button
-                                                                                                type="button"
-                                                                                                id="copy-pesanan"
-                                                                                                class="btn btn-primary btn-sm">
-                                                                                                Copy Semua No. Pesanan
-                                                                                            </button>
-                                                                                        </td>
-                                                                                    ` : ''}
+                                                                                            <td rowspan="${response.data.length}" class="text-center align-middle">
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    id="copy-pesanan"
+                                                                                                    class="btn btn-primary btn-sm">
+                                                                                                    Copy Semua No. Pesanan
+                                                                                                </button>
+                                                                                            </td>
+                                                                                        ` : ''}
                                     </tr>
                                 `)
                                 .join('');
