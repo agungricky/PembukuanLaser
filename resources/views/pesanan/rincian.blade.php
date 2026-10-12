@@ -666,8 +666,6 @@
                 </div>
             </div>
         @endif
-
-
     </div>
 
     <div class="modal fade" id="modalEditPesanan" tabindex="-1" aria-labelledby="modalEditPesananLabel"

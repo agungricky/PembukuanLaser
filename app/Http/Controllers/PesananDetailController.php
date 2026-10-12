@@ -56,72 +56,26 @@ class PesananDetailController extends Controller
                 'pp.id_per_produk'
             )
             ->get();
-        // dd($items->take(30)->toArray());
 
-        $totalHarga = (float) (
-            $pesanan->total_harga ?? 0
-        );
-
-        $biayaAdmin = (float) (
-            $pesanan->total_admin ?? 0
-        );
-
-        $totalPencairan = (float) (
-            $pesanan->pencairan ?? 0
-        );
-
-        $subtotalItems = (float) $items->sum(
-            'subtotal'
-        );
-
-        $subtotal = $subtotalItems > 0
-            ? $subtotalItems
-            : $totalHarga;
-
-        $totalHPP = $pesanan->total_hpp !== null
-            ? (float) $pesanan->total_hpp
-            : (float) DB::table(
-                'pesanan_per_produk'
-            )
-                ->where(
-                    'no_pesanan',
-                    $no_pesanan
-                )
+        $totalHarga = (float) ($pesanan->total_harga ?? 0);
+        $biayaAdmin = (float) ($pesanan->total_admin ?? 0);
+        $totalPencairan = (float) ($pesanan->pencairan ?? 0);
+        $subtotalItems = (float) $items->sum('subtotal');
+        $subtotal = $subtotalItems > 0 ? $subtotalItems : $totalHarga;
+        $totalHPP = $pesanan->total_hpp !== null ? (float) $pesanan->total_hpp : (float) DB::table('pesanan_per_produk')
+                ->where('no_pesanan', $no_pesanan)
                 ->selectRaw(
                     'COALESCE(SUM(COALESCE(hpp, 0) * COALESCE(jumlah, 0)), 0) as total_hpp'
                 )
-                ->value(
-                    'total_hpp'
-                );
+                ->value('total_hpp');
 
-        $tarik =
-            $totalHarga -
-            $biayaAdmin;
-
-        $totalPenghasilan =
-            $totalPencairan -
-            $totalHPP;
-
-        $margin = $totalHarga > 0
-            ? round(
-                ($totalPenghasilan / $totalHarga) * 100,
-                2
-            )
-            : 0;
-
-        $isProfit =
-            $totalPenghasilan >= 0;
-
-        $selisih =
-            $totalPencairan -
-            $tarik;
-
-        $selisihClass = $selisih < 0
-            ? 'text-danger'
-            : (
-                $selisih > 0
-                    ? 'text-success'
-                    : 'text-muted'
+        $tarik = $totalHarga - $biayaAdmin;
+        $totalPenghasilan = $totalPencairan - $totalHPP;
+        $margin = $totalHarga > 0 ? round(($totalPenghasilan / $totalHarga) * 100, 2) : 0;
+        $isProfit = $totalPenghasilan >= 0;
+        $selisih = $totalPencairan - $tarik;
+        $selisihClass = $selisih < 0 ? 'text-danger' : (
+                $selisih > 0 ? 'text-success' : 'text-muted'
             );
 
         $selisihText =
@@ -134,15 +88,9 @@ class PesananDetailController extends Controller
                 '.'
             );
 
-        $totalItem =
-            (int) $items->count();
-
-        $totalQty =
-            (int) $items->sum('jumlah');
-
-        $status = strtolower(
-            (string) $pesanan->status
-        );
+        $totalItem = (int) $items->count();
+        $totalQty = (int) $items->sum('jumlah');
+        $status = strtolower((string) $pesanan->status);
 
         $badgeMap = [
             'proses' => 'warning',
@@ -160,9 +108,7 @@ class PesananDetailController extends Controller
 
         $statusLabel = match ($status) {
             'pengiriman_gagal' => 'Pengiriman Gagal',
-
             'pengembalian' => 'Pengembalian',
-
             default => ucfirst(
                 $status ?: '-'
             ),
