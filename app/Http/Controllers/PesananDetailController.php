@@ -53,9 +53,9 @@ class PesananDetailController extends Controller
         $subtotalItems = (float) $items->sum('subtotal');
         $subtotal = $subtotalItems > 0 ? $subtotalItems : $totalHarga;
         $totalHPP = $pesanan->total_hpp !== null ? (float) $pesanan->total_hpp : (float) DB::table('pesanan_per_produk')
-                ->where('no_pesanan', $no_pesanan)
-                ->selectRaw('COALESCE(SUM(COALESCE(hpp, 0) * COALESCE(jumlah, 0)), 0) as total_hpp')
-                ->value('total_hpp');
+            ->where('no_pesanan', $no_pesanan)
+            ->selectRaw('COALESCE(SUM(COALESCE(hpp, 0) * COALESCE(jumlah, 0)), 0) as total_hpp')
+            ->value('total_hpp');
 
         $tarik = $totalHarga - $biayaAdmin;
         $totalPenghasilan = $totalPencairan - $totalHPP;
@@ -63,7 +63,7 @@ class PesananDetailController extends Controller
         $isProfit = $totalPenghasilan >= 0;
         $selisih = $totalPencairan - $tarik;
         $selisihClass = $selisih < 0 ? 'text-danger' : ($selisih > 0 ? 'text-success' : 'text-muted');
-        $selisihText = ($selisih < 0 ? '-' : ''). 'Rp'. number_format(abs($selisih), 0, ',', '.');
+        $selisihText = ($selisih < 0 ? '-' : '').'Rp'.number_format(abs($selisih), 0, ',', '.');
 
         $totalItem = (int) $items->count();
         $totalQty = (int) $items->sum('jumlah');
@@ -140,21 +140,21 @@ class PesananDetailController extends Controller
         $dataPlat = $dataPlat === [] ? null : $dataPlat;
         $pengerjaanPesanan = $pesanan->pesanan_per_produk[0];
         $mutasi = $pengerjaanPesanan->mutasi != null ? true : false;
-        $exported = $pengerjaanPesanan->exporter != null ? true : false; 
-        
+        $exported = $pengerjaanPesanan->exporter != null ? true : false;
+
         if ($mutasi == true) {
             $statusPengerjaan = [
                 'proses' => 'Dikerjakan',
                 'role' => $pengerjaanPesanan?->mutasi?->admin_penjualan?->role == 'pegawai' ? 'Admin Penjualan' : null,
                 'user' => $pengerjaanPesanan?->mutasi?->admin_penjualan?->name,
             ];
-        }elseif ($exported == true) {
+        } elseif ($exported == true) {
             $statusPengerjaan = [
                 'proses' => 'Exported',
                 'role' => $pengerjaanPesanan?->exporter?->role == 'gudang' ? 'Gudang' : 'Produksi',
                 'user' => $pengerjaanPesanan?->exporter?->user?->name,
             ];
-        }else{
+        } else {
             $statusPengerjaan = [
                 'proses' => null,
                 'role' => null,

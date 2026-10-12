@@ -8,6 +8,7 @@ class mutasi_stok extends Model
 {
     protected $fillable = [
         'stok_produk_id',
+        'source',
         'gudang_id',
         'produksi_id', 	
         'adm_penjualan_id', 

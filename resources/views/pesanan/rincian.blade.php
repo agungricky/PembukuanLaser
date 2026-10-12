@@ -435,7 +435,7 @@
                                 @if ($pesanan->batas_kirim_at)
                                     <i class="bi bi-check-circle-fill"></i>
                                 @endif
-                                INPUT
+                                ADMIN PENJUALAN
                             </div>
                             <div class="step-info">
                                <strong>{{ $pesanan->user['name'] }}</strong> · {{ $tanggalInput  }}
@@ -444,18 +444,21 @@
                     </div>
                    @endif
 
-                    <!-- EXPORTED -->
-                    <div class="order-step" data-step="exported">
-                        <div class="step-inner">
-                            <div class="step-title">
-                                <i class="bi bi-check-circle-fill"></i>
-                                GUDANG
-                            </div>
-                            <div class="step-info">
-                                <strong>Anam</strong> · 13/04 10:42
+                    <!-- GUDANG -->
+                    @if ($pesanan?->pesanan_per_produk)
+                        <div class="order-step" data-step="exported">
+                            <div class="step-inner">
+                                <div class="step-title">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    GUDANG
+                                </div>
+                                <div class="step-info">
+                                    <strong>Anam</strong> · 13/04 10:42
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    @endif
+                    
 
                     <!-- EDITOR -->
                     <div class="order-step" data-step="editor">
@@ -512,7 +515,6 @@
 
             </div>
         </div>
-
 
         <div class="card shadow-sm border-0 mb-3">
             <div class="card-header bg-white">
