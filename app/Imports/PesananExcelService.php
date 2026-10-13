@@ -144,7 +144,7 @@ class PesananExcelService
 
                         $subtotal = $subtotalSen / 100;
                         $hargaJualReal = $jumlahReal > 0
-                            ? round($subtotal / $jumlahReal, 2)
+                            ? round($subtotal / $jumlahReal)
                             : 0;
 
                         $custom = $this->isCustomSku($skuItem);
@@ -274,7 +274,7 @@ class PesananExcelService
                         }
                         $subtotalReal = $subtotalSen / 100;
                         $hargaJualReal = $jumlahReal > 0
-                            ? round($subtotalReal / $jumlahReal, 2)
+                            ? round($subtotal / $jumlahReal)
                             : 0;
                         $custom = $this->isCustomSku($skuItem);
                         $produkDetail[] = [
