@@ -106,10 +106,10 @@
                                             </div>
                                         </td>
                                     </tr>
-                                    {{-- <tr>
+                                    <tr>
                                         <td class="text-muted">Tanggal Input</td>
                                         <td>{{ $tanggalInput }}</td>
-                                    </tr> --}}
+                                    </tr>
                                     <tr>
                                         <td class="text-muted">Pembeli</td>
                                         <td>{{ $pesanan->nama_pembeli ?? '-' }}</td>
@@ -414,107 +414,118 @@
             </div>
         </div>
 
-        <div class="card shadow-sm border-0 mb-3">
+        @if ($progresPesanan->isNotEmpty())
+            <div class="card shadow-sm border-0 mb-3">
 
-            <div class="card-header bg-white">
-                <h6 class="mb-0 fw-semibold">
-                    <i class="bi bi-diagram-3 me-2 text-primary"></i>
-                    Proses Pesanan
-                </h6>
-            </div>
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-semibold">
+                        <i class="bi bi-diagram-3 me-2 text-primary"></i>
+                        Proses Pesanan
+                    </h6>
+                </div>
 
-            <div class="card-body py-3">
+                <div class="card-body py-3">
 
-                <div class="order-flow">
+                    <div class="order-flow">
 
-                    <!-- INPUT -->
-                   @if ($tanggalInput)
-                        <div class="order-step" data-step="input">
-                        <div class="step-inner">
-                            <div class="step-title">
-                                @if ($pesanan->batas_kirim_at)
-                                    <i class="bi bi-check-circle-fill"></i>
-                                @endif
-                                ADMIN PENJUALAN
-                            </div>
-                            <div class="step-info">
-                               <strong>{{ $pesanan->user['name'] }}</strong> · {{ $tanggalInput  }}
-                            </div>
-                        </div>
-                    </div>
-                   @endif
-
-                    <!-- GUDANG -->
-                    @if ($pesanan?->pesanan_per_produk)
-                        <div class="order-step" data-step="exported">
-                            <div class="step-inner">
-                                <div class="step-title">
-                                    <i class="bi bi-check-circle-fill"></i>
-                                    GUDANG
-                                </div>
-                                <div class="step-info">
-                                    <strong>Anam</strong> · 13/04 10:42
+                        <!-- INPUT -->
+                        @if (isset($progresPesanan['pegawai']))
+                            <div class="order-step" data-step="input">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        @if ($pesanan->batas_kirim_at)
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        @endif
+                                        ADMIN PENJUALAN
+                                    </div>
+                                    <div class="step-info">
+                                        <strong>{{ $progresPesanan['pegawai']->users->name }}</strong> · {{ $progresPesanan['pegawai']->updated_at->format('d/m • H.i') }}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    @endif
-                    
+                        @endif
 
-                    <!-- EDITOR -->
-                    <div class="order-step" data-step="editor">
-                        <div class="step-inner">
-                            <div class="step-title">
-                                <i class="bi bi-check-circle-fill"></i>
-                                EDITOR
+                        <!-- GUDANG -->
+                        @if (isset($progresPesanan['gudang']))
+                            <div class="order-step" data-step="exported">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        @if ($pesanan?->pesanan_per_produk[0]?->mutasi_stok_id != null)
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        @endif
+                                        GUDANG
+                                    </div>
+                                    <div class="step-info">
+                                        <strong>{{ $progresPesanan['gudang']->users->name }}</strong> · {{ $progresPesanan['gudang']->updated_at->format('d/m • H.i') }}
+                                    </div>
+                                </div>
                             </div>
-                            <div class="step-info">
-                                <strong>Sintia</strong> · 14/07 14:20
-                            </div>
-                        </div>
-                    </div>
+                        @endif
 
-                    <!-- PRODUKSI -->
-                    <div class="order-step" data-step="produksi">
-                        <div class="step-inner">
-                            <div class="step-title">
-                                <i class="bi bi-check-circle-fill"></i>
-                                PRODUKSI
+                        <!-- EDITOR -->
+                        @if (isset($editor))
+                            <div class="order-step" data-step="editor">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        EDITOR
+                                    </div>
+                                    <div class="step-info">
+                                        <strong>Sintia</strong> · 14/07 14:20
+                                    </div>
+                                </div>
                             </div>
-                            <div class="step-info">
-                                <strong>Budi</strong> · 14/07 15:10
-                            </div>
-                        </div>
-                    </div>
+                        @endif
 
-                    <!-- PACKING -->
-                    <div class="order-step" data-step="packing">
-                        <div class="step-inner">
-                            <div class="step-title">
-                                <i class="bi bi-check-circle-fill"></i>
-                                PACKING
+                        <!-- PRODUKSI -->
+                        @if (isset($produksi))
+                            <div class="order-step" data-step="produksi">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        PRODUKSI
+                                    </div>
+                                    <div class="step-info">
+                                        <strong>Budi</strong> · 14/07 15:10
+                                    </div>
+                                </div>
                             </div>
-                            <div class="step-info">
-                                <strong>Rina</strong> · 14/07 16:00
-                            </div>
-                        </div>
-                    </div>
+                        @endif
 
-                    <!-- DIKIRIM -->
-                    <div class="order-step pending" data-step="dikirim">
-                        <div class="step-inner">
-                            <div class="step-title">
-                                DIKIRIM
+                        <!-- PACKING -->
+                        @if (isset($packing))
+                            <div class="order-step" data-step="packing">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        PACKING
+                                    </div>
+                                    <div class="step-info">
+                                        <strong>Rina</strong> · 14/07 16:00
+                                    </div>
+                                </div>
                             </div>
-                            <div class="step-info">
-                                Belum diproses
+                        @endif
+
+                        <!-- DIKIRIM -->
+                        @if (isset($dikirim))
+                            <div class="order-step pending" data-step="dikirim">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        DIKIRIM
+                                    </div>
+                                    <div class="step-info">
+                                        Belum diproses
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        @endif
+
                     </div>
 
                 </div>
-
             </div>
-        </div>
+        @endif
 
         <div class="card shadow-sm border-0 mb-3">
             <div class="card-header bg-white">
@@ -1289,7 +1300,7 @@
                     },
                     {
                         icon: 'bi-check-circle-fill',
-                        text: 'Data berhasil diteruskan ke editor'
+                        text: 'Gudang selesai'
                     }
                 ],
 

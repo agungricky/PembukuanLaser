@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\EditorRequest;
 use App\Models\Pesanan;
+use App\Models\progres_pesanan;
 use App\Models\Toko;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -162,6 +163,12 @@ class PesananDetailController extends Controller
             ];
         }
 
+        $progresPesanan = progres_pesanan::with('users')->where('no_pesanan', $pesanan->no_pesanan)->get()
+            ->keyBy('role');
+
+
+        // dd($progresPesanan->toArray());
+
         return view(
             'pesanan.rincian',
             [
@@ -202,6 +209,7 @@ class PesananDetailController extends Controller
 
                 'dataPlat' => $dataPlat,
                 'statusPengerjaan' => $statusPengerjaan,
+                'progresPesanan' => $progresPesanan,
             ]
         );
     }

@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Imports\PesananExcelService;
 use App\Models\Pesanan;
+use App\Models\progres_pesanan;
 use App\Models\Toko;
 use App\Services\EditorPartService;
 use App\Services\Pesanan\CetakResiService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -235,8 +237,6 @@ class PesananController extends Controller
         $data = $marketplace === 'Shopee'
             ? $excelService->parseShopee($path)
             : $excelService->parseTikTok($path);
-
-        // dd($data);
 
         if (empty($data)) {
             return response()->json([
@@ -626,6 +626,8 @@ class PesananController extends Controller
                 }
 
                 $previewItem = $previewByOrder->get($noPesanan, []);
+
+                // Batas kirim dimatikan karna batas kirim diganti menggunakan import resi
                 $batasKirimAt = $previewItem['batas_kirim_at']
                     ?? $item['batas_kirim_at']
                     ?? null;
@@ -657,6 +659,12 @@ class PesananController extends Controller
                     // 'batas_kirim_at' => $batasKirimAt,
                     'batas_kirim_raw' => $batasKirimRaw,
                     'batas_kirim_source' => $batasKirimSource,
+                ]);
+
+                progres_pesanan::create([
+                    'no_pesanan' => $noPesanan,
+                    'role' => Auth::user()->role,
+                    'user_id' => Auth::id(),
                 ]);
 
                 $totalHpp = 0;

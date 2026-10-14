@@ -130,6 +130,7 @@ Route::middleware(['web', 'auth'])->group(function () {
                 Route::post('/simpan', 'store')->name('resi.store');
             });
 
+        // Rincian
         Route::controller(PesananDetailController::class)
             ->group(function () {
                 Route::get('pesanan/{no_pesanan}', 'show')->name('pesanan.show');

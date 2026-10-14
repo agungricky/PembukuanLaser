@@ -6,6 +6,7 @@ use App\Models\Exporter;
 use App\Models\mutasi_stok;
 use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
+use App\Models\progres_pesanan;
 use App\Models\ResiPage;
 use App\Models\stok_produk;
 use App\Services\Pdf\CompatibleFpdi as Fpdi;
@@ -597,7 +598,7 @@ class TransaksiService
                 if ($stok == true) {
                     $mutasi = mutasi_stok::create([
                         'stok_produk_id' => $data_stok->id,
-                        'source'=> 'stok',
+                        'source' => 'stok',
                         'adm_penjualan_id' => $request->pengambil_barang,
                         'gudang_id' => Auth::id(),
                         'jenis_mutasi' => 'keluar',
@@ -608,7 +609,7 @@ class TransaksiService
                 } elseif ($stok == false) {
                     $mutasi = mutasi_stok::create([
                         'stok_produk_id' => $data_stok->id,
-                        'source'=> 'produksi',
+                        'source' => 'produksi',
                         'adm_penjualan_id' => $request->pengambil_barang,
                         'gudang_id' => Auth::id(),
                         'jenis_mutasi' => 'keluar',
@@ -623,8 +624,23 @@ class TransaksiService
                     ->update([
                         'mutasi_stok_id' => $mutasi->id,
                     ]);
-
             }
+
+            $userId = Auth::id();
+            $role = Auth::user()->role;
+            collect($request->no_pesanan)->each(function ($noPesanan) use ($userId, $role) {
+                $progres = progres_pesanan::updateOrCreate(
+                    [
+                        'no_pesanan' => $noPesanan,
+                        'role' => $role,
+                    ],
+                    [
+                        'user_id' => $userId,
+                    ]
+                );
+
+                $progres->touch();
+            });
 
             Exporter::where('user_id', Auth::id())
                 ->where('status', 'proses')
@@ -1276,6 +1292,22 @@ class TransaksiService
             PesananPerProduk::whereIn('no_pesanan', $request->pesanan)->update([
                 'exporter_id' => $exporter->id,
             ]);
+
+            $now = now();
+            $userId = Auth::id();
+            $role = Auth::user()->role;
+
+            $data = collect($request->pesanan)->map(function ($noPesanan) use ($now, $userId, $role) {
+                return [
+                    'no_pesanan' => $noPesanan,
+                    'role' => $role,
+                    'user_id' => $userId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            })->toArray();
+
+            progres_pesanan::insert($data);
 
             DB::commit();
 
