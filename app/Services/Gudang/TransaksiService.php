@@ -123,6 +123,7 @@ class TransaksiService
                 'ppp.no_pesanan',
                 'ppp.sku',
                 'ppp.jumlah',
+                'ppp.exporter_id',
                 'p.batas_kirim_at',
             ])
             ->orderByRaw(
@@ -232,6 +233,7 @@ class TransaksiService
                                 'stok_sisa' => $alokasi['stok_sisa'] ?? 0,
                                 'tersedia' => $alokasi['tersedia'] ?? false,
                                 'produk' => $item->produk,
+                                'cetak_resi' => $item->exporter_id,
                             ];
                         })
                         ->values()

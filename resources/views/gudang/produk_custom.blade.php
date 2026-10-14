@@ -751,6 +751,12 @@
                                 new Date(row.batas_kirim_at) :
                                 null;
 
+                            const cetakResi = row.pesanan_per_produk?.some(item => item.cetak_resi != null) ?
+                                `<span class="fa-stack" style="font-size: 9px;" title="Pernah Cetak Resi">
+                                    <i class="fa-solid fa-circle fa-stack-2x text-success"></i>
+                                    <i class="fa-solid fa-print fa-stack-1x text-white"></i>
+                                </span>` : '';
+
                             const terlambat = batasKirim && new Date() > batasKirim;
                             return `
                                 <div class="d-flex flex-column gap-1">
@@ -763,6 +769,8 @@
                                             style="font-size: 14px;">
                                             ${row.no_pesanan ?? '-'}
                                         </span>
+
+                                        ${cetakResi}
                                     </div>
 
                                     <div class="d-flex flex-column">

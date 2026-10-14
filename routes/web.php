@@ -133,6 +133,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         // Rincian
         Route::controller(PesananDetailController::class)
             ->group(function () {
+                // Detail Rincian
                 Route::get('pesanan/{no_pesanan}', 'show')->name('pesanan.show');
                 Route::put('pesanan/{no_pesanan}', 'update')->name('pesanan.update');
             });
