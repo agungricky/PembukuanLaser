@@ -6,6 +6,7 @@ use App\Models\Exporter;
 use App\Models\mutasi_stok;
 use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
+use App\Models\progres_pesanan;
 use App\Models\ResiPage;
 use App\Models\stok_produk;
 use App\Services\Pdf\CompatibleFpdi as Fpdi;
@@ -569,7 +570,7 @@ class TransaksiService
 
         try {
             PesananPerProduk::whereIn('no_pesanan', $request->no_pesanan)
-                                ->update(['status_pesanan' => '1']);
+                ->update(['status_pesanan' => '1']);
 
             $kebutuhan = collect($request->input('kebutuhan'));
             $sku = $kebutuhan->pluck('sku');
@@ -589,38 +590,65 @@ class TransaksiService
             foreach ($kebutuhan as $value) {
                 $data_stok = stok_produk::where('sku_id', $value['sku'])->first();
 
-                $mutasi = mutasi_stok::create([
-                    'stok_produk_id' => $data_stok->id,
-                    'adm_penjualan_id' => $request->pengambil_barang,
-                    'gudang_id' => Auth::id(),
-                    'jenis_mutasi' => 'keluar',
-                    'jumlah' => $value['kebutuhan'],
-                    'produksi_id' => null,
-                    'keterangan' => null,
-                ]);
-
-                stok_produk::where('sku_id', $value['sku'])
+                $stok = stok_produk::where('sku_id', $value['sku'])
                     ->where('jumlah_tersedia', '>=', $value['kebutuhan'])
                     ->decrement(
                         'jumlah_tersedia',
                         $value['kebutuhan']
                     );
 
-                PesananPerProduk::whereIn(
-                    'no_pesanan',
-                    $request->no_pesanan
-                )
+                if ($stok == true) {
+                    $mutasi = mutasi_stok::create([
+                        'stok_produk_id' => $data_stok->id,
+                        'source' => 'stok',
+                        'adm_penjualan_id' => $request->pengambil_barang,
+                        'gudang_id' => Auth::id(),
+                        'jenis_mutasi' => 'keluar',
+                        'jumlah' => $value['kebutuhan'],
+                        'produksi_id' => null,
+                        'keterangan' => null,
+                    ]);
+                } elseif ($stok == false) {
+                    $mutasi = mutasi_stok::create([
+                        'stok_produk_id' => $data_stok->id,
+                        'source' => 'produksi',
+                        'adm_penjualan_id' => $request->pengambil_barang,
+                        'gudang_id' => Auth::id(),
+                        'jenis_mutasi' => 'keluar',
+                        'jumlah' => $value['kebutuhan'],
+                        'produksi_id' => null,
+                        'keterangan' => null,
+                    ]);
+                }
+
+                PesananPerProduk::whereIn('no_pesanan', $request->no_pesanan)
                     ->where('sku', $value['sku'])
                     ->update([
                         'mutasi_stok_id' => $mutasi->id,
                     ]);
             }
 
+            $userId = Auth::id();
+            $role = Auth::user()->role;
+            collect($request->no_pesanan)->each(function ($noPesanan) use ($userId, $role) {
+                $progres = progres_pesanan::updateOrCreate(
+                    [
+                        'no_pesanan' => $noPesanan,
+                        'role' => $role,
+                    ],
+                    [
+                        'user_id' => $userId,
+                    ]
+                );
+
+                $progres->touch();
+            });
+
             Exporter::where('user_id', Auth::id())
-                        ->where('status', 'proses')
-                        ->update([
-                            'status' => 'selesai'
-                        ]);
+                ->where('status', 'proses')
+                ->update([
+                    'status' => 'selesai',
+                ]);
 
             DB::commit();
 
@@ -1247,7 +1275,7 @@ class TransaksiService
             $exportAktif = Exporter::where('user_id', Auth::id())
                 ->where('status', 'proses')
                 ->first();
-            
+
             if ($exportAktif != null) {
                 $exporter = Exporter::where('id', $exportAktif->id)->update([
                     'keterangan' => $request->alasan_export,
@@ -1266,6 +1294,22 @@ class TransaksiService
             PesananPerProduk::whereIn('no_pesanan', $request->pesanan)->update([
                 'exporter_id' => $exporter->id,
             ]);
+
+            $now = now();
+            $userId = Auth::id();
+            $role = Auth::user()->role;
+
+            $data = collect($request->pesanan)->map(function ($noPesanan) use ($now, $userId, $role) {
+                return [
+                    'no_pesanan' => $noPesanan,
+                    'role' => $role,
+                    'user_id' => $userId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            })->toArray();
+
+            progres_pesanan::insert($data);
 
             DB::commit();
 

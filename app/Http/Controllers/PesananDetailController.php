@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\EditorRequest;
 use App\Models\Pesanan;
+use App\Models\progres_pesanan;
 use App\Models\Toko;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -30,12 +31,7 @@ class PesananDetailController extends Controller
             ->get();
 
         $items = DB::table('pesanan_per_produk as pp')
-            ->leftJoin(
-                'produk as p',
-                'p.sku',
-                '=',
-                'pp.sku'
-            )
+            ->leftJoin('produk as p', 'p.sku', '=', 'pp.sku')
             ->leftJoin('kategoris as k', 'k.id', '=', 'p.kategori_id')
             ->select([
                 'pp.id_per_produk',
@@ -48,13 +44,8 @@ class PesananDetailController extends Controller
                 DB::raw('(COALESCE(pp.harga, 0) * COALESCE(pp.jumlah, 0)) as subtotal'),
                 'k.nama_kategori',
             ])
-            ->where(
-                'pp.no_pesanan',
-                $no_pesanan
-            )
-            ->orderBy(
-                'pp.id_per_produk'
-            )
+            ->where('pp.no_pesanan', $no_pesanan)
+            ->orderBy('pp.id_per_produk')
             ->get();
 
         $totalHarga = (float) ($pesanan->total_harga ?? 0);
@@ -63,30 +54,17 @@ class PesananDetailController extends Controller
         $subtotalItems = (float) $items->sum('subtotal');
         $subtotal = $subtotalItems > 0 ? $subtotalItems : $totalHarga;
         $totalHPP = $pesanan->total_hpp !== null ? (float) $pesanan->total_hpp : (float) DB::table('pesanan_per_produk')
-                ->where('no_pesanan', $no_pesanan)
-                ->selectRaw(
-                    'COALESCE(SUM(COALESCE(hpp, 0) * COALESCE(jumlah, 0)), 0) as total_hpp'
-                )
-                ->value('total_hpp');
+            ->where('no_pesanan', $no_pesanan)
+            ->selectRaw('COALESCE(SUM(COALESCE(hpp, 0) * COALESCE(jumlah, 0)), 0) as total_hpp')
+            ->value('total_hpp');
 
         $tarik = $totalHarga - $biayaAdmin;
         $totalPenghasilan = $totalPencairan - $totalHPP;
         $margin = $totalHarga > 0 ? round(($totalPenghasilan / $totalHarga) * 100, 2) : 0;
         $isProfit = $totalPenghasilan >= 0;
         $selisih = $totalPencairan - $tarik;
-        $selisihClass = $selisih < 0 ? 'text-danger' : (
-                $selisih > 0 ? 'text-success' : 'text-muted'
-            );
-
-        $selisihText =
-            ($selisih < 0 ? '-' : '').
-            'Rp'.
-            number_format(
-                abs($selisih),
-                0,
-                ',',
-                '.'
-            );
+        $selisihClass = $selisih < 0 ? 'text-danger' : ($selisih > 0 ? 'text-success' : 'text-muted');
+        $selisihText = ($selisih < 0 ? '-' : '').'Rp'.number_format(abs($selisih), 0, ',', '.');
 
         $totalItem = (int) $items->count();
         $totalQty = (int) $items->sum('jumlah');
@@ -102,95 +80,50 @@ class PesananDetailController extends Controller
             'batal' => 'danger',
         ];
 
-        $statusBadge =
-            $badgeMap[$status] ??
-            'secondary';
-
+        $statusBadge = $badgeMap[$status] ?? 'secondary';
         $statusLabel = match ($status) {
             'pengiriman_gagal' => 'Pengiriman Gagal',
             'pengembalian' => 'Pengembalian',
-            default => ucfirst(
-                $status ?: '-'
-            ),
+            default => ucfirst($status ?: '-'),
         };
 
-        $tanggalInput = $pesanan->tanggal
-            ? Carbon::parse(
-                $pesanan->tanggal
-            )->format('d/m/Y')
-            : '-';
-
+        $tanggalInput = $pesanan->input_at ? Carbon::parse($pesanan->input_at)->format('d/m/Y H:i') : '-';
         $batasKirim = null;
 
         if ($pesanan->batas_kirim_at) {
             try {
-                $batasKirim = Carbon::parse(
-                    $pesanan->batas_kirim_at
-                );
+                $batasKirim = Carbon::parse($pesanan->batas_kirim_at);
             } catch (\Throwable $e) {
                 $batasKirim = null;
             }
         }
 
-        $sisaJam = $batasKirim
-            ? now()->diffInHours(
-                $batasKirim,
-                false
-            )
-            : null;
-
+        $sisaJam = $batasKirim ? now()->diffInHours($batasKirim, false) : null;
         if ($sisaJam === null) {
-            $prioritasLabel =
-                'BELUM ADA';
-
-            $prioritasBadge =
-                'secondary';
+            $prioritasLabel = 'BELUM ADA';
+            $prioritasBadge = 'secondary';
         } elseif ($sisaJam < 0) {
-            $prioritasLabel =
-                'TERLAMBAT';
-
-            $prioritasBadge =
-                'danger';
+            $prioritasLabel = 'TERLAMBAT';
+            $prioritasBadge = 'danger';
         } elseif ($sisaJam <= 24) {
-            $prioritasLabel =
-                'URGENT';
-
-            $prioritasBadge =
-                'danger';
+            $prioritasLabel = 'URGENT';
+            $prioritasBadge = 'danger';
         } elseif ($sisaJam <= 48) {
-            $prioritasLabel =
-                'MENDEKATI';
-
-            $prioritasBadge =
-                'warning';
+            $prioritasLabel = 'MENDEKATI';
+            $prioritasBadge = 'warning';
         } else {
-            $prioritasLabel =
-                'AMAN';
-
-            $prioritasBadge =
-                'success';
+            $prioritasLabel = 'AMAN';
+            $prioritasBadge = 'success';
         }
 
-        $batasKirimSource = match (
-            $pesanan->batas_kirim_source
-        ) {
+        $batasKirimSource = match ($pesanan->batas_kirim_source) {
             'shopee_estimated_ship_out_date' => 'Shopee Excel',
-
             'tiktok_in_transit_by' => 'TikTok PDF',
-
-            default => $pesanan->batas_kirim_source
-                    ?: '-',
+            default => $pesanan->batas_kirim_source ?: '-',
         };
 
-        $resiSudahDicetak =
-            ! is_null(
-                $pesanan->resi_printed_at
-            );
-
-        $resiPrintCount =
-            (int) (
-                $pesanan->resi_print_count ?? 0
-            );
+        $resiSudahDicetak = ! is_null($pesanan->resi_printed_at);
+        $resiPrintCount = (int) ($pesanan->resi_print_count ?? 0);
 
         $dataPlat = [];
         foreach ($items as $value) {
@@ -206,30 +139,35 @@ class PesananDetailController extends Controller
         }
 
         $dataPlat = $dataPlat === [] ? null : $dataPlat;
-
         $pengerjaanPesanan = $pesanan->pesanan_per_produk[0];
         $mutasi = $pengerjaanPesanan->mutasi != null ? true : false;
-        $exported = $pengerjaanPesanan->exporter != null ? true : false; 
-        
+        $exported = $pengerjaanPesanan->exporter != null ? true : false;
+
         if ($mutasi == true) {
             $statusPengerjaan = [
                 'proses' => 'Dikerjakan',
                 'role' => $pengerjaanPesanan?->mutasi?->admin_penjualan?->role == 'pegawai' ? 'Admin Penjualan' : null,
                 'user' => $pengerjaanPesanan?->mutasi?->admin_penjualan?->name,
             ];
-        }elseif ($exported == true) {
+        } elseif ($exported == true) {
             $statusPengerjaan = [
                 'proses' => 'Exported',
                 'role' => $pengerjaanPesanan?->exporter?->role == 'gudang' ? 'Gudang' : 'Produksi',
                 'user' => $pengerjaanPesanan?->exporter?->user?->name,
             ];
-        }else{
+        } else {
             $statusPengerjaan = [
                 'proses' => null,
                 'role' => null,
                 'user' => null,
             ];
         }
+
+        $progresPesanan = progres_pesanan::with('users')->where('no_pesanan', $pesanan->no_pesanan)->get()
+            ->keyBy('role');
+
+
+        // dd($progresPesanan->toArray());
 
         return view(
             'pesanan.rincian',
@@ -271,6 +209,7 @@ class PesananDetailController extends Controller
 
                 'dataPlat' => $dataPlat,
                 'statusPengerjaan' => $statusPengerjaan,
+                'progresPesanan' => $progresPesanan,
             ]
         );
     }

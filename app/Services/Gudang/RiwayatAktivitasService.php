@@ -16,7 +16,9 @@ class RiwayatAktivitasService
         */
         $query = mutasi_stok::with([
             'stok_produk.produk.kategori', 'gudang', 'admin_penjualan',
-        ])->whereIn('jenis_mutasi', ['keluar', 'masuk', 'edit']);
+        ])
+        // ->where('source', 'stok')
+        ->whereIn('jenis_mutasi', ['keluar', 'masuk', 'edit']);
 
         /*
         |--------------------------------------------------------------------------

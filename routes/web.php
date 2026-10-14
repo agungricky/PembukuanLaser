@@ -130,6 +130,7 @@ Route::middleware(['web', 'auth'])->group(function () {
                 Route::post('/simpan', 'store')->name('resi.store');
             });
 
+        // Rincian
         Route::controller(PesananDetailController::class)
             ->group(function () {
                 // Detail Rincian

@@ -414,6 +414,119 @@
             </div>
         </div>
 
+        @if ($progresPesanan->isNotEmpty())
+            <div class="card shadow-sm border-0 mb-3">
+
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-semibold">
+                        <i class="bi bi-diagram-3 me-2 text-primary"></i>
+                        Proses Pesanan
+                    </h6>
+                </div>
+
+                <div class="card-body py-3">
+
+                    <div class="order-flow">
+
+                        <!-- INPUT -->
+                        @if (isset($progresPesanan['pegawai']))
+                            <div class="order-step" data-step="input">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        @if ($pesanan->batas_kirim_at)
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        @endif
+                                        ADMIN PENJUALAN
+                                    </div>
+                                    <div class="step-info">
+                                        <strong>{{ $progresPesanan['pegawai']->users->name }}</strong> · {{ $progresPesanan['pegawai']->updated_at->format('d/m • H.i') }}
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- GUDANG -->
+                        @if (isset($progresPesanan['gudang']))
+                            <div class="order-step" data-step="exported">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        @if ($pesanan?->pesanan_per_produk[0]?->mutasi_stok_id != null)
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        @endif
+                                        GUDANG
+                                    </div>
+                                    <div class="step-info">
+                                        <strong>{{ $progresPesanan['gudang']->users->name }}</strong> · {{ $progresPesanan['gudang']->updated_at->format('d/m • H.i') }}
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- EDITOR -->
+                        @if (isset($editor))
+                            <div class="order-step" data-step="editor">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        EDITOR
+                                    </div>
+                                    <div class="step-info">
+                                        <strong>Sintia</strong> · 14/07 14:20
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- PRODUKSI -->
+                        @if (isset($produksi))
+                            <div class="order-step" data-step="produksi">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        PRODUKSI
+                                    </div>
+                                    <div class="step-info">
+                                        <strong>Budi</strong> · 14/07 15:10
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- PACKING -->
+                        @if (isset($packing))
+                            <div class="order-step" data-step="packing">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        PACKING
+                                    </div>
+                                    <div class="step-info">
+                                        <strong>Rina</strong> · 14/07 16:00
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- DIKIRIM -->
+                        @if (isset($dikirim))
+                            <div class="order-step pending" data-step="dikirim">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        DIKIRIM
+                                    </div>
+                                    <div class="step-info">
+                                        Belum diproses
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                    </div>
+
+                </div>
+            </div>
+        @endif
+
         <div class="card shadow-sm border-0 mb-3">
             <div class="card-header bg-white">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -844,6 +957,128 @@
         .table-row-line tr:last-child {
             border-bottom: 0;
         }
+
+
+        /* ===== ALUR PESANAN ===== */
+
+        .order-flow {
+            display: flex;
+            width: 100%;
+            overflow-x: auto;
+            gap: 2px;
+            scrollbar-width: thin;
+        }
+
+        .order-step {
+            --step-bg: #dbeafe;
+            --step-border: #60a5fa;
+            --step-text: #1d4ed8;
+
+            flex: 1 0 145px;
+            min-width: 145px;
+            height: 48px;
+            padding: 1px;
+            background: var(--step-border);
+            cursor: help;
+
+            clip-path: polygon(0 0,
+                    calc(100% - 18px) 0,
+                    100% 50%,
+                    calc(100% - 18px) 100%,
+                    0 100%,
+                    18px 50%);
+        }
+
+        .order-step:first-child {
+            clip-path: polygon(0 0,
+                    calc(100% - 18px) 0,
+                    100% 50%,
+                    calc(100% - 18px) 100%,
+                    0 100%);
+        }
+
+        .step-inner {
+            height: 100%;
+            padding: 3px 20px 3px 22px;
+            background: var(--step-bg);
+            clip-path: inherit;
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .order-step:first-child .step-inner {
+            padding-left: 6px;
+        }
+
+        .step-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--step-text);
+            line-height: 17px;
+            white-space: nowrap;
+        }
+
+        .step-info {
+            font-size: 12px;
+            font-weight: 400;
+            color: #475569;
+            line-height: 17px;
+            white-space: nowrap;
+        }
+
+        .step-info strong {
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        /* Hover */
+        .order-step:hover {
+            filter: brightness(0.96);
+        }
+
+        /* Belum diproses */
+        .order-step.pending {
+            --step-bg: #f1f5f9;
+            --step-border: #cbd5e1;
+            --step-text: #94a3b8;
+        }
+
+        /* ===== POPOVER PUTIH ===== */
+
+        .order-popover {
+            --bs-popover-bg: #000000;
+            --bs-popover-border-color: #e2e8f0;
+            --bs-popover-border-radius: 9px;
+            --bs-popover-max-width: 300px;
+
+            box-shadow: 0 5px 18px rgba(0, 0, 0, 0.12);
+        }
+
+        .order-popover .popover-body {
+            padding: 11px 13px;
+            color: #f0f0f0;
+            font-size: 12px;
+        }
+
+        .order-popover .popover-body .info-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+        }
+
+        .order-popover .popover-body .info-row+.info-row {
+            margin-top: 9px;
+        }
+
+        .order-popover .info-row i {
+            color: #2563eb;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
     </style>
 @endpush
 @push('scripts')
@@ -957,9 +1192,7 @@
             @endif
         });
 
-
         $(document).ready(function() {
-
             $('#cetakResi').on('click', function() {
                 const pesanan = "{{ $pesanan->no_pesanan }}";
                 if (!pesanan) {
@@ -1048,6 +1281,117 @@
                     }
                 });
             });
+
+            const prosesInfo = {
+
+                input: [{
+                        icon: 'bi-file-earmark-excel',
+                        text: 'Telah melakukan input Excel'
+                    },
+                    {
+                        icon: 'bi-check-circle-fill',
+                        text: 'Telah melakukan import resi'
+                    }
+                ],
+
+                exported: [{
+                        icon: 'bi-file-earmark-arrow-down',
+                        text: 'Pesanan telah diexport'
+                    },
+                    {
+                        icon: 'bi-check-circle-fill',
+                        text: 'Gudang selesai'
+                    }
+                ],
+
+                editor: [{
+                        icon: 'bi-palette',
+                        text: 'Pesanan masuk antrian editor'
+                    },
+                    {
+                        icon: 'bi-check-circle-fill',
+                        text: 'Desain pesanan telah selesai'
+                    }
+                ],
+
+                produksi: [{
+                        icon: 'bi-gear',
+                        text: 'Pesanan masuk proses produksi'
+                    },
+                    {
+                        icon: 'bi-check-circle-fill',
+                        text: 'Produk selesai diproduksi'
+                    }
+                ],
+
+                packing: [{
+                        icon: 'bi-box-seam',
+                        text: 'Pesanan telah masuk packing'
+                    },
+                    {
+                        icon: 'bi-check-circle-fill',
+                        text: 'Pesanan selesai dikemas'
+                    }
+                ],
+
+                dikirim: [{
+                        icon: 'bi-truck',
+                        text: 'Pesanan disiapkan untuk pengiriman'
+                    },
+                    {
+                        icon: 'bi-check-circle-fill',
+                        text: 'Paket telah diserahkan ke kurir'
+                    }
+                ]
+
+            };
+
+            $('.order-step[data-step]').each(function() {
+
+                const element = this;
+                const step = $(element).attr('data-step');
+                const items = prosesInfo[step];
+
+                if (!items) return;
+
+                new bootstrap.Popover(element, {
+
+                    container: 'body',
+                    trigger: 'hover',
+                    placement: 'top',
+                    html: true,
+                    sanitize: true,
+                    customClass: 'order-popover',
+
+                    content: function() {
+
+                        const container = $('<div>');
+
+                        items.forEach(function(item) {
+
+                            const row = $('<div>', {
+                                class: 'info-row'
+                            });
+
+                            $('<i>', {
+                                class: 'bi ' + item.icon
+                            }).appendTo(row);
+
+                            $('<span>')
+                                .text(item.text)
+                                .appendTo(row);
+
+                            container.append(row);
+
+                        });
+
+                        return container[0];
+                    }
+
+                });
+
+            });
+
 
         });
     </script>

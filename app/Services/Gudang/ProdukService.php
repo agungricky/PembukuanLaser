@@ -61,7 +61,7 @@ class ProdukService
 
                 mutasi_stok::create([
                     'stok_produk_id' => $stok->id,
-                    'gudang_id' => auth()->id(),
+                    'gudang_id' => Auth::id(),
                     'jenis_mutasi' => 'edit',
                     'jumlah' => $request->jumlah_edit,
                     'keterangan' => $request->keterangan
@@ -81,7 +81,7 @@ class ProdukService
 
                     mutasi_stok::create([
                         'stok_produk_id' => $stokProduk->id,
-                        'gudang_id' => auth()->id(),
+                        'gudang_id' => Auth::id(),
                         'jenis_mutasi' => 'masuk',
                         'jumlah' => $request->jumlah_add,
                         'keterangan' => null,
@@ -95,7 +95,8 @@ class ProdukService
 
                     mutasi_stok::create([
                         'stok_produk_id' => $stokProduk->id,
-                        'gudang_id' => auth()->id(),
+                        'source' => 'stok',
+                        'gudang_id' => Auth::id(),
                         'jenis_mutasi' => 'masuk',
                         'jumlah' => $request->jumlah_edit,
                         'keterangan' => null,
