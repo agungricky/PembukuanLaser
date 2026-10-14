@@ -6,14 +6,11 @@
         <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
             <div>
                 <h5 class="mb-1 fw-semibold">Riwayat Transaksi Iklan</h5>
-
                 <div class="d-flex flex-wrap align-items-center gap-2 text-muted small">
                     <span>
                         {{ number_format($iklan->total(), 0, ',', '.') }} transaksi
                     </span>
-
                     <span class="text-secondary">|</span>
-
                     <span>
                         Total pembayaran:
                         <span class="fw-semibold text-dark">
@@ -86,12 +83,16 @@
                         </div>
                     </div>
 
-                    <div class="col-12 d-flex justify-content-end gap-2">
-                        <a href="{{ route('iklan.index') }}" class="btn btn-outline-secondary btn-sm">
+                    <div class="col-12 d-flex justify-content-end align-items-center gap-2 mt-2">
+                        <a href="{{ route('iklan.index') }}"
+                            class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2 px-3">
+                            <i class="bi bi-arrow-counterclockwise"></i>
                             Reset
                         </a>
-                        <button type="submit" class="btn btn-primary btn-sm">
-                            Filter
+
+                        <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 px-3">
+                            <i class="bi bi-funnel"></i>
+                            Terapkan Filter
                         </button>
                     </div>
 
@@ -338,6 +339,16 @@
 
         table tbody td {
             vertical-align: middle;
+        }
+
+        .btn {
+            border-radius: 7px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
         }
     </style>
 @endpush
