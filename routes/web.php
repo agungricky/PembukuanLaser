@@ -283,3 +283,11 @@ Route::get('/cs/redirect', function () {
 
 Route::get('/dashboard/admin-cs', [rotatorController::class, 'index'])->name('rotator.index');
 Route::redirect('/', '/login');
+// Jadwal Upload TikTok IZA
+Route::get('/jadwal-iza', function () {
+    return view('jadwaliza');
+})->name('jadwal-iza');
+
+Route::get('/jadwal-elsa', function () {
+    return view('jadwalelsa');
+})->name('jadwal-elsa');
