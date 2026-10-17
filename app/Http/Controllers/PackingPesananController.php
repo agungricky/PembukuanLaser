@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
+use App\Models\progres_pesanan;
 use App\Services\Pdf\CompatibleFpdi as Fpdi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -201,16 +202,16 @@ class PackingPesananController extends Controller
 
         DB::transaction(
             function () use ($pesanan) {
-                $pesanan->status =
-                    'kirim';
-
-                $pesanan->id_user_kirim =
-                    Auth::id();
-
-                $pesanan->tanggal_kirim =
-                    now();
-
+                $pesanan->status = 'kirim';
+                $pesanan->id_user_kirim = Auth::id();
+                $pesanan->tanggal_kirim = now();
                 $pesanan->save();
+
+                progres_pesanan::create([
+                    'no_pesanan' => $pesanan->no_pesanan,
+                    'role' => 'dikirim',
+                    'user_id' => Auth::id(),
+                ]);
             }
         );
 
@@ -433,43 +434,43 @@ class PackingPesananController extends Controller
                 $pesanan
             ),
             'pesanan' => [
-            'no_pesanan' => $pesanan
-                ->no_pesanan,
-            'no_resi' => $pesanan
-                ->no_resi,
-            'nama_pembeli' => $pesanan
-                ->nama_pembeli,
-            'marketplace' => $marketplace,
-            'produk' => $this->buildProdukPayload(
-                $pesanan
-            ),
-            'pdf_tersedia' => $resiPages
-                ->isNotEmpty(),
-            'jumlah_halaman_resi' => $resiPages
-                ->count(),
-            'sudah_print' => ! is_null(
-                $pesanan
-                    ->resi_printed_at
-            ),
-            'print_count' => (int) (
-                $pesanan
-                    ->resi_print_count ?? 0
-            ),
-            'first_printed_at' => $pesanan
-                ->resi_printed_at
-                ? Carbon::parse(
+                'no_pesanan' => $pesanan
+                    ->no_pesanan,
+                'no_resi' => $pesanan
+                    ->no_resi,
+                'nama_pembeli' => $pesanan
+                    ->nama_pembeli,
+                'marketplace' => $marketplace,
+                'produk' => $this->buildProdukPayload(
+                    $pesanan
+                ),
+                'pdf_tersedia' => $resiPages
+                    ->isNotEmpty(),
+                'jumlah_halaman_resi' => $resiPages
+                    ->count(),
+                'sudah_print' => ! is_null(
                     $pesanan
                         ->resi_printed_at
-                )->format(
-                    'd/m/Y H:i:s'
-                )
-                    : null,
-            'first_printed_by' => $pesanan
-                ->resiPrinter
-                    ? $pesanan
-                        ->resiPrinter
-                        ->name
-                    : null,
+                ),
+                'print_count' => (int) (
+                    $pesanan
+                        ->resi_print_count ?? 0
+                ),
+                'first_printed_at' => $pesanan
+                    ->resi_printed_at
+                    ? Carbon::parse(
+                        $pesanan
+                            ->resi_printed_at
+                    )->format(
+                        'd/m/Y H:i:s'
+                    )
+                        : null,
+                'first_printed_by' => $pesanan
+                    ->resiPrinter
+                        ? $pesanan
+                            ->resiPrinter
+                            ->name
+                        : null,
             ],
         ]);
     }
@@ -668,30 +669,35 @@ class PackingPesananController extends Controller
 
             $pdf->Output('F', $tempPath);
             DB::transaction(function () use ($pesanan) {
-                    $lockedPesanan = Pesanan::where('no_pesanan', $pesanan->no_pesanan)
-                        ->lockForUpdate()
-                        ->first();
+                $lockedPesanan = Pesanan::where('no_pesanan', $pesanan->no_pesanan)
+                    ->lockForUpdate()
+                    ->first();
 
-                    if (! $lockedPesanan) {
-                        throw new \Exception('Pesanan tidak ditemukan.');
-                    }
-
-                    $now = now();
-                    if (! $lockedPesanan->resi_printed_at) {
-                        $lockedPesanan->resi_printed_at = $now;
-                        $lockedPesanan->resi_printed_by = Auth::id();
-                    }
-
-                    $lockedPesanan->resi_last_printed_at = $now;
-                    $lockedPesanan->resi_print_count = ((int) $lockedPesanan->resi_print_count) + 1;
-
-                    PesananPerProduk::where('no_pesanan', $pesanan->no_pesanan)->update([
-                        'status_pesanan' => '1',
-                        'exporter_id' => Auth::id(),
-                    ]);
-
-                    $lockedPesanan->save();
+                if (! $lockedPesanan) {
+                    throw new \Exception('Pesanan tidak ditemukan.');
                 }
+
+                $now = now();
+                if (! $lockedPesanan->resi_printed_at) {
+                    $lockedPesanan->resi_printed_at = $now;
+                    $lockedPesanan->resi_printed_by = Auth::id();
+                }
+
+                $lockedPesanan->resi_last_printed_at = $now;
+                $lockedPesanan->resi_print_count = ((int) $lockedPesanan->resi_print_count) + 1;
+
+                PesananPerProduk::where('no_pesanan', $pesanan->no_pesanan)->update([
+                    'status_pesanan' => '1',
+                ]);
+
+                progres_pesanan::create([
+                    'no_pesanan' => $pesanan->no_pesanan,
+                    'role' => Auth::user()->role,
+                    'user_id' => Auth::id(),
+                ]);
+
+                $lockedPesanan->save();
+            }
             );
 
             return response()
