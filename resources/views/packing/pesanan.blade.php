@@ -1,822 +1,693 @@
 @extends('layouts.app')
 
 @section('content')
+    <div class="container-fluid py-3">
 
-<div class="container-fluid py-3">
+        {{-- HEADER --}}
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
 
-    {{-- HEADER --}}
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
-
-        <div class="d-flex align-items-center gap-3">
-            <div class="rounded-4 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
-                 style="width:72px;height:72px;">
-                <i class="bi bi-qr-code-scan fs-1 text-primary"></i>
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-4 bg-primary bg-opacity-10 d-flex align-items-center justify-content-center"
+                    style="width:72px;height:72px;">
+                    <i class="bi bi-qr-code-scan fs-1 text-primary"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-1">
+                        Packing Scanner
+                    </h3>
+                    <div class="text-muted">
+                        Scan No. Resi / No. Pesanan untuk mengubah status menjadi
+                        <span class="fw-semibold text-success">Kirim</span>
+                    </div>
+                </div>
             </div>
-            <div>
-                <h3 class="fw-bold mb-1">
-                    Packing Scanner
-                </h3>
-                <div class="text-muted">
-                    Scan No. Resi / No. Pesanan untuk mengubah status menjadi
-                    <span class="fw-semibold text-success">Kirim</span>
+
+            <div class="text-end">
+                <div class="small text-muted">
+                    Operator
+                </div>
+                <div class="fw-semibold">
+                    {{ auth()->user()->name }}
                 </div>
             </div>
         </div>
 
-        <div class="text-end">
-            <div class="small text-muted">
-                Operator
-            </div>
-            <div class="fw-semibold">
-                {{ auth()->user()->name }}
-            </div>
-        </div>
-    </div>
+        <div class="row g-4">
+            {{-- AREA SCANNER --}}
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body p-5 text-center">
+                        <div class="mb-4">
+                            <div class="scan-circle mb-3">
+                                <i class="bi bi-qr-code-scan fs-1"></i>
+                            </div>
 
-    <div class="row g-4">
-        {{-- AREA SCANNER --}}
-        <div class="col-lg-7">
-            <div class="card border-0 shadow-sm rounded-4 h-100">
-                <div class="card-body p-5 text-center">
-                    <div class="mb-4">
-                        <div class="scan-circle mb-3">
-                            <i class="bi bi-qr-code-scan fs-1"></i>
+                            <h3 class="fw-bold mb-2">
+                                Scan Resi
+                            </h3>
+
+                            <div class="text-muted">
+                                Fokus otomatis • Enter = Scan • ESC = Reset
+                            </div>
                         </div>
 
-                        <h3 class="fw-bold mb-2">
-                            Scan Resi
-                        </h3>
+                        <div class="input-group input-group-lg mx-auto" style="max-width:650px;">
 
-                        <div class="text-muted">
-                            Fokus otomatis • Enter = Scan • ESC = Reset
-                        </div>
-                    </div>
-
-                    <div class="input-group input-group-lg mx-auto"
-                         style="max-width:650px;">
-
-                        <input
-                            type="text"
-                            id="scanInput"
-                            class="form-control text-center fw-bold fs-2"
-                            placeholder="Scan Barcode..."
-                            autocomplete="off"
-                            autofocus
-                            spellcheck="false"
-                            style="
+                            <input type="text" id="scanInput" class="form-control text-center fw-bold fs-2"
+                                placeholder="Scan Barcode..." autocomplete="off" autofocus spellcheck="false"
+                                style="
                                 font-family:Consolas,monospace;
                                 letter-spacing:3px;
                                 height:78px;
                             ">
-                    </div>
+                        </div>
 
-                    <div class="mt-4">
-                        <div class="alert alert-light border mb-0">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Pastikan barcode jelas dan scanner berada pada fokus input.
+                        <div class="mt-4">
+                            <div class="alert alert-light border mb-0">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Pastikan barcode jelas dan scanner berada pada fokus input.
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-                {{-- STATUS --}}
-        <div class="col-lg-5">
-            <div class="card border-0 shadow-sm rounded-4 h-100">
-                <div class="card-body">
-                    <div class="text-center mb-4">
-                        <h5 class="fw-bold mb-1">
-                            Status Terakhir
-                        </h5>
-
-                        <small class="text-muted">
-                            Informasi hasil scan terakhir
-                        </small>
-                    </div>
-
-                    <div id="scanStatus"
-                        class="border rounded-4 p-4 mb-4 bg-light">
-                        <div class="text-center">
-                            <i class="bi bi-clock-history display-4 text-secondary"></i>
-                            <h5 class="mt-3 mb-1">
-                                Siap Scan
+            {{-- STATUS --}}
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm rounded-4 h-100">
+                    <div class="card-body">
+                        <div class="text-center mb-4">
+                            <h5 class="fw-bold mb-1">
+                                Status Terakhir
                             </h5>
-                            <div class="text-muted">
-                                Silakan scan No. Resi atau No. Pesanan
+
+                            <small class="text-muted">
+                                Informasi hasil scan terakhir
+                            </small>
+                        </div>
+
+                        <div id="scanStatus" class="border rounded-4 p-4 mb-4 bg-light">
+                            <div class="text-center">
+                                <i class="bi bi-clock-history display-4 text-secondary"></i>
+                                <h5 class="mt-3 mb-1">
+                                    Siap Scan
+                                </h5>
+                                <div class="text-muted">
+                                    Silakan scan No. Resi atau No. Pesanan
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- STATISTIK --}}
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="card border-0 bg-primary bg-opacity-10">
+                                    <div class="card-body text-center py-3">
+                                        <div class="fw-bold text-primary" style="font-size:32px;" id="statHariIni">
+                                            {{ $hariIni }}
+
+                                        </div>
+                                        <small class="text-muted">
+                                            Scan Hari Ini
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-6">
+                                <div class="card border-0 bg-success bg-opacity-10">
+                                    <div class="card-body text-center py-3">
+                                        <div class="fw-bold text-success" style="font-size:32px;" id="statBelumDikirim">
+                                            {{ $jumlahPesanan }}
+                                        </div>
+                                        <small class="text-muted">
+                                            Belum Dikirim
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="my-4">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="card border-warning">
+                                    <div class="card-body py-3 text-center">
+                                        <div class="fw-bold text-warning fs-3" id="statSpx">
+
+                                            {{ $kurirHariIni->spx ?? 0 }}
+                                        </div>
+                                        <small>
+                                            SPX
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card border-dark">
+                                    <div class="card-body py-3 text-center">
+                                        <div class="fw-bold text-dark fs-3" id="statJnt">
+                                            {{ $kurirHariIni->jnt ?? 0 }}
+                                        </div>
+                                        <small>
+                                            J&T
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card border-danger">
+                                    <div class="card-body py-3 text-center">
+                                        <div class="fw-bold text-danger fs-3" id="statAnteraja">
+                                            {{ $kurirHariIni->anteraja ?? 0 }}
+                                        </div>
+                                        <small>
+                                            Anteraja
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card border-primary">
+                                    <div class="card-body py-3 text-center">
+                                        <div class="fw-bold text-primary fs-3" id="statJne">
+                                            {{ $kurirHariIni->jne ?? 0 }}
+                                        </div>
+                                        <small>
+                                            JNE
+                                        </small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-
-
-                    {{-- STATISTIK --}}
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <div class="card border-0 bg-primary bg-opacity-10">
-                                <div class="card-body text-center py-3">
-                                    <div
-                                        class="fw-bold text-primary"
-                                        style="font-size:32px;"
-                                        id="statHariIni">
-                                        {{ $hariIni }}
-
-                                    </div>
-                                    <small class="text-muted">
-                                        Scan Hari Ini
-                                    </small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-6">
-
-                            <div class="card border-0 bg-success bg-opacity-10">
-
-                                <div class="card-body text-center py-3">
-
-                                    <div
-                                        class="fw-bold text-success"
-                                        style="font-size:32px;"
-                                        id="statBelumDikirim">
-
-                                        {{ $jumlahPesanan }}
-
-                                    </div>
-
-                                    <small class="text-muted">
-
-                                        Belum Dikirim
-
-                                    </small>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-
-                    <hr class="my-4">
-
-
-
-                    <div class="row g-3">
-
-                        <div class="col-6">
-
-                            <div class="card border-warning">
-
-                                <div class="card-body py-3 text-center">
-
-                                    <div
-                                        class="fw-bold text-warning fs-3"
-                                        id="statSpx">
-
-                                        {{ $kurirHariIni->spx ?? 0 }}
-
-                                    </div>
-
-                                    <small>
-
-                                        SPX
-
-                                    </small>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-6">
-
-                            <div class="card border-dark">
-
-                                <div class="card-body py-3 text-center">
-
-                                    <div
-                                        class="fw-bold text-dark fs-3"
-                                        id="statJnt">
-
-                                        {{ $kurirHariIni->jnt ?? 0 }}
-
-                                    </div>
-
-                                    <small>
-
-                                        J&T
-
-                                    </small>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-6">
-
-                            <div class="card border-danger">
-
-                                <div class="card-body py-3 text-center">
-
-                                    <div
-                                        class="fw-bold text-danger fs-3"
-                                        id="statAnteraja">
-
-                                        {{ $kurirHariIni->anteraja ?? 0 }}
-
-                                    </div>
-
-                                    <small>
-
-                                        Anteraja
-
-                                    </small>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-6">
-
-                            <div class="card border-primary">
-
-                                <div class="card-body py-3 text-center">
-
-                                    <div
-                                        class="fw-bold text-primary fs-3"
-                                        id="statJne">
-
-                                        {{ $kurirHariIni->jne ?? 0 }}
-
-                                    </div>
-
-                                    <small>
-
-                                        JNE
-
-                                    </small>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
                 </div>
-
             </div>
-
         </div>
-
     </div>
-
-</div>
-
 @endsection
 @push('styles')
+    <style>
+        body {
+            background: #f4f6fb;
+        }
 
-<style>
+        .card {
+            border: none;
+            border-radius: 18px;
+            transition: .25s;
+        }
 
-body{
-    background:#f4f6fb;
-}
+        .card:hover {
+            transform: translateY(-2px);
+        }
 
-.card{
-    border:none;
-    border-radius:18px;
-    transition:.25s;
-}
+        .scan-circle {
 
-.card:hover{
-    transform:translateY(-2px);
-}
+            width: 110px;
+            height: 110px;
 
-.scan-circle{
+            margin: auto;
 
-    width:110px;
-    height:110px;
+            border-radius: 50%;
 
-    margin:auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
 
-    border-radius:50%;
+            background: #fff;
+            border: 4px solid #0d6efd22;
 
-    display:flex;
-    align-items:center;
-    justify-content:center;
+            color: #0d6efd;
 
-    background:#fff;
-    border:4px solid #0d6efd22;
+            transition: .3s;
 
-    color:#0d6efd;
+        }
 
-    transition:.3s;
+        .scan-circle.active {
 
-}
+            background: #0d6efd;
+            color: #fff;
 
-.scan-circle.active{
+            transform: scale(1.05);
 
-    background:#0d6efd;
-    color:#fff;
+        }
 
-    transform:scale(1.05);
+        #scanInput {
 
-}
+            height: 78px;
 
-#scanInput{
+            font-size: 32px;
+            font-weight: 700;
 
-    height:78px;
+            font-family: Consolas, monospace;
 
-    font-size:32px;
-    font-weight:700;
+            letter-spacing: 3px;
 
-    font-family:Consolas,monospace;
+            border: 2px solid #dee2e6;
 
-    letter-spacing:3px;
+            transition: .2s;
 
-    border:2px solid #dee2e6;
+        }
 
-    transition:.2s;
+        #scanInput:focus {
 
-}
+            border-color: #0d6efd;
 
-#scanInput:focus{
+            box-shadow: 0 0 0 .25rem rgba(13, 110, 253, .15);
 
-    border-color:#0d6efd;
+        }
 
-    box-shadow:0 0 0 .25rem rgba(13,110,253,.15);
+        #manualScanBtn {
 
-}
+            width: 90px;
 
-#manualScanBtn{
+            font-size: 28px;
 
-    width:90px;
+        }
 
-    font-size:28px;
+        #scanStatus {
 
-}
+            min-height: 210px;
 
-#scanStatus{
+            display: flex;
 
-    min-height:210px;
+            align-items: center;
+            justify-content: center;
 
-    display:flex;
+            transition: .25s;
 
-    align-items:center;
-    justify-content:center;
+        }
 
-    transition:.25s;
+        .status-success {
 
-}
+            background: #d1e7dd !important;
+            border: 1px solid #badbcc;
 
-.status-success{
+        }
 
-    background:#d1e7dd !important;
-    border:1px solid #badbcc;
+        .status-danger {
 
-}
+            background: #f8d7da !important;
+            border: 1px solid #f5c2c7;
 
-.status-danger{
+        }
 
-    background:#f8d7da !important;
-    border:1px solid #f5c2c7;
+        .status-warning {
 
-}
+            background: #fff3cd !important;
+            border: 1px solid #ffecb5;
 
-.status-warning{
+        }
 
-    background:#fff3cd !important;
-    border:1px solid #ffecb5;
+        .status-info {
 
-}
+            background: #cff4fc !important;
+            border: 1px solid #b6effb;
 
-.status-info{
+        }
 
-    background:#cff4fc !important;
-    border:1px solid #b6effb;
+        .stat-card {
 
-}
+            border-radius: 16px;
 
-.stat-card{
+            padding: 16px;
 
-    border-radius:16px;
+            text-align: center;
 
-    padding:16px;
+            transition: .25s;
 
-    text-align:center;
+        }
 
-    transition:.25s;
+        .stat-card:hover {
 
-}
+            transform: translateY(-3px);
 
-.stat-card:hover{
+        }
 
-    transform:translateY(-3px);
+        .stat-number {
 
-}
+            font-size: 34px;
 
-.stat-number{
+            font-weight: 700;
 
-    font-size:34px;
+            line-height: 1;
 
-    font-weight:700;
+        }
 
-    line-height:1;
+        .stat-label {
 
-}
+            margin-top: 8px;
 
-.stat-label{
+            color: #6c757d;
 
-    margin-top:8px;
+            font-size: 14px;
 
-    color:#6c757d;
+        }
 
-    font-size:14px;
+        @media (max-width:991px) {
 
-}
+            #scanInput {
 
-@media (max-width:991px){
+                font-size: 24px;
 
-    #scanInput{
+                letter-spacing: 2px;
 
-        font-size:24px;
+            }
 
-        letter-spacing:2px;
+        }
 
-    }
+        @media (max-width:576px) {
 
-}
+            #scanInput {
 
-@media (max-width:576px){
+                height: 64px;
 
-    #scanInput{
+                font-size: 20px;
 
-        height:64px;
+            }
 
-        font-size:20px;
+            #manualScanBtn {
 
-    }
+                width: 70px;
 
-    #manualScanBtn{
+            }
 
-        width:70px;
+            .scan-circle {
 
-    }
+                width: 85px;
+                height: 85px;
 
-    .scan-circle{
+            }
 
-        width:85px;
-        height:85px;
-
-    }
-
-}
-
-</style>
-
+        }
+    </style>
 @endpush
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script>
+        $(function() {
 
-<script>
+            const scanInput = $('#scanInput');
+            const scanStatus = $('#scanStatus');
+            const btnScan = $('#manualScanBtn');
 
-$(function () {
+            let scanTimer = null;
+            let scanning = false;
 
-    const scanInput = $('#scanInput');
-    const scanStatus = $('#scanStatus');
-    const btnScan = $('#manualScanBtn');
+            /*
+            |--------------------------------------------------------------------------
+            | Fokus Scanner
+            |--------------------------------------------------------------------------
+            */
 
-    let scanTimer = null;
-    let scanning = false;
+            function focusScanner() {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Fokus Scanner
-    |--------------------------------------------------------------------------
-    */
+                setTimeout(function() {
 
-    function focusScanner() {
+                    scanInput.trigger('focus');
 
-        setTimeout(function () {
+                }, 100);
 
-            scanInput.trigger('focus');
-
-        }, 100);
-
-    }
-
-    focusScanner();
-
-    $(window).on('focus', function () {
-
-        focusScanner();
-
-    });
-
-    $(document).on('click', function () {
-
-        focusScanner();
-
-    });
-
-    scanInput.on('blur', function () {
-
-        focusScanner();
-
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | ESC Reset
-    |--------------------------------------------------------------------------
-    */
-
-    $(document).on('keydown', function (e) {
-
-        if (e.key === 'Escape') {
-
-            scanInput.val('');
-
-            resetStatus();
+            }
 
             focusScanner();
 
-        }
+            $(window).on('focus', function() {
 
-    });
+                focusScanner();
 
-    /*
-    |--------------------------------------------------------------------------
-    | AUTO SCAN
-    |--------------------------------------------------------------------------
-    */
+            });
 
-    scanInput.on('input', function () {
+            $(document).on('click', function() {
 
-        clearTimeout(scanTimer);
+                focusScanner();
 
-        scanTimer = setTimeout(function () {
+            });
 
-            const kode = scanInput.val().trim();
+            scanInput.on('blur', function() {
 
-            if (kode.length < 5) {
-                return;
-            }
+                focusScanner();
 
-            if (scanning) {
-                return;
-            }
+            });
 
-            scanning = true;
+            /*
+            |--------------------------------------------------------------------------
+            | ESC Reset
+            |--------------------------------------------------------------------------
+            */
 
-            scanResi(kode);
+            $(document).on('keydown', function(e) {
 
-        }, 80);
+                if (e.key === 'Escape') {
 
-    });
+                    scanInput.val('');
 
-    /*
-    |--------------------------------------------------------------------------
-    | Tombol Manual
-    |--------------------------------------------------------------------------
-    */
-
-    btnScan.on('click', function () {
-
-        if (scanning) {
-            return;
-        }
-
-        const kode = scanInput.val().trim();
-
-        if (kode === '') {
-
-            showMessage(
-
-                '⚠ Silakan scan barcode terlebih dahulu.',
-
-                'warning'
-
-            );
-
-            playBeep(350,0.25);
-
-            focusScanner();
-
-            return;
-
-        }
-
-        scanning = true;
-
-        scanResi(kode);
-
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | AJAX SCAN
-    |--------------------------------------------------------------------------
-    */
-
-    function scanResi(kode) {
-
-        scanInput.prop('disabled', true);
-
-        btnScan.prop('disabled', true);
-
-        showMessage(
-
-            '🔄 Scanning...<br><strong>'+kode+'</strong>',
-
-            'info'
-
-        );
-
-        $.ajax({
-
-            url: "{{ route('packing.scan') }}",
-
-            type: "POST",
-
-            data: {
-
-                _token: "{{ csrf_token() }}",
-
-                no_pesanan: kode
-
-            },
-
-            success: function(response){
-
-                scanning = false;
-
-                scanInput.prop('disabled', false);
-
-                btnScan.prop('disabled', false);
-
-                if(!response.success){
-
-                    playBeep(300,0.35);
-
-                    playVoice('error');
-
-                    showMessage(
-
-                        response.message,
-
-                        'danger'
-
-                    );
-
-                    scanInput.select();
+                    resetStatus();
 
                     focusScanner();
 
+                }
+
+            });
+
+            /*
+            |--------------------------------------------------------------------------
+            | AUTO SCAN
+            |--------------------------------------------------------------------------
+            */
+
+            scanInput.on('input', function() {
+
+                clearTimeout(scanTimer);
+
+                scanTimer = setTimeout(function() {
+
+                    const kode = scanInput.val().trim();
+
+                    if (kode.length < 5) {
+                        return;
+                    }
+
+                    if (scanning) {
+                        return;
+                    }
+
+                    scanning = true;
+
+                    scanResi(kode);
+
+                }, 80);
+
+            });
+
+            /*
+            |--------------------------------------------------------------------------
+            | Tombol Manual
+            |--------------------------------------------------------------------------
+            */
+
+            btnScan.on('click', function() {
+                if (scanning) {
                     return;
-
                 }
 
-                playBeep(900,0.18);
-
-                let voice = response.ekspedisi;
-
-                if(!['spx','jnt','jne','anteraja'].includes(voice)){
-
-                    voice='success';
-
+                const kode = scanInput.val().trim();
+                if (kode === '') {
+                    showMessage(
+                        '⚠ Silakan scan barcode terlebih dahulu.',
+                        'warning'
+                    );
+                    playBeep(350, 0.25);
+                    focusScanner();
+                    return;
                 }
 
-                playVoice(voice);
+                scanning = true;
+                scanResi(kode);
+            });
 
+            /*
+            |--------------------------------------------------------------------------
+            | AJAX SCAN
+            |--------------------------------------------------------------------------
+            */
+
+            function scanResi(kode) {
+                scanInput.prop('disabled', true);
+                btnScan.prop('disabled', true);
                 showMessage(
-
-                    response.message,
-
-                    'success',
-
-                    response
-
+                    '🔄 Scanning...<br><strong>' + kode + '</strong>',
+                    'info'
                 );
 
-                /*
-                |--------------------------------------------------------------------------
-                | Update Statistik
-                |--------------------------------------------------------------------------
-                */
+                $.ajax({
+                    url: "{{ route('packing.scan') }}",
+                    type: "POST",
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        no_pesanan: kode
+                    },
 
-                if(response.hari_ini!==undefined){
+                    success: function(response) {
+                        scanning = false;
+                        scanInput.prop('disabled', false);
 
-                    $('#statHariIni').text(response.hari_ini);
+                        btnScan.prop('disabled', false);
 
-                }
+                        if (!response.success) {
 
-                if(response.remaining_proses!==undefined){
+                            playBeep(300, 0.35);
 
-                    $('#statBelumDikirim').text(response.remaining_proses);
+                            playVoice('error');
 
-                }
+                            showMessage(
 
-                if(response.kurir_hari_ini){
+                                response.message,
 
-                    $('#statSpx').text(response.kurir_hari_ini.spx ?? 0);
+                                'danger'
 
-                    $('#statJnt').text(response.kurir_hari_ini.jnt ?? 0);
+                            );
 
-                    $('#statAnteraja').text(response.kurir_hari_ini.anteraja ?? 0);
+                            scanInput.select();
 
-                    $('#statJne').text(response.kurir_hari_ini.jne ?? 0);
+                            focusScanner();
 
-                }
+                            return;
 
-                scanInput.val('');
+                        }
 
-                focusScanner();
+                        playBeep(900, 0.18);
 
-            },
+                        let voice = response.ekspedisi;
 
-            error:function(xhr){
+                        if (!['spx', 'jnt', 'jne', 'anteraja'].includes(voice)) {
 
-                scanning=false;
+                            voice = 'success';
 
-                scanInput.prop('disabled',false);
+                        }
 
-                btnScan.prop('disabled',false);
+                        playVoice(voice);
 
-                let pesan='❌ Terjadi kesalahan.';
+                        showMessage(
 
-                if(xhr.responseJSON && xhr.responseJSON.message){
+                            response.message,
 
-                    pesan=xhr.responseJSON.message;
+                            'success',
 
-                }
+                            response
 
-                playBeep(250,0.35);
+                        );
 
-                playVoice('error');
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Update Statistik
+                        |--------------------------------------------------------------------------
+                        */
 
-                showMessage(
+                        if (response.hari_ini !== undefined) {
 
-                    pesan,
+                            $('#statHariIni').text(response.hari_ini);
 
-                    'danger'
+                        }
 
-                );
+                        if (response.remaining_proses !== undefined) {
 
-                scanInput.select();
+                            $('#statBelumDikirim').text(response.remaining_proses);
 
-                focusScanner();
+                        }
+
+                        if (response.kurir_hari_ini) {
+
+                            $('#statSpx').text(response.kurir_hari_ini.spx ?? 0);
+
+                            $('#statJnt').text(response.kurir_hari_ini.jnt ?? 0);
+
+                            $('#statAnteraja').text(response.kurir_hari_ini.anteraja ?? 0);
+
+                            $('#statJne').text(response.kurir_hari_ini.jne ?? 0);
+
+                        }
+
+                        scanInput.val('');
+
+                        focusScanner();
+
+                    },
+
+                    error: function(xhr) {
+
+                        scanning = false;
+
+                        scanInput.prop('disabled', false);
+
+                        btnScan.prop('disabled', false);
+
+                        let pesan = '❌ Terjadi kesalahan.';
+
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+
+                            pesan = xhr.responseJSON.message;
+
+                        }
+
+                        playBeep(250, 0.35);
+
+                        playVoice('error');
+
+                        showMessage(
+
+                            pesan,
+
+                            'danger'
+
+                        );
+
+                        scanInput.select();
+
+                        focusScanner();
+
+                    }
+
+                });
 
             }
+            /*
+        |--------------------------------------------------------------------------
+        | STATUS MESSAGE
+        |--------------------------------------------------------------------------
+        */
 
-        });
+            function showMessage(message, type = 'info', data = null) {
 
-    }
-        /*
-    |--------------------------------------------------------------------------
-    | STATUS MESSAGE
-    |--------------------------------------------------------------------------
-    */
+                scanStatus
+                    .removeClass(
+                        'status-success status-danger status-warning status-info'
+                    )
+                    .addClass('status-' + type);
 
-    function showMessage(message, type = 'info', data = null) {
+                let icon = 'bi-info-circle-fill';
 
-        scanStatus
-            .removeClass(
-                'status-success status-danger status-warning status-info'
-            )
-            .addClass('status-' + type);
+                switch (type) {
 
-        let icon = 'bi-info-circle-fill';
+                    case 'success':
+                        icon = 'bi-check-circle-fill';
+                        break;
 
-        switch (type) {
+                    case 'danger':
+                        icon = 'bi-x-circle-fill';
+                        break;
 
-            case 'success':
-                icon = 'bi-check-circle-fill';
-                break;
+                    case 'warning':
+                        icon = 'bi-exclamation-triangle-fill';
+                        break;
 
-            case 'danger':
-                icon = 'bi-x-circle-fill';
-                break;
+                    case 'info':
+                        icon = 'bi-arrow-repeat';
+                        break;
 
-            case 'warning':
-                icon = 'bi-exclamation-triangle-fill';
-                break;
+                }
 
-            case 'info':
-                icon = 'bi-arrow-repeat';
-                break;
-
-        }
-
-        let html = `
+                let html = `
             <div class="w-100 text-center">
 
                 <i class="bi ${icon}"
@@ -829,9 +700,9 @@ $(function () {
                 </div>
         `;
 
-        if (data && data.success) {
+                if (data && data.success) {
 
-            html += `
+                    html += `
 
                 <hr class="my-3">
 
@@ -889,29 +760,29 @@ $(function () {
 
             `;
 
-        }
+                }
 
-        html += `</div>`;
+                html += `</div>`;
 
-        scanStatus.html(html);
+                scanStatus.html(html);
 
-    }
+            }
 
-    /*
-    |--------------------------------------------------------------------------
-    | RESET STATUS
-    |--------------------------------------------------------------------------
-    */
+            /*
+            |--------------------------------------------------------------------------
+            | RESET STATUS
+            |--------------------------------------------------------------------------
+            */
 
-    function resetStatus() {
+            function resetStatus() {
 
-        scanStatus
-            .removeClass(
-                'status-success status-danger status-warning'
-            )
-            .addClass('status-info');
+                scanStatus
+                    .removeClass(
+                        'status-success status-danger status-warning'
+                    )
+                    .addClass('status-info');
 
-        scanStatus.html(`
+                scanStatus.html(`
 
             <div class="text-center">
 
@@ -934,164 +805,158 @@ $(function () {
 
         `);
 
-    }
+            }
 
-    /*
-    |--------------------------------------------------------------------------
-    | AUDIO BEEP
-    |--------------------------------------------------------------------------
-    */
+            /*
+            |--------------------------------------------------------------------------
+            | AUDIO BEEP
+            |--------------------------------------------------------------------------
+            */
 
-    const audioContext =
-        new(window.AudioContext || window.webkitAudioContext)();
+            const audioContext =
+                new(window.AudioContext || window.webkitAudioContext)();
 
-    function playBeep(freq = 800, duration = 0.15) {
+            function playBeep(freq = 800, duration = 0.15) {
 
-        try {
+                try {
 
-            const oscillator =
-                audioContext.createOscillator();
+                    const oscillator =
+                        audioContext.createOscillator();
 
-            const gain =
-                audioContext.createGain();
+                    const gain =
+                        audioContext.createGain();
 
-            oscillator.connect(gain);
+                    oscillator.connect(gain);
 
-            gain.connect(audioContext.destination);
+                    gain.connect(audioContext.destination);
 
-            oscillator.frequency.value = freq;
+                    oscillator.frequency.value = freq;
 
-            oscillator.type = 'sine';
+                    oscillator.type = 'sine';
 
-            gain.gain.value = 0.20;
+                    gain.gain.value = 0.20;
 
-            oscillator.start();
+                    oscillator.start();
 
-            oscillator.stop(audioContext.currentTime + duration);
+                    oscillator.stop(audioContext.currentTime + duration);
 
-        }
-
-        catch(e){}
-
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | VOICE
-    |--------------------------------------------------------------------------
-    */
-
-    function playVoice(file){
-
-        try{
-
-            const allow = [
-                'spx',
-                'jnt',
-                'jne',
-                'anteraja',
-                'success',
-                'error'
-            ];
-
-            if(!allow.includes(file)){
-
-                file='success';
+                } catch (e) {}
 
             }
 
-            const audio =
-                new Audio('/sounds/'+file+'.mp3');
+            /*
+            |--------------------------------------------------------------------------
+            | VOICE
+            |--------------------------------------------------------------------------
+            */
 
-            audio.volume = 1;
+            function playVoice(file) {
 
-            audio.play();
+                try {
 
-        }
+                    const allow = [
+                        'spx',
+                        'jnt',
+                        'jne',
+                        'anteraja',
+                        'success',
+                        'error'
+                    ];
 
-        catch(e){}
+                    if (!allow.includes(file)) {
 
-    }
-        /*
-    |--------------------------------------------------------------------------
-    | JAM DIGITAL (OPSIONAL)
-    |--------------------------------------------------------------------------
-    */
+                        file = 'success';
 
-    function updateClock() {
+                    }
 
-        const now = new Date();
+                    const audio =
+                        new Audio('/sounds/' + file + '.mp3');
 
-        const jam = String(now.getHours()).padStart(2, '0');
-        const menit = String(now.getMinutes()).padStart(2, '0');
-        const detik = String(now.getSeconds()).padStart(2, '0');
+                    audio.volume = 1;
 
-        $('#clock').text(`${jam}:${menit}:${detik} WIB`);
+                    audio.play();
 
-    }
+                } catch (e) {}
 
-    if ($('#clock').length) {
+            }
+            /*
+        |--------------------------------------------------------------------------
+        | JAM DIGITAL (OPSIONAL)
+        |--------------------------------------------------------------------------
+        */
 
-        updateClock();
+            function updateClock() {
 
-        setInterval(updateClock, 1000);
+                const now = new Date();
 
-    }
+                const jam = String(now.getHours()).padStart(2, '0');
+                const menit = String(now.getMinutes()).padStart(2, '0');
+                const detik = String(now.getSeconds()).padStart(2, '0');
 
-    /*
-    |--------------------------------------------------------------------------
-    | AUTO FOCUS SCANNER
-    |--------------------------------------------------------------------------
-    */
+                $('#clock').text(`${jam}:${menit}:${detik} WIB`);
 
-    $(window).on('focus', function () {
+            }
 
-        if (!scanning) {
+            if ($('#clock').length) {
+
+                updateClock();
+
+                setInterval(updateClock, 1000);
+
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | AUTO FOCUS SCANNER
+            |--------------------------------------------------------------------------
+            */
+
+            $(window).on('focus', function() {
+
+                if (!scanning) {
+
+                    focusScanner();
+
+                }
+
+            });
+
+            scanInput.on('blur', function() {
+
+                if (!scanning) {
+
+                    setTimeout(function() {
+
+                        focusScanner();
+
+                    }, 100);
+
+                }
+
+            });
+
+            /*
+            |--------------------------------------------------------------------------
+            | AUTO SELECT INPUT
+            |--------------------------------------------------------------------------
+            */
+
+            scanInput.on('focus', function() {
+
+                $(this).select();
+
+            });
+
+            /*
+            |--------------------------------------------------------------------------
+            | INISIALISASI
+            |--------------------------------------------------------------------------
+            */
+
+            resetStatus();
 
             focusScanner();
 
-        }
-
-    });
-
-    scanInput.on('blur', function () {
-
-        if (!scanning) {
-
-            setTimeout(function () {
-
-                focusScanner();
-
-            }, 100);
-
-        }
-
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | AUTO SELECT INPUT
-    |--------------------------------------------------------------------------
-    */
-
-    scanInput.on('focus', function () {
-
-        $(this).select();
-
-    });
-
-    /*
-    |--------------------------------------------------------------------------
-    | INISIALISASI
-    |--------------------------------------------------------------------------
-    */
-
-    resetStatus();
-
-    focusScanner();
-
-});
-
-</script>
-
+        });
+    </script>
 @endpush

@@ -425,109 +425,6 @@
                     </h6>
                 </div>
 
-                {{-- <div class="card-body py-3">
-
-                    <div class="order-flow">
-
-                        <!-- INPUT -->
-                        @if (isset($progresPesanan['pegawai']))
-                            <div class="order-step" data-step="input">
-                                <div class="step-inner">
-                                    <div class="step-title">
-                                        @if ($pesanan->batas_kirim_at)
-                                            <i class="bi bi-check-circle-fill"></i>
-                                        @endif
-                                        ADMIN PENJUALAN
-                                    </div>
-                                    <div class="step-info">
-                                        <strong>{{ $progresPesanan['pegawai']->users->name }}</strong> · {{ $progresPesanan['pegawai']->updated_at->format('d/m • H.i') }}
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        <!-- GUDANG -->
-                        @if (isset($progresPesanan['gudang']))
-                            <div class="order-step" data-step="exported">
-                                <div class="step-inner">
-                                    <div class="step-title">
-                                        @if ($pesanan?->pesanan_per_produk[0]?->mutasi_stok_id != null)
-                                            <i class="bi bi-check-circle-fill"></i>
-                                        @endif
-                                        GUDANG
-                                    </div>
-                                    <div class="step-info">
-                                        <strong>{{ $progresPesanan['gudang']->users->name }}</strong> · {{ $progresPesanan['gudang']->updated_at->format('d/m • H.i') }}
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        <!-- EDITOR -->
-                        @if (isset($progresPesanan['editor']))
-                            <div class="order-step" data-step="editor">
-                                <div class="step-inner">
-                                    <div class="step-title">
-                                        @if (!empty($progresPesanan['editor']?->perproduk?->editorRequest))
-                                            <i class="bi bi-check-circle-fill"></i>
-                                        @endif
-                                        EDITOR
-                                    </div>
-                                    <div class="step-info">
-                                        <strong>{{ $progresPesanan['editor']->users->name }}</strong> · {{ $progresPesanan['editor']->updated_at->format('d/m • H.i') }}
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        <!-- PRODUKSI -->
-                        @if (isset($produksi))
-                            <div class="order-step" data-step="produksi">
-                                <div class="step-inner">
-                                    <div class="step-title">
-                                        <i class="bi bi-check-circle-fill"></i>
-                                        PRODUKSI
-                                    </div>
-                                    <div class="step-info">
-                                        <strong>Budi</strong> · 14/07 15:10
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        <!-- PACKING -->
-                        @if (isset($packing))
-                            <div class="order-step" data-step="packing">
-                                <div class="step-inner">
-                                    <div class="step-title">
-                                        <i class="bi bi-check-circle-fill"></i>
-                                        PACKING
-                                    </div>
-                                    <div class="step-info">
-                                        <strong>Rina</strong> · 14/07 16:00
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        <!-- DIKIRIM -->
-                        @if (isset($dikirim))
-                            <div class="order-step pending" data-step="dikirim">
-                                <div class="step-inner">
-                                    <div class="step-title">
-                                        DIKIRIM
-                                    </div>
-                                    <div class="step-info">
-                                        Belum diproses
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                    </div>
-
-                </div> --}}
-
                 <div class="card-body py-3">
                     <div class="order-flow">
 
@@ -543,7 +440,7 @@
                                     default => strtoupper($role),
                                 };
 
-                                // Sesuaikan data-step dengan program lama
+                                // status roll
                                 $dataStep = match ($role) {
                                     'pegawai' => 'input',
                                     'gudang' => 'exported',
@@ -554,13 +451,13 @@
                                     default => $role,
                                 };
 
+                                // Status Centang muncul ketika ............
                                 $selesai = match ($role) {
                                     'pegawai' => !is_null($pesanan->batas_kirim_at),
-
                                     'gudang' => !is_null($pesanan->pesanan_per_produk->first()?->mutasi_stok_id),
-
-                                    'editor' => $progres->perproduk?->editorRequest?->isNotEmpty() ?? false,
-
+                                    'editor' => !is_null($dataPlat),
+                                    'packing' => !is_null($pesanan->tanggal_kirim),
+                                    'dikirim' => $pesanan->status == 'kirim',
                                     default => false,
                                 };
                             @endphp
@@ -577,11 +474,9 @@
                                     </div>
 
                                     <div class="step-info">
-                                        <strong>
-                                            {{ $progres->users?->name ?? '-' }}
-                                        </strong>
-
-                                        <span>•</span> {{ $progres->updated_at?->format('d/m • H.i') }}
+                                        <strong>{{ $progres->users?->name ?? '-' }}</strong>
+                                        <span>•</span>
+                                        {{ $progres->updated_at?->format('d/m • H.i') }}
                                     </div>
 
                                 </div>
@@ -791,7 +686,7 @@
                                     </td>
 
                                     <td class="text-center">
-                                        @if ($item->tanpa_korlantas == 0)
+                                        @if ($item->tanpa_korlantas == 1)
                                             <span
                                                 class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-2">
                                                 <i class="bi bi-x-circle me-1"></i>
@@ -807,7 +702,7 @@
                                     </td>
 
                                     <td class="text-center">
-                                        @if ($item->tanpa_heartbeat == 0)
+                                        @if ($item->tanpa_heartbeat == 1)
                                             <span
                                                 class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-2">
                                                 <i class="bi bi-x-circle me-1"></i>
@@ -1349,7 +1244,7 @@
             });
 
             const prosesInfo = {
-                pegawai: [{
+                input: [{
                         icon: 'bi-file-earmark-excel',
                         text: 'Telah melakukan input Excel'
                     },
@@ -1359,7 +1254,7 @@
                     }
                 ],
 
-                gudang: [{
+                exported: [{
                         icon: 'bi-file-earmark-arrow-down',
                         text: 'Pesanan telah diexport'
                     },
@@ -1375,7 +1270,7 @@
                     },
                     {
                         icon: 'bi-check-circle-fill',
-                        text: 'Desain pesanan telah diproses'
+                        text: 'Request diinput & desain selesai diproses'
                     }
                 ],
 
@@ -1408,13 +1303,10 @@
                         text: 'Paket telah diserahkan ke kurir'
                     }
                 ]
-
             };
-
 
             // Inisialisasi Popover
             $('.order-step[data-step]').each(function() {
-
                 const element = this;
                 const step = element.dataset.step;
                 const items = prosesInfo[step];
@@ -1424,7 +1316,6 @@
                     return;
                 }
 
-                // Hapus popover lama jika ada
                 const oldPopover = bootstrap.Popover.getInstance(element);
 
                 if (oldPopover) {
@@ -1432,42 +1323,30 @@
                 }
 
                 new bootstrap.Popover(element, {
-
                     container: 'body',
                     trigger: 'hover focus',
                     placement: 'top',
                     html: true,
                     sanitize: true,
                     customClass: 'order-popover',
-
                     content: function() {
-
                         const container = $('<div>');
-
                         items.forEach(function(item) {
-
                             const row = $('<div>', {
                                 class: 'info-row'
                             });
-
                             $('<i>', {
                                 class: 'bi ' + item.icon
                             }).appendTo(row);
-
-                            $('<span>')
-                                .text(item.text)
-                                .appendTo(row);
-
+                            $('<span>').text(item.text).appendTo(row);
                             container.append(row);
-
                         });
 
                         return container[0];
                     }
-
                 });
-
             });
+
         });
     </script>
 @endpush
