@@ -17,7 +17,7 @@ class RiwayatAktivitasService
         $query = mutasi_stok::with([
             'stok_produk.produk.kategori', 'gudang', 'admin_penjualan',
         ])
-        // ->where('source', 'stok')
+        ->where('source', 'stok')
         ->whereIn('jenis_mutasi', ['keluar', 'masuk', 'edit']);
 
         /*
@@ -25,7 +25,7 @@ class RiwayatAktivitasService
         | Total seluruh data
         |--------------------------------------------------------------------------
         */
-        $totalData = mutasi_stok::count();
+        $totalData = (clone $query)->count();
 
         /*
         |--------------------------------------------------------------------------
@@ -140,7 +140,6 @@ class RiwayatAktivitasService
             'recordsTotal' => $totalData,
             'recordsFiltered' => $totalFiltered,
             'data' => $result,
-
         ]);
     }
 }

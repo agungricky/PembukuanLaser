@@ -245,6 +245,7 @@
                                         <td class="text-muted">Dikirim Oleh</td>
                                         <td>{{ $pesanan->userKirim?->name ?? '-' }}</td>
                                     </tr>
+
                                     @if ($dataPlat != [] || $dataPlat != null)
                                         <tr class="{{ $items->contains('nama_kategori', 'PLAT') ? '' : 'd-none' }}">
                                             <td class="text-muted">Cetak Resi</td>
@@ -424,7 +425,7 @@
                     </h6>
                 </div>
 
-                <div class="card-body py-3">
+                {{-- <div class="card-body py-3">
 
                     <div class="order-flow">
 
@@ -463,15 +464,17 @@
                         @endif
 
                         <!-- EDITOR -->
-                        @if (isset($editor))
+                        @if (isset($progresPesanan['editor']))
                             <div class="order-step" data-step="editor">
                                 <div class="step-inner">
                                     <div class="step-title">
-                                        <i class="bi bi-check-circle-fill"></i>
+                                        @if (!empty($progresPesanan['editor']?->perproduk?->editorRequest))
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        @endif
                                         EDITOR
                                     </div>
                                     <div class="step-info">
-                                        <strong>Sintia</strong> · 14/07 14:20
+                                        <strong>{{ $progresPesanan['editor']->users->name }}</strong> · {{ $progresPesanan['editor']->updated_at->format('d/m • H.i') }}
                                     </div>
                                 </div>
                             </div>
@@ -523,6 +526,69 @@
 
                     </div>
 
+                </div> --}}
+
+                <div class="card-body py-3">
+                    <div class="order-flow">
+
+                        @foreach ($progresPesanan as $role => $progres)
+                            @php
+                                $namaRole = match ($role) {
+                                    'pegawai' => 'ADMIN PENJUALAN',
+                                    'gudang' => 'GUDANG',
+                                    'editor' => 'EDITOR',
+                                    'produksi' => 'PRODUKSI',
+                                    'packing' => 'PACKING',
+                                    'dikirim' => 'DIKIRIM',
+                                    default => strtoupper($role),
+                                };
+
+                                // Sesuaikan data-step dengan program lama
+                                $dataStep = match ($role) {
+                                    'pegawai' => 'input',
+                                    'gudang' => 'exported',
+                                    'editor' => 'editor',
+                                    'produksi' => 'produksi',
+                                    'packing' => 'packing',
+                                    'dikirim' => 'dikirim',
+                                    default => $role,
+                                };
+
+                                $selesai = match ($role) {
+                                    'pegawai' => !is_null($pesanan->batas_kirim_at),
+
+                                    'gudang' => !is_null($pesanan->pesanan_per_produk->first()?->mutasi_stok_id),
+
+                                    'editor' => $progres->perproduk?->editorRequest?->isNotEmpty() ?? false,
+
+                                    default => false,
+                                };
+                            @endphp
+
+                            <div class="order-step" data-step="{{ $dataStep }}"
+                                data-completed="{{ $selesai ? '1' : '0' }}">
+                                <div class="step-inner">
+                                    <div class="step-title">
+                                        @if ($selesai)
+                                            <i class="bi bi-check-circle-fill"></i>
+                                        @endif
+
+                                        {{ $namaRole }}
+                                    </div>
+
+                                    <div class="step-info">
+                                        <strong>
+                                            {{ $progres->users?->name ?? '-' }}
+                                        </strong>
+
+                                        <span>•</span> {{ $progres->updated_at?->format('d/m • H.i') }}
+                                    </div>
+
+                                </div>
+                            </div>
+                        @endforeach
+
+                    </div>
                 </div>
             </div>
         @endif
@@ -1283,8 +1349,7 @@
             });
 
             const prosesInfo = {
-
-                input: [{
+                pegawai: [{
                         icon: 'bi-file-earmark-excel',
                         text: 'Telah melakukan input Excel'
                     },
@@ -1294,13 +1359,13 @@
                     }
                 ],
 
-                exported: [{
+                gudang: [{
                         icon: 'bi-file-earmark-arrow-down',
                         text: 'Pesanan telah diexport'
                     },
                     {
                         icon: 'bi-check-circle-fill',
-                        text: 'Gudang selesai'
+                        text: 'Pesanan telah keluar dari gudang'
                     }
                 ],
 
@@ -1310,7 +1375,7 @@
                     },
                     {
                         icon: 'bi-check-circle-fill',
-                        text: 'Desain pesanan telah selesai'
+                        text: 'Desain pesanan telah diproses'
                     }
                 ],
 
@@ -1346,18 +1411,30 @@
 
             };
 
+
+            // Inisialisasi Popover
             $('.order-step[data-step]').each(function() {
 
                 const element = this;
-                const step = $(element).attr('data-step');
+                const step = element.dataset.step;
                 const items = prosesInfo[step];
 
-                if (!items) return;
+                if (!items) {
+                    console.warn('Role tidak ditemukan:', step);
+                    return;
+                }
+
+                // Hapus popover lama jika ada
+                const oldPopover = bootstrap.Popover.getInstance(element);
+
+                if (oldPopover) {
+                    oldPopover.dispose();
+                }
 
                 new bootstrap.Popover(element, {
 
                     container: 'body',
-                    trigger: 'hover',
+                    trigger: 'hover focus',
                     placement: 'top',
                     html: true,
                     sanitize: true,
@@ -1391,8 +1468,6 @@
                 });
 
             });
-
-
         });
     </script>
 @endpush

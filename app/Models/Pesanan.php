@@ -143,4 +143,9 @@ class Pesanan extends Model
             'id'
         )->withTrashed();
     }
+
+    public function progresPesanan()
+    {
+        return $this->hasMany(progres_pesanan::class, 'no_pesanan', 'no_pesanan');
+    }
 }

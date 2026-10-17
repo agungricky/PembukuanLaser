@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\EditorPart;
 use App\Models\EditorPartItem;
 use App\Models\EditorRequest;
+use App\Models\progres_pesanan;
 use App\Services\EditorPartService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
@@ -132,9 +133,8 @@ class EditorController extends Controller
         );
     }
 
-    public function partIndex(
-        EditorPartService $partService
-    ) {
+    public function partIndex(EditorPartService $partService)
+    {
         try {
             $partService->sinkronkanPekerjaanTersedia(
                 Auth::id()
@@ -190,15 +190,11 @@ class EditorController extends Controller
             ->orderBy('marketplace')
             ->paginate(20);
 
-        return view(
-            'editor.part.index',
-            compact('parts')
-        );
+        return view('editor.part.index', compact('parts'));
     }
 
-    public function partShow(
-        EditorPart $part
-    ) {
+    public function partShow(EditorPart $part)
+    {
         $part->load([
             'items' => fn ($q) => $q->orderBy('urutan'),
             'items.item.pesanan',
@@ -225,10 +221,8 @@ class EditorController extends Controller
         );
     }
 
-    public function downloadPlat(
-        EditorPart $part,
-        EditorPartService $partService
-    ) {
+    public function downloadPlat(EditorPart $part, EditorPartService $partService)
+    {
         try {
             $partService->sinkronkanPekerjaanTersedia(
                 Auth::id()
@@ -294,13 +288,9 @@ class EditorController extends Controller
 
             DB::transaction(
                 function () use ($part) {
-                    $lockedPart =
-                        EditorPart::where(
-                            'id',
-                            $part->id
-                        )
-                            ->lockForUpdate()
-                            ->firstOrFail();
+                    $lockedPart = EditorPart::where('id', $part->id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
                     if (! in_array(
                         $lockedPart->status,
@@ -312,17 +302,10 @@ class EditorController extends Controller
                         );
                     }
 
-                    $adaPending =
-                        EditorPartItem::where(
-                            'editor_part_id',
-                            $lockedPart->id
-                        )
-                            ->where(
-                                'status',
-                                'pending'
-                            )
-                            ->whereRaw("UPPER(TRIM(sku)) <> 'PLT028C'")
-                            ->exists();
+                    $adaPending = EditorPartItem::where('editor_part_id', $lockedPart->id)
+                        ->where('status', 'pending')
+                        ->whereRaw("UPPER(TRIM(sku)) <> 'PLT028C'")
+                        ->exists();
 
                     if (! $adaPending) {
                         throw new \Exception(
@@ -330,19 +313,11 @@ class EditorController extends Controller
                         );
                     }
 
-                    if (
-                        $lockedPart->status ===
-                        'open'
-                    ) {
-                        $this->validasiWaktuDownload(
-                            $lockedPart
-                        );
-
+                    if ($lockedPart->status === 'open') {
+                        $this->validasiWaktuDownload($lockedPart);
                         $lockedPart->update([
                             'status' => 'downloaded',
-
                             'downloaded_by' => Auth::id(),
-
                             'downloaded_at' => now(),
                         ]);
                     }
@@ -350,17 +325,11 @@ class EditorController extends Controller
             );
 
             $part->refresh();
-
             $part->load([
                 'items' => function ($q) {
-                    $q->where(
-                        'status',
-                        'pending'
-                    )
+                    $q->where('status', 'pending')
                         ->whereRaw("UPPER(TRIM(sku)) <> 'PLT028C'")
-                        ->orderBy(
-                            'urutan'
-                        );
+                        ->orderBy('urutan');
                 },
                 'items.item.pesanan',
             ]);
@@ -374,91 +343,51 @@ class EditorController extends Controller
                 );
             }
 
-            $sheet->setCellValue(
-                'A1',
-                'SKU'
-            );
+            $listNoPesanan = $part->items
+                ->pluck('item.no_pesanan')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
 
-            $sheet->setCellValue(
-                'B1',
-                'PLAT LENGKAP'
-            );
+            $role = Auth::user()->role;
+            $userId = Auth::id();
 
-            $sheet->setCellValue(
-                'C1',
-                'NAMA'
-            );
+            foreach ($listNoPesanan as $value) {
+                progres_pesanan::firstOrCreate(
+                    [
+                        'no_pesanan' => $value,
+                        'role' => $role,
+                    ],
+                    [
+                        'user_id' => $userId,
+                    ]
+                );
+            }
 
-            $sheet->setCellValue(
-                'D1',
-                'TANGGAL/BULAN TAHUN'
-            );
+            $sheet->setCellValue('A1', 'SKU');
+            $sheet->setCellValue('B1', 'PLAT LENGKAP');
+            $sheet->setCellValue('C1', 'NAMA');
+            $sheet->setCellValue('D1', 'TANGGAL/BULAN TAHUN');
+            $sheet->setCellValue('E1', 'JUMLAH');
+            $sheet->setCellValue('F1', 'TANPA HEARTBEAT');
+            $sheet->setCellValue('G1', 'ID ITEM');
+            $sheet->setCellValue('H1', 'NO PESANAN');
+            $sheet->setCellValue('I1', 'STATUS REQUEST');
+            $sheet->setCellValue('J1', 'BATAS KIRIM');
+            $highestRow = max(2, $sheet->getHighestDataRow());
 
-            $sheet->setCellValue(
-                'E1',
-                'JUMLAH'
-            );
-
-            $sheet->setCellValue(
-                'F1',
-                'TANPA HEARTBEAT'
-            );
-
-            $sheet->setCellValue(
-                'G1',
-                'ID ITEM'
-            );
-
-            $sheet->setCellValue(
-                'H1',
-                'NO PESANAN'
-            );
-
-            $sheet->setCellValue(
-                'I1',
-                'STATUS REQUEST'
-            );
-
-            $sheet->setCellValue(
-                'J1',
-                'BATAS KIRIM'
-            );
-
-            $highestRow = max(
-                2,
-                $sheet->getHighestDataRow()
-            );
-
-            for (
-                $row = 2;
-                $row <= $highestRow;
-                $row++
-            ) {
-                for (
-                    $column = 'A';
-                    $column <= 'J';
-                    $column++
-                ) {
-                    $sheet
-                        ->getCell(
-                            $column.$row
-                        )
-                        ->setValue(null);
+            for ($row = 2; $row <= $highestRow; $row++) {
+                for ($column = 'A'; $column <= 'J'; $column++) {
+                    $sheet->getCell($column.$row)->setValue(null);
                 }
             }
 
             $row = 2;
+            foreach ($part->items as $partItem) {
+                $item = $partItem->item;
 
-            foreach (
-                $part->items as $partItem
-            ) {
-                $item =
-                    $partItem->item;
-
-                if (
-                    ! $item ||
-                    ! $item->pesanan
-                ) {
+                if (! $item || ! $item->pesanan) {
                     continue;
                 }
 
@@ -468,111 +397,46 @@ class EditorController extends Controller
                     DataType::TYPE_STRING
                 );
 
-                $sheet->setCellValue(
-                    'B'.$row,
-                    ''
-                );
-
-                $sheet->setCellValue(
-                    'C'.$row,
-                    ''
-                );
-
-                $sheet->setCellValue(
-                    'D'.$row,
-                    ''
-                );
-
-                $sheet->setCellValue(
-                    'E'.$row,
-                    (int) $item->jumlah
-                );
-
-                $sheet->setCellValue(
-                    'F'.$row,
-                    ''
-                );
-
-                $sheet->setCellValueExplicit(
-                    'G'.$row,
-                    (string)
-                    $item->id_per_produk,
-                    DataType::TYPE_STRING
-                );
-
-                $sheet->setCellValueExplicit(
-                    'H'.$row,
-                    (string)
-                    $item->no_pesanan,
-                    DataType::TYPE_STRING
-                );
-
-                $sheet->setCellValue(
-                    'I'.$row,
-                    ''
-                );
-
-                $sheet->setCellValue(
-                    'J'.$row,
-                    $this->formatBatasKirim(
-                        $item
-                            ->pesanan
-                            ->batas_kirim_at
-                    )
+                $sheet->setCellValue('B'.$row, '');
+                $sheet->setCellValue('C'.$row, '');
+                $sheet->setCellValue('D'.$row, '');
+                $sheet->setCellValue('E'.$row, (int) $item->jumlah);
+                $sheet->setCellValue('F'.$row, '');
+                $sheet->setCellValueExplicit('G'.$row, (string) $item->id_per_produk, DataType::TYPE_STRING);
+                $sheet->setCellValueExplicit('H'.$row, (string) $item->no_pesanan, DataType::TYPE_STRING);
+                $sheet->setCellValue('I'.$row, '');
+                $sheet->setCellValue('J'.$row,
+                    $this->formatBatasKirim($item->pesanan->batas_kirim_at)
                 );
 
                 $row++;
             }
 
-            $lastRow =
-                $row - 1;
+            $lastRow = $row - 1;
 
             if ($lastRow >= 2) {
-                $sheet
-                    ->getStyle(
-                        'A2:A'.$lastRow
-                    )
+                $sheet->getStyle('A2:A'.$lastRow)
                     ->getNumberFormat()
                     ->setFormatCode('@');
 
                 $sheet
-                    ->getStyle(
-                        'G2:H'.$lastRow
-                    )
+                    ->getStyle('G2:H'.$lastRow)
                     ->getNumberFormat()
                     ->setFormatCode('@');
             }
 
-            $this->buatMetaSheet(
-                $spreadsheet,
-                $part
-            );
-
-            $filename =
-                'EDITOR_'.
-                $part->kode_part.
-                '.xlsx';
+            $this->buatMetaSheet($spreadsheet, $part);
+            $filename = 'EDITOR_'.$part->kode_part.'.xlsx';
 
             return response()->streamDownload(
-                function () use (
-                    $spreadsheet
-                ) {
-                    $writer =
-                        new Xlsx(
-                            $spreadsheet
-                        );
-
-                    $writer->save(
-                        'php://output'
-                    );
-
-                    $spreadsheet
-                        ->disconnectWorksheets();
+                function () use ($spreadsheet) {
+                    $writer = new Xlsx($spreadsheet);
+                    $writer->save('php://output');
+                    $spreadsheet->disconnectWorksheets();
                 },
                 $filename,
                 [
                     'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-
                     'Cache-Control' => 'max-age=0, no-cache, no-store, must-revalidate',
                 ]
             );
@@ -593,10 +457,8 @@ class EditorController extends Controller
         );
     }
 
-    public function importEditor(
-        Request $request,
-        EditorPartService $partService
-    ) {
+    public function importEditor(Request $request, EditorPartService $partService)
+    {
         $request->validate([
             'file_editor' => [
                 'required',
@@ -606,15 +468,16 @@ class EditorController extends Controller
             ],
         ]);
 
+        $file = $request->file('file_editor');
         $spreadsheet = null;
 
         try {
             $spreadsheet = IOFactory::load(
-                $request->file('file_editor')->getRealPath()
+                $file->getPathname()
             );
 
+            // Mencari Sheet bernama Plat
             $sheet = $spreadsheet->getSheetByName('PLAT');
-
             if (! $sheet) {
                 $spreadsheet->disconnectWorksheets();
 
@@ -624,10 +487,7 @@ class EditorController extends Controller
                 );
             }
 
-            $part = $this->ambilPartDariExcel(
-                $spreadsheet
-            );
-
+            $part = $this->ambilPartDariExcel($spreadsheet);
             if (! $part) {
                 $spreadsheet->disconnectWorksheets();
 
@@ -667,21 +527,10 @@ class EditorController extends Controller
             }
 
             $this->validasiHeader($sheet);
-
-            $partItems = EditorPartItem::with([
-                'item.pesanan',
-            ])
-                ->where(
-                    'editor_part_id',
-                    $part->id
-                )
-                ->where(
-                    'status',
-                    'pending'
-                )
-                ->orderBy(
-                    'urutan'
-                )
+            $partItems = EditorPartItem::with(['item.pesanan'])
+                ->where('editor_part_id', $part->id)
+                ->where('status', 'pending')
+                ->orderBy('urutan')
                 ->get()
                 ->keyBy(
                     fn ($item) => (string) $item->id_per_produk
@@ -698,70 +547,46 @@ class EditorController extends Controller
                     );
             }
 
-            $highestRow =
-                $sheet->getHighestDataRow();
-
+            $highestRow = $sheet->getHighestDataRow();
             $groupedRows = [];
             $invalidItemIds = [];
             $errors = [];
 
-            for (
-                $row = 2;
-                $row <= $highestRow;
-                $row++
-            ) {
+            for ($row = 2; $row <= $highestRow; $row++) {
                 $sku = $this->nullableText(
-                    $sheet
-                        ->getCell("A{$row}")
-                        ->getFormattedValue()
+                    $sheet->getCell("A{$row}")->getFormattedValue()
                 );
 
                 $platLengkap = $this->nullableText(
-                    $sheet
-                        ->getCell("B{$row}")
-                        ->getFormattedValue()
+                    $sheet->getCell("B{$row}")->getFormattedValue()
                 );
 
                 $nama = $this->nullableText(
-                    $sheet
-                        ->getCell("C{$row}")
-                        ->getFormattedValue()
+                    $sheet->getCell("C{$row}")->getFormattedValue()
                 );
 
                 $tanggalBulanTahun = $this->nullableText(
-                    $sheet
-                        ->getCell("D{$row}")
-                        ->getFormattedValue()
+                    $sheet->getCell("D{$row}")->getFormattedValue()
                 );
 
                 $jumlah = $this->nullableText(
-                    $sheet
-                        ->getCell("E{$row}")
-                        ->getFormattedValue()
+                    $sheet->getCell("E{$row}")->getFormattedValue()
                 );
 
                 $tanpaHeartbeat = $this->nullableText(
-                    $sheet
-                        ->getCell("F{$row}")
-                        ->getFormattedValue()
+                    $sheet->getCell("F{$row}")->getFormattedValue()
                 );
 
                 $idItem = $this->nullableText(
-                    $sheet
-                        ->getCell("G{$row}")
-                        ->getFormattedValue()
+                    $sheet->getCell("G{$row}")->getFormattedValue()
                 );
 
                 $noPesanan = $this->nullableText(
-                    $sheet
-                        ->getCell("H{$row}")
-                        ->getFormattedValue()
+                    $sheet->getCell("H{$row}")->getFormattedValue()
                 );
 
                 $statusRaw = $this->nullableText(
-                    $sheet
-                        ->getCell("I{$row}")
-                        ->getFormattedValue()
+                    $sheet->getCell("I{$row}")->getFormattedValue()
                 );
 
                 if (
@@ -779,178 +604,100 @@ class EditorController extends Controller
                 }
 
                 if ($idItem === null) {
-                    $errors[] =
-                        "Baris {$row}: ID ITEM kosong.";
+                    $errors[] = "Baris {$row}: ID ITEM kosong.";
 
                     continue;
                 }
 
-                $idItem = trim(
-                    (string) $idItem
-                );
-
+                $idItem = trim((string) $idItem);
                 if (! $partItems->has($idItem)) {
-                    $errors[] =
-                        "Baris {$row}: ID ITEM {$idItem} bukan item pending dari antrian {$part->kode_part}.";
+                    $errors[] = "Baris {$row}: ID ITEM {$idItem} bukan item pending dari antrian {$part->kode_part}.";
 
                     continue;
                 }
 
-                $partItem =
-                    $partItems->get($idItem);
-
-                $item =
-                    $partItem->item;
+                $partItem = $partItems->get($idItem);
+                $item = $partItem->item;
 
                 if (! $item) {
                     $invalidItemIds[$idItem] = true;
-
-                    $errors[] =
-                        "Baris {$row}: ID ITEM {$idItem} tidak ditemukan.";
+                    $errors[] = "Baris {$row}: ID ITEM {$idItem} tidak ditemukan.";
 
                     continue;
                 }
 
                 if (! $item->pesanan) {
                     $invalidItemIds[$idItem] = true;
-
-                    $errors[] =
-                        "Baris {$row}: pesanan untuk ID ITEM {$idItem} tidak ditemukan.";
+                    $errors[] = "Baris {$row}: pesanan untuk ID ITEM {$idItem} tidak ditemukan.";
 
                     continue;
                 }
 
-                if (
-                    $item->pesanan->status !==
-                    'proses'
-                ) {
+                if ($item->pesanan->status !== 'proses') {
                     $invalidItemIds[$idItem] = true;
-
-                    $errors[] =
-                        "Baris {$row}: pesanan {$item->no_pesanan} sudah tidak berstatus proses.";
+                    $errors[] = "Baris {$row}: pesanan {$item->no_pesanan} sudah tidak berstatus proses.";
 
                     continue;
                 }
 
                 if ($noPesanan === null) {
-                    $noPesanan =
-                        (string) $item->no_pesanan;
+                    $noPesanan = (string) $item->no_pesanan;
                 }
 
-                if (
-                    (string) $item->no_pesanan !==
-                    (string) $noPesanan
-                ) {
+                if ((string) $item->no_pesanan !== (string) $noPesanan) {
                     $invalidItemIds[$idItem] = true;
-
-                    $errors[] =
-                        "Baris {$row}: NO PESANAN {$noPesanan} tidak cocok dengan ID ITEM {$idItem}.";
+                    $errors[] = "Baris {$row}: NO PESANAN {$noPesanan} tidak cocok dengan ID ITEM {$idItem}.";
 
                     continue;
                 }
 
-                if (
-                    $sku !== null &&
-                    strtoupper(
-                        trim(
-                            (string) $item->sku
-                        )
-                    ) !==
-                    strtoupper(
-                        trim(
-                            (string) $sku
-                        )
-                    )
-                ) {
+                if ($sku !== null && strtoupper(trim((string) $item->sku)) !== strtoupper(trim((string) $sku))) {
                     $invalidItemIds[$idItem] = true;
-
-                    $errors[] =
-                        "Baris {$row}: SKU {$sku} tidak cocok dengan ID ITEM {$idItem}.";
+                    $errors[] = "Baris {$row}: SKU {$sku} tidak cocok dengan ID ITEM {$idItem}.";
 
                     continue;
                 }
 
-                if (
-                    $jumlah === null ||
-                    ! is_numeric($jumlah) ||
-                    (int) $jumlah < 1
-                ) {
+                if ($jumlah === null || ! is_numeric($jumlah) || (int) $jumlah < 1) {
                     $invalidItemIds[$idItem] = true;
-
-                    $errors[] =
-                        "Baris {$row}: JUMLAH harus minimal 1.";
+                    $errors[] = "Baris {$row}: JUMLAH harus minimal 1.";
 
                     continue;
                 }
 
-                $statusRequest =
-                    $this->normalizeStatusRequest(
-                        $statusRaw
-                    );
-
+                $statusRequest = $this->normalizeStatusRequest($statusRaw);
                 if ($statusRequest === null) {
                     $invalidItemIds[$idItem] = true;
-
-                    $errors[] =
-                        "Baris {$row}: STATUS REQUEST hanya boleh kosong, NORMAL, MENUNGGU, atau RANDOM.";
+                    $errors[] = "Baris {$row}: STATUS REQUEST hanya boleh kosong, NORMAL, MENUNGGU, atau RANDOM.";
 
                     continue;
                 }
 
-                $requestSearch =
-                    $this->buildRequestSearch(
-                        $platLengkap,
-                        $nama,
-                        $tanggalBulanTahun
-                    );
+                $requestSearch = $this->buildRequestSearch($platLengkap, $nama, $tanggalBulanTahun);
 
-                if (
-                    $statusRequest === 'normal' &&
-                    $requestSearch === null
-                ) {
-                    $statusRequest =
-                        'menunggu';
+                if ($statusRequest === 'normal' && $requestSearch === null) {
+                    $statusRequest = 'menunggu';
                 }
 
-                if (
-                    $statusRequest === 'random' &&
-                    $requestSearch === null
-                ) {
+                if ($statusRequest === 'random' && $requestSearch === null) {
                     $platLengkap = 'RANDOM';
                     $requestSearch = 'RANDOM';
                 }
 
                 $groupedRows[$idItem][] = [
                     'baris' => $row,
-
                     'plat_lengkap' => $platLengkap,
-
                     'nama' => $nama,
-
                     'tanggal_bulan_tahun' => $tanggalBulanTahun,
-
                     'jumlah_editor' => (int) $jumlah,
-
-                    'tanpa_heartbeat' => $this->excelBoolean(
-                        $tanpaHeartbeat
-                    ),
-
+                    'tanpa_heartbeat' => $this->excelBoolean($tanpaHeartbeat),
                     'status_request' => $statusRequest,
-
                     'request_search' => $requestSearch,
                 ];
             }
 
-            foreach (
-                $groupedRows as $idPerProduk => $rows
-            ) {
-                if (
-                    isset(
-                        $invalidItemIds[
-                            $idPerProduk
-                        ]
-                    )
-                ) {
+            foreach ($groupedRows as $idPerProduk => $rows) {
+                if (isset($invalidItemIds[$idPerProduk])) {
                     continue;
                 }
 
@@ -960,12 +707,9 @@ class EditorController extends Controller
                     ->values();
 
                 if ($statuses->count() > 1) {
-                    $invalidItemIds[
-                        $idPerProduk
-                    ] = true;
+                    $invalidItemIds[$idPerProduk] = true;
 
-                    $errors[] =
-                        "ID ITEM {$idPerProduk}: STATUS REQUEST harus sama pada semua baris.";
+                    $errors[] = "ID ITEM {$idPerProduk}: STATUS REQUEST harus sama pada semua baris.";
                 }
             }
 
@@ -976,16 +720,8 @@ class EditorController extends Controller
             $jumlahDilewati = 0;
             $jumlahRequest = 0;
 
-            foreach (
-                $groupedRows as $idPerProduk => $rows
-            ) {
-                if (
-                    isset(
-                        $invalidItemIds[
-                            $idPerProduk
-                        ]
-                    )
-                ) {
+            foreach ($groupedRows as $idPerProduk => $rows) {
+                if (isset($invalidItemIds[$idPerProduk])) {
                     continue;
                 }
 
@@ -1003,41 +739,24 @@ class EditorController extends Controller
                             &$jumlahRequest,
                             $partService
                         ) {
-                            $lockedPart =
-                                EditorPart::where(
-                                    'id',
-                                    $part->id
-                                )
-                                    ->lockForUpdate()
-                                    ->firstOrFail();
+                            $lockedPart = EditorPart::where('id', $part->id)
+                                ->lockForUpdate()
+                                ->firstOrFail();
 
-                            if (
-                                $lockedPart->status ===
-                                'processed'
-                            ) {
+                            if ($lockedPart->status === 'processed') {
                                 return;
                             }
 
-                            if (
-                                $lockedPart->status !==
-                                'downloaded'
-                            ) {
+                            if ($lockedPart->status !== 'downloaded') {
                                 throw new \Exception(
                                     "Antrian {$lockedPart->kode_part} sudah tidak dapat diproses."
                                 );
                             }
 
-                            $partItem =
-                                EditorPartItem::where(
-                                    'editor_part_id',
-                                    $lockedPart->id
-                                )
-                                    ->where(
-                                        'id_per_produk',
-                                        $idPerProduk
-                                    )
-                                    ->lockForUpdate()
-                                    ->first();
+                            $partItem = EditorPartItem::where('editor_part_id', $lockedPart->id)
+                                ->where('id_per_produk', $idPerProduk)
+                                ->lockForUpdate()
+                                ->first();
 
                             if (! $partItem) {
                                 throw new \Exception(
@@ -1045,22 +764,13 @@ class EditorController extends Controller
                                 );
                             }
 
-                            if (
-                                $partItem->status !==
-                                'pending'
-                            ) {
+                            if ($partItem->status !== 'pending') {
                                 return;
                             }
 
-                            $skuItem = mb_strtoupper(
-                                trim((string) $partItem->sku)
-                            );
-
+                            $skuItem = mb_strtoupper(trim((string) $partItem->sku));
                             if ($skuItem === 'PLT028C') {
-                                EditorRequest::where(
-                                    'id_per_produk',
-                                    $idPerProduk
-                                )
+                                EditorRequest::where('id_per_produk', $idPerProduk)
                                     ->whereNull('locked_at')
                                     ->delete();
 
@@ -1075,22 +785,10 @@ class EditorController extends Controller
                                 return;
                             }
 
-                            $status =
-                                $rows[0][
-                                    'status_request'
-                                ];
-
-                            if (
-                                $status ===
-                                'menunggu'
-                            ) {
-                                EditorRequest::where(
-                                    'id_per_produk',
-                                    $idPerProduk
-                                )
-                                    ->whereNull(
-                                        'locked_at'
-                                    )
+                            $status = $rows[0]['status_request'];
+                            if ($status === 'menunggu') {
+                                EditorRequest::where('id_per_produk', $idPerProduk)
+                                    ->whereNull('locked_at')
                                     ->delete();
 
                                 $partItem->update([
@@ -1099,10 +797,8 @@ class EditorController extends Controller
                                     'processed_at' => now(),
                                 ]);
 
-                                $hasilAlih = $partService->alokasikanKeAntrianBerikutnya(
-                                    [(int) $idPerProduk],
-                                    $lockedPart,
-                                    Auth::id()
+                                $hasilAlih = $partService->alokasikanKeAntrianBerikutnya([(int) $idPerProduk],
+                                    $lockedPart, Auth::id()
                                 );
 
                                 if (($hasilAlih['items'] ?? 0) < 1) {
@@ -1116,15 +812,9 @@ class EditorController extends Controller
                                 return;
                             }
 
-                            $sudahLocked =
-                                EditorRequest::where(
-                                    'id_per_produk',
-                                    $idPerProduk
-                                )
-                                    ->whereNotNull(
-                                        'locked_at'
-                                    )
-                                    ->exists();
+                            $sudahLocked = EditorRequest::where('id_per_produk', $idPerProduk)
+                                ->whereNotNull('locked_at')
+                                ->exists();
 
                             if ($sudahLocked) {
                                 throw new \Exception(
@@ -1132,84 +822,55 @@ class EditorController extends Controller
                                 );
                             }
 
-                            EditorRequest::where(
-                                'id_per_produk',
-                                $idPerProduk
-                            )
-                                ->whereNull(
-                                    'locked_at'
-                                )
+                            EditorRequest::where('id_per_produk', $idPerProduk)
+                                ->whereNull('locked_at')
                                 ->delete();
 
                             $jumlahFinal = 0;
-
-                            foreach (
-                                $rows as $requestRow
-                            ) {
+                            foreach ($rows as $requestRow) {
                                 EditorRequest::create([
                                     'id_per_produk' => $idPerProduk,
-
                                     'editor_part_id' => $lockedPart->id,
-
-                                    'plat_lengkap' => $requestRow[
-                                            'plat_lengkap'
-                                        ],
-
-                                    'nama' => $requestRow[
-                                            'nama'
-                                        ],
-
-                                    'tanggal_bulan_tahun' => $requestRow[
-                                            'tanggal_bulan_tahun'
-                                        ],
-
-                                    'jumlah_editor' => $requestRow[
-                                            'jumlah_editor'
-                                        ],
-
-                                    'tanpa_heartbeat' => $requestRow[
-                                            'tanpa_heartbeat'
-                                        ],
-
+                                    'plat_lengkap' => $requestRow['plat_lengkap'],
+                                    'nama' => $requestRow['nama'],
+                                    'tanggal_bulan_tahun' => $requestRow['tanggal_bulan_tahun'],
+                                    'jumlah_editor' => $requestRow['jumlah_editor'],
+                                    'tanpa_heartbeat' => $requestRow['tanpa_heartbeat'],
                                     'tanpa_korlantas' => false,
-
                                     'status_request' => $status,
-
-                                    'request_search' => $requestRow[
-                                            'request_search'
-                                        ],
-
+                                    'request_search' => $requestRow['request_search'],
                                     'editor_imported_by' => Auth::id(),
-
                                     'editor_imported_at' => now(),
-
                                     'locked_at' => now(),
-
                                     'locked_by' => Auth::id(),
                                 ]);
 
-                                $jumlahFinal +=
-                                    (int) $requestRow[
-                                        'jumlah_editor'
-                                    ];
-
+                                $jumlahFinal += (int) $requestRow['jumlah_editor'];
                                 $jumlahRequest++;
                             }
 
                             $partItem->update([
                                 'status' => 'locked',
-
                                 'jumlah_final' => $jumlahFinal,
-
                                 'processed_at' => now(),
                             ]);
 
-                            $jumlahLocked++;
+                            $noPesanan = $partItem->item?->no_pesanan;
 
-                            if (
-                                $status ===
-                                'random'
-                            ) {
+                            if (! $noPesanan) {
+                                throw new \Exception(
+                                    "Nomor pesanan untuk ID ITEM {$idPerProduk} tidak ditemukan."
+                                );
+                            }
+
+                            progres_pesanan::where('no_pesanan', $noPesanan)
+                                ->where('role', 'editor')
+                                ->update([
+                                    'updated_at' => now(),
+                                ]);
+
+                            $jumlahLocked++;
+                            if ($status === 'random') {
                                 $jumlahRandom++;
                             } else {
                                 $jumlahNormal++;
@@ -1219,19 +880,12 @@ class EditorController extends Controller
                 } catch (\Throwable $e) {
                     report($e);
 
-                    $invalidItemIds[
-                        $idPerProduk
-                    ] = true;
-
-                    $errors[] =
-                        "ID ITEM {$idPerProduk}: ".
-                        $e->getMessage();
+                    $invalidItemIds[$idPerProduk] = true;
+                    $errors[] = "ID ITEM {$idPerProduk}: ".$e->getMessage();
                 }
             }
 
-            $sudahDiproses =
-                false;
-
+            $sudahDiproses = false;
             DB::transaction(
                 function () use (
                     $part,
@@ -1240,54 +894,30 @@ class EditorController extends Controller
                     &$jumlahDilewati,
                     &$sudahDiproses
                 ) {
-                    $lockedPart =
-                        EditorPart::where(
-                            'id',
-                            $part->id
-                        )
-                            ->lockForUpdate()
-                            ->firstOrFail();
+                    $lockedPart = EditorPart::where('id', $part->id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
-                    if (
-                        $lockedPart->status ===
-                        'processed'
-                    ) {
+                    if ($lockedPart->status === 'processed') {
                         $sudahDiproses = true;
 
                         return;
                     }
 
-                    if (
-                        $lockedPart->status !==
-                        'downloaded'
-                    ) {
+                    if ($lockedPart->status !== 'downloaded') {
                         throw new \Exception(
                             "Antrian {$lockedPart->kode_part} sudah tidak dapat diselesaikan."
                         );
                     }
 
-                    $sisaPending =
-                        EditorPartItem::where(
-                            'editor_part_id',
-                            $lockedPart->id
-                        )
-                            ->where(
-                                'status',
-                                'pending'
-                            )
-                            ->lockForUpdate()
-                            ->get();
+                    $sisaPending = EditorPartItem::where('editor_part_id', $lockedPart->id)
+                        ->where('status', 'pending')
+                        ->lockForUpdate()
+                        ->get();
 
-                    foreach (
-                        $sisaPending as $pending
-                    ) {
-                        EditorRequest::where(
-                            'id_per_produk',
-                            $pending->id_per_produk
-                        )
-                            ->whereNull(
-                                'locked_at'
-                            )
+                    foreach ($sisaPending as $pending) {
+                        EditorRequest::where('id_per_produk', $pending->id_per_produk)
+                            ->whereNull('locked_at')
                             ->delete();
 
                         $pending->update([
@@ -1296,10 +926,7 @@ class EditorController extends Controller
                             'processed_at' => now(),
                         ]);
 
-                        $skuPending = mb_strtoupper(
-                            trim((string) $pending->sku)
-                        );
-
+                        $skuPending = mb_strtoupper(trim((string) $pending->sku));
                         if ($skuPending === 'PLT028C') {
                             $jumlahDilewati++;
 
@@ -1323,24 +950,17 @@ class EditorController extends Controller
 
                     $lockedPart->update([
                         'status' => 'processed',
-
                         'uploaded_by' => Auth::id(),
-
                         'uploaded_at' => now(),
                     ]);
                 }
             );
 
-            $spreadsheet
-                ->disconnectWorksheets();
-
+            $spreadsheet->disconnectWorksheets();
             $spreadsheet = null;
-
             if ($sudahDiproses) {
                 return redirect()
-                    ->route(
-                        'editor.riwayat.index'
-                    )
+                    ->route('editor.riwayat.index')
                     ->with(
                         'success',
                         "Antrian {$part->kode_part} sudah berhasil diproses."
@@ -1353,22 +973,14 @@ class EditorController extends Controller
                 "({$jumlahNormal} normal, {$jumlahRandom} random), ".
                 "{$jumlahRequest} request disimpan, ".
                 "{$jumlahDialihkan} item tanpa request dialihkan ke antrian Editor berikutnya".
-                ($jumlahDilewati > 0
-                    ? ", {$jumlahDilewati} item PLT028C dilewati."
-                    : '.');
+                ($jumlahDilewati > 0 ? ", {$jumlahDilewati} item PLT028C dilewati." : '.');
 
             $redirect = redirect()
-                ->route(
-                    'editor.riwayat.index'
-                )
-                ->with(
-                    'success',
-                    $message
-                );
+                ->route('editor.riwayat.index')
+                ->with('success', $message);
 
             if (! empty($errors)) {
-                $redirect->with(
-                    'import_errors',
+                $redirect->with('import_errors',
                     $errors
                 );
             }
@@ -1380,8 +992,7 @@ class EditorController extends Controller
 
             if ($spreadsheet) {
                 try {
-                    $spreadsheet
-                        ->disconnectWorksheets();
+                    $spreadsheet->disconnectWorksheets();
                 } catch (\Throwable $ignored) {
                 }
             }
@@ -1988,49 +1599,18 @@ class EditorController extends Controller
         }
 
         $renderer = new ImageRenderer(
-            new RendererStyle(
-                180,
-                1
-            ),
+            new RendererStyle(180, 1),
             new SvgImageBackEnd
         );
 
-        $writer = new Writer(
-            $renderer
-        );
-
+        $writer = new Writer($renderer);
         $rows = collect();
-
         foreach ($requests as $request) {
-            $jumlah = max(
-                1,
-                (int) $request->jumlah_editor
-            );
-
-            $namaProduk = trim(
-                (string) (
-                    $request->master_nama_produk
-                    ?: $request->pp_nama_produk
-                    ?: ''
-                )
-            );
-
-            $variasi = trim(
-                (string) (
-                    $request->master_variasi
-                    ?: $request->pp_variasi
-                    ?: ''
-                )
-            );
-
-            $sku = strtoupper(
-                trim((string) $request->sku)
-            );
-
-            $svg = $writer->writeString(
-                (string) $request->no_pesanan
-            );
-
+            $jumlah = max(1, (int) $request->jumlah_editor);
+            $namaProduk = trim((string) ($request->master_nama_produk ?: $request->pp_nama_produk ?: ''));
+            $variasi = trim((string) ($request->master_variasi ?: $request->pp_variasi ?: ''));
+            $sku = strtoupper(trim((string) $request->sku));
+            $svg = $writer->writeString((string) $request->no_pesanan);
             $qrCode = 'data:image/svg+xml;base64,'.base64_encode($svg);
             for ($i = 1; $i <= $jumlah; $i++) {
                 $rows->push([
@@ -2052,40 +1632,21 @@ class EditorController extends Controller
         }
 
         $pages = collect();
-
-        $rows
-            ->groupBy('sku')
+        $rows->groupBy('sku')
             ->each(
                 function ($skuRows) use (&$pages) {
                     $skuRows
                         ->chunk(7)
                         ->each(
                             function ($pageRows) use (&$pages) {
-                                $pages->push(
-                                    $pageRows->values()
-                                );
+                                $pages->push($pageRows->values());
                             }
                         );
                 }
             );
 
-        $pdf = Pdf::loadView(
-            'editor.part.qr-pdf',
-            compact(
-                'part',
-                'pages'
-            )
-        );
-
-        $pdf->setPaper(
-            [
-                0,
-                0,
-                283.46,
-                425.20,
-            ],
-            'portrait'
-        );
+        $pdf = Pdf::loadView('editor.part.qr-pdf', compact('part', 'pages'));
+        $pdf->setPaper([0, 0, 283.46, 425.20], 'portrait');
 
         return $pdf->download('QR_'.$part->kode_part.'.pdf');
     }

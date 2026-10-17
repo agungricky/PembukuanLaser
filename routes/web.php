@@ -51,52 +51,24 @@ Route::middleware(['web', 'auth'])->group(function () {
 
     // ===================== EDITOR ===================== //
     Route::prefix('editor')->name('editor.')->middleware('auth')->group(function () {
-        Route::get('/', [EditorController::class, 'index'])
-            ->name('index');
-
-        Route::get('/part', [EditorController::class, 'partIndex'])
-            ->name('part.index');
-
-        Route::get('/part/{part}', [EditorController::class, 'partShow'])
-            ->name('part.show');
-
-        Route::get('/part/{part}/download', [EditorController::class, 'downloadPlat'])
-            ->name('part.download');
-
-        Route::get('/part/{part}/qr-pdf', [EditorController::class, 'downloadQrPart'])
-            ->name('part.qr.pdf');
-
-        Route::get('/import', [EditorController::class, 'importPage'])
-            ->name('import.page');
-
-        Route::post('/import', [EditorController::class, 'importEditor'])
-            ->name('import');
-
-        Route::get('/riwayat', [EditorController::class, 'riwayatIndex'])
-            ->name('riwayat.index');
+        Route::get('/', [EditorController::class, 'index'])->name('index');
+        Route::get('/part', [EditorController::class, 'partIndex'])->name('part.index');
+        Route::get('/part/{part}', [EditorController::class, 'partShow'])->name('part.show');
+        Route::get('/part/{part}/download', [EditorController::class, 'downloadPlat'])->name('part.download');
+        Route::get('/part/{part}/qr-pdf', [EditorController::class, 'downloadQrPart'])->name('part.qr.pdf');
+        Route::get('/import', [EditorController::class, 'importPage'])->name('import.page');
+        Route::post('/import', [EditorController::class, 'importEditor'])->name('import');
+        Route::get('/riwayat', [EditorController::class, 'riwayatIndex'])->name('riwayat.index');
     });
 
     // ===================== PACKING ===================== //
     Route::middleware(['role:packing'])->group(function () {
-
-        Route::get('/packing/pesanan', [PackingPesananController::class, 'index'])
-            ->name('packing.pesanan');
-
-        Route::post('/packing/scan', [PackingPesananController::class, 'scan'])
-            ->name('packing.scan');
-
-        Route::get('/packing/stats', [PackingPesananController::class, 'stats'])
-            ->name('packing.stats');
-
-        Route::get('/packing/cetak-resi', [PackingPesananController::class, 'cetakIndex'])
-            ->name('packing.cetak.index');
-
-        Route::post('/packing/cari-request', [PackingPesananController::class, 'cariRequest'])
-            ->name('packing.cariRequest');
-
-        Route::post('/packing/cetak-resi', [PackingPesananController::class, 'cetakResi'])
-            ->name('packing.cetakResi');
-
+        Route::get('/packing/pesanan', [PackingPesananController::class, 'index'])->name('packing.pesanan');
+        Route::post('/packing/scan', [PackingPesananController::class, 'scan'])->name('packing.scan');
+        Route::get('/packing/stats', [PackingPesananController::class, 'stats'])->name('packing.stats');
+        Route::get('/packing/cetak-resi', [PackingPesananController::class, 'cetakIndex'])->name('packing.cetak.index');
+        Route::post('/packing/cari-request', [PackingPesananController::class, 'cariRequest'])->name('packing.cariRequest');
+        Route::post('/packing/cetak-resi', [PackingPesananController::class, 'cetakResi'])->name('packing.cetakResi');
     });
 
     // ===================== Admin & Manager ===================== //
@@ -250,7 +222,6 @@ Route::middleware(['web', 'auth'])->group(function () {
         // Riwayat Aktifitas
         Route::get('/riwayat-aktivitas/gudang', [GudangController::class, 'riwayataktivitas'])->name('gudang.aktivitas');
         Route::get('/riwayat-aktivitas/data', [GudangController::class, 'riwayatAktivitasData'])->name('gudang.riwayataktivitas.data');
-
     });
 
     Route::middleware(['role:produksi'])->group(function () {
