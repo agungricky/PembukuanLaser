@@ -19,11 +19,9 @@
     @include('editor.partials.alert')
 
     <div class="card border-0 shadow-sm">
-
         <div class="table-responsive">
 
             <table class="table align-middle mb-0">
-
                 <thead class="table-light">
                     <tr>
                         <th>Antrian</th>
@@ -38,9 +36,7 @@
                 </thead>
 
                 <tbody>
-
                     @forelse($parts as $part)
-
                         @php
                             $kelompok = $part->items
                                 ->where('status', 'pending')
@@ -65,7 +61,6 @@
                         @endphp
 
                         <tr>
-
                             <td>
                                 <div class="fw-bold">
                                     {{ $part->kode_part }}
@@ -91,11 +86,8 @@
                             </td>
 
                             <td style="min-width: 330px">
-
                                 @forelse($kelompok as $nama => $jumlah)
-
                                     <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
-
                                         <div class="small">
                                             {{ str_replace('|', ' • ', $nama) }}
                                         </div>
@@ -107,17 +99,13 @@
                                     </div>
 
                                 @empty
-
                                     <span class="text-muted small">
                                         Tidak ada item pending
                                     </span>
-
                                 @endforelse
-
                             </td>
 
                             <td class="text-center">
-
                                 <span class="fw-bold">
                                     {{ number_format($part->pending_count) }}
                                 </span>
@@ -125,13 +113,10 @@
                                 <div class="small text-muted">
                                     item
                                 </div>
-
                             </td>
 
                             <td>
-
                                 @if($part->status === 'open')
-
                                     <span class="badge bg-success">
                                         SIAP DOWNLOAD
                                     </span>
@@ -141,21 +126,15 @@
                                     <span class="badge bg-warning text-dark">
                                         SEDANG DIEDIT
                                     </span>
-
                                 @else
-
                                     <span class="badge bg-secondary">
                                         {{ strtoupper($part->status) }}
                                     </span>
-
                                 @endif
-
                             </td>
 
                             <td>
-
                                 @if($part->downloaded_at)
-
                                     <div class="small fw-semibold">
                                         {{ $part->downloaded_at->format('d/m/Y') }}
                                     </div>
@@ -163,21 +142,15 @@
                                     <div class="small text-muted">
                                         {{ $part->downloaded_at->format('H:i') }}
                                     </div>
-
                                 @else
-
                                     <span class="text-muted">
                                         Belum
                                     </span>
-
                                 @endif
-
                             </td>
 
                             <td class="text-end">
-
                                 <div class="d-flex justify-content-end gap-2 flex-wrap">
-
                                     <a href="{{ route('editor.part.download', $part) }}"
                                         class="btn btn-sm btn-success">
 

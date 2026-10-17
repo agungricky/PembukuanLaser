@@ -163,11 +163,21 @@ class PesananDetailController extends Controller
             ];
         }
 
-        $progresPesanan = progres_pesanan::with('users')->where('no_pesanan', $pesanan->no_pesanan)->get()
+        $progresPesanan = progres_pesanan::with([
+            'users',
+            'perproduk' => function ($query) {
+                $query->with('editorRequest');
+            },
+        ])
+            ->where('no_pesanan', $pesanan->no_pesanan)
+            ->get()
+            ->each(function ($item) {
+                if ($item->role !== 'editor') {
+                    $item->unsetRelation('perproduk');
+                }
+            })
+            ->sortBy('updated_at')
             ->keyBy('role');
-
-
-        // dd($progresPesanan->toArray());
 
         return view(
             'pesanan.rincian',

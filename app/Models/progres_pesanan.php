@@ -12,7 +12,20 @@ class progres_pesanan extends Model
         'user_id',
     ];
 
-    public function users(){
+    public function users()
+    {
         return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function pesanan()
+    {
+        return $this->belongsTo(
+            Pesanan::class, 'no_pesanan', 'no_pesanan'
+        );
+    }
+
+    public function perproduk()
+    {
+        return $this->belongsTo(PesananPerProduk::class, 'no_pesanan', 'no_pesanan');
     }
 }

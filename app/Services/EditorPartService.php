@@ -115,10 +115,7 @@ class EditorPartService
         return DB::transaction(function () use ($idPerProduk, $userId) {
             $partsBaru = 0;
             $skuDilewati = $this->bersihkanSkuDilewatiDariAntrianOpen();
-            $dipindahMalam = $this->pindahkanMalamBelumDidownload(
-                $userId,
-                $partsBaru
-            );
+            $dipindahMalam = $this->pindahkanMalamBelumDidownload($userId, $partsBaru);
 
             $hasil = $this->prosesAlokasi(
                 $idPerProduk,

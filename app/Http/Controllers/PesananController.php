@@ -502,7 +502,7 @@ class PesananController extends Controller
 
         $payload = $request->input('pesanan', []);
         $tanggal = Carbon::parse($request->input('tanggal_import'))->startOfDay();
-        $idUser = auth()->id();
+        $idUser = Auth::id();
         $idToko = (int) $request->input('id_toko');
         $inputAt = Carbon::now('Asia/Jakarta');
 
