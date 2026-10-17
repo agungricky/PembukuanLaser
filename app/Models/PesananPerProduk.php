@@ -77,6 +77,6 @@ class PesananPerProduk extends Model
     }
 
     public function editorRequest(){
-        return $this->hasMany(editorRequest::class, 'id_per_produk', 'id_per_produk');
+        return $this->hasMany(EditorRequest::class, 'id_per_produk', 'id_per_produk');
     }
 }
