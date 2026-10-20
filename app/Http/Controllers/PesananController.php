@@ -561,8 +561,35 @@ class PesananController extends Controller
             $previewProduk = collect($previewItem['produk_detail'] ?? [])->values();
 
             foreach ($item['produk'] ?? [] as $index => $prd) {
-                $preview = $previewProduk->get($index, []);
-                $preview = is_array($preview) ? $preview : [];
+                $skuPrd = $this->firstNonEmpty(
+                    $prd,
+                    [
+                        'sku_original',
+                        'sku_asli',
+                        '__sku',
+                        'sku',
+                        'SKU Induk',
+                        'SKU',
+                    ]
+                );
+
+                $preview = [];
+
+                if ($skuPrd !== '') {
+                    $preview = $previewProduk->first(function ($row) use ($skuPrd) {
+                        if (! is_array($row)) {
+                            return false;
+                        }
+
+                        $skuPreview = $this->firstNonEmpty(
+                            $row,
+                            ['sku_original', 'sku_asli', '__sku', 'sku']
+                        );
+
+                        return Str::upper(trim((string) $skuPreview))
+                            === Str::upper(trim((string) $skuPrd));
+                    }) ?? [];
+                }
 
                 $skuOriginal = $this->firstNonEmpty(
                     $prd,
@@ -626,11 +653,6 @@ class PesananController extends Controller
                 }
 
                 $previewItem = $previewByOrder->get($noPesanan, []);
-
-                // Batas kirim dimatikan karna batas kirim diganti menggunakan import resi
-                $batasKirimAt = $previewItem['batas_kirim_at']
-                    ?? $item['batas_kirim_at']
-                    ?? null;
                 $batasKirimRaw = $previewItem['batas_kirim_raw']
                     ?? $item['batas_kirim_raw']
                     ?? null;
@@ -656,7 +678,6 @@ class PesananController extends Controller
                     'total_admin' => 0,
                     'pencairan' => null,
                     'notes' => null,
-                    // 'batas_kirim_at' => $batasKirimAt,
                     'batas_kirim_raw' => $batasKirimRaw,
                     'batas_kirim_source' => $batasKirimSource,
                 ]);
@@ -679,20 +700,25 @@ class PesananController extends Controller
 
                     $skuOriginal = $this->firstNonEmpty(
                         $prd,
-                        ['sku_original', 'sku_asli', '__sku']
+                        [
+                            'sku_original',
+                            'sku_asli',
+                            '__sku',
+                            'sku',
+                            'SKU Induk',
+                            'SKU',
+                        ]
                     );
 
                     if ($skuOriginal === '') {
                         $skuOriginal = $this->firstNonEmpty(
                             $preview,
-                            ['sku_original', 'sku_asli', '__sku', 'sku']
-                        );
-                    }
-
-                    if ($skuOriginal === '') {
-                        $skuOriginal = $this->firstNonEmpty(
-                            $prd,
-                            ['sku', 'SKU Induk', 'SKU']
+                            [
+                                'sku_original',
+                                'sku_asli',
+                                '__sku',
+                                'sku',
+                            ]
                         );
                     }
 
