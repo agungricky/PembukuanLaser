@@ -751,7 +751,8 @@
                                 new Date(row.batas_kirim_at) :
                                 null;
 
-                            const cetakResi = row.pesanan_per_produk?.some(item => item.cetak_resi != null) ?
+                            const cetakResi = row.pesanan_per_produk?.some(item => item
+                                    .cetak_resi != null) ?
                                 `<span class="fa-stack" style="font-size: 9px;" title="Pernah Cetak Resi">
                                     <i class="fa-solid fa-circle fa-stack-2x text-success"></i>
                                     <i class="fa-solid fa-print fa-stack-1x text-white"></i>
@@ -839,17 +840,17 @@
                                     ${
                                         terlambat
                                             ? `
-                                                                                                                                                                                                                                                                <div class="mt-1">
-                                                                                                                                                                                                                                                                    <span
-                                                                                                                                                                                                                                                                        class="badge bg-danger text-white"
-                                                                                                                                                                                                                                                                        style="font-size: 9px;">
+                                                                                                                                                                                                                                                                        <div class="mt-1">
+                                                                                                                                                                                                                                                                            <span
+                                                                                                                                                                                                                                                                                class="badge bg-danger text-white"
+                                                                                                                                                                                                                                                                                style="font-size: 9px;">
 
-                                                                                                                                                                                                                                                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                                                                                                                                                                                                                                                                        Terlambat
+                                                                                                                                                                                                                                                                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                                                                                                                                                                                                                                                                Terlambat
 
-                                                                                                                                                                                                                                                                    </span>
-                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                            `
+                                                                                                                                                                                                                                                                            </span>
+                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                    `
                                             : ''
                                     }
                                 </div>
@@ -921,7 +922,8 @@
                         className: 'px-3 py-0 produk-cell',
                         render: function(data, type, row) {
                             let html = '';
-                            const barang = Array.isArray(row.pesanan_per_produk) ? row.pesanan_per_produk : [];
+                            const barang = Array.isArray(row.pesanan_per_produk) ? row
+                                .pesanan_per_produk : [];
                             barang.forEach(function(item, index) {
                                 const border = index > 0 ? 'border-top' : '';
                                 html += `
@@ -953,12 +955,12 @@
                                             ${
                                                 item.variasi
                                                     ? `
-                                                                                                                                                                                                                                                                    <span
-                                                                                                                                                                                                                                                                        class="badge bg-light text-dark border fw-normal"
-                                                                                                                                                                                                                                                                        style="font-size:10px;">
-                                                                                                                                                                                                                                                                        ${item.produk?.variasi}
-                                                                                                                                                                                                                                                                    </span>
-                                                                                                                                                                                                                                                                `
+                                                                                                                                                                                                                                                                            <span
+                                                                                                                                                                                                                                                                                class="badge bg-light text-dark border fw-normal"
+                                                                                                                                                                                                                                                                                style="font-size:10px;">
+                                                                                                                                                                                                                                                                                ${item.produk?.variasi}
+                                                                                                                                                                                                                                                                            </span>
+                                                                                                                                                                                                                                                                        `
                                                     : ''
                                             }
 
@@ -1028,7 +1030,7 @@
                                 const skuCustom = sku.endsWith('C');
 
                                 // Tersedia jika stok tersedia ATAU SKU custom
-                                const tersedia = item.tersedia === true || skuCustom;
+                                const tersedia = item.tersedia === true || !skuCustom;
 
                                 html += `
                                     <div
@@ -1039,17 +1041,17 @@
                                         ${
                                             tersedia
                                                 ? `
-                                                                                                                                            <span class="status-stok stok-tersedia">
-                                                                                                                                                <i class="fa-solid fa-circle-check"></i>
-                                                                                                                                                Tersedia
-                                                                                                                                            </span>
-                                                                                                                                        `
+                                                                                                                                                    <span class="status-stok stok-tersedia">
+                                                                                                                                                        <i class="fa-solid fa-circle-check"></i>
+                                                                                                                                                        Tersedia
+                                                                                                                                                    </span>
+                                                                                                                                                `
                                                 : `
-                                                                                                                                            <span class="status-stok stok-kurang">
-                                                                                                                                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                                                                                                                                Kurang
-                                                                                                                                            </span>
-                                                                                                                                        `
+                                                                                                                                                    <span class="status-stok stok-kurang">
+                                                                                                                                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                                                                                                                                        Kurang
+                                                                                                                                                    </span>
+                                                                                                                                                `
                                         }
 
                                     </div>
@@ -1071,7 +1073,8 @@
 
             // Check All
             $(document).on('click', '.pilih-checkbox', function() {
-                type = $(this).data('type');
+                const type = $(this).data('type');
+
                 $('#orderlist tbody tr').each(function() {
 
                     const row = $(this);
@@ -1081,71 +1084,48 @@
                         return;
                     }
 
-                    // Ambil data row dari DataTable
                     const rowData = table.row(this).data();
-
                     const barang = Array.isArray(rowData?.pesanan_per_produk) ?
-                        rowData.pesanan_per_produk : [];
+                        rowData.pesanan_per_produk :
+                        [];
 
-                    // CEK APAKAH ADA SKU NON-C YANG STOKNYA KURANG
-                    const adaKurangNonCustom = barang.some(function(item) {
-
+                    const adaKurang = barang.some(function(item) {
                         const sku = String(item.sku ?? '')
                             .trim()
                             .toUpperCase();
 
                         const skuCustom = sku.endsWith('C');
-
-                        // SKU berakhiran C tetap dianggap tersedia
+                        // SKU berakhiran C selalu dianggap Kurang
                         if (skuCustom) {
-                            return false;
+                            return true;
                         }
 
-                        // SKU biasa harus tersedia
                         return item.tersedia !== true;
                     });
 
-
-                    // STATUS PESANAN
-                    const tersedia =
-                        barang.length > 0 &&
-                        !adaKurangNonCustom;
-
+                    // Status pesanan tersedia jika semua produk tersedia
+                    const tersedia = barang.length > 0 && !adaKurang;
                     let checked = false;
-
-                    // PILIH SEMUA
                     if (type === 'all') {
                         checked = true;
                     }
-
-                    // PILIH YANG TERSEDIA
                     else if (type === 'tersedia') {
                         checked = tersedia;
                     }
-
-                    // PILIH YANG TIDAK TERSEDIA
                     else if (type === 'kurang') {
                         checked = !tersedia;
                     }
-
-                    // KOSONGKAN
                     else if (type === 'clear') {
                         checked = false;
                     }
-
                     checkbox.prop('checked', checked);
-
-                    row.toggleClass(
-                        'table-active',
-                        checked
-                    );
+                    row.toggleClass('table-active', checked);
                 });
 
                 totalTercentang = $('.item-checkbox:checked').length;
 
                 updateButtonPengambil();
                 updateStokLive();
-
             });
 
             // Klik Row
@@ -1205,25 +1185,23 @@
                     const barang = Array.isArray(rowData.pesanan_per_produk) ?
                         rowData.pesanan_per_produk : [];
 
-
                     barang.forEach(function(item) {
-                        const sku = item.sku ?? '-';
+                        const produk = item.produk ?? {};
+                        const sku = produk.sku ?? item.sku ?? '-';
+                        const namaProduk = produk.nama_produk ?? item.nama_produk ?? '-';
+                        const variasi = produk.variasi ?? item.variasi ?? '-';
+
                         if (!rekap[sku]) {
                             rekap[sku] = {
                                 sku: sku,
-                                nama_produk: item.nama_produk ?? '-',
-                                variasi: item.variasi,
+                                nama_produk: namaProduk,
+                                variasi: variasi,
                                 stok_awal: Math.max(0, Number(item.stok_total ?? 0)),
                                 kebutuhan: 0
                             };
                         }
 
-
-                        // Tambahkan qty pesanan
-                        rekap[sku].kebutuhan += Number(
-                            item.jumlah ?? 0
-                        );
-
+                        rekap[sku].kebutuhan += Number(item.jumlah ?? 0);
                     });
 
                 });
@@ -1295,19 +1273,10 @@
 
             // Logic jika filter ganti maka hapus checklist
             function resetChecklist() {
-                // Hapus semua checkbox item
                 $('.item-checkbox').prop('checked', false);
-
-                // Hapus check all
                 $('#checkAll').prop('checked', false);
-
-                // Hapus highlight row
                 $('#orderlist tbody tr').removeClass('table-active');
-
-                // Update tombol
                 updateButtonPengambil();
-
-                // Update card stok live kalau kamu pakai
                 if (typeof updateStokLive === 'function') {
                     updateStokLive();
                 }
@@ -1319,10 +1288,8 @@
 
             // Buka Modal Cetak Resi
             $('#cetakResi').on('click', function() {
-
                 const selected = $('.item-checkbox:checked');
                 if (selected.length === 0) {
-
                     Swal.fire({
                         icon: 'warning',
                         title: 'Belum Ada Barang',
@@ -1348,12 +1315,10 @@
                     .val('')
                     .removeClass('is-invalid');
 
-
                 // Tampilkan jumlah pesanan jika diperlukan
                 $('#jumlahPesananExport').text(
                     pesananExport.length
                 );
-
 
                 // Buka modal
                 const modal = new bootstrap.Modal(
@@ -1361,7 +1326,6 @@
                 );
 
                 modal.show();
-
             });
 
             // Proses Cetak Resi
@@ -1451,15 +1415,15 @@
                                         <td>${index + 1}</td>
                                         <td>${item ?? '-'}</td>
                                         ${index === 0 ? `
-                                                                                        <td rowspan="${response.data.length}" class="text-center align-middle">
-                                                                                            <button
-                                                                                                type="button"
-                                                                                                id="copy-pesanan"
-                                                                                                class="btn btn-primary btn-sm">
-                                                                                                Copy Semua No. Pesanan
-                                                                                            </button>
-                                                                                        </td>
-                                                                                    ` : ''}
+                                                                                                <td rowspan="${response.data.length}" class="text-center align-middle">
+                                                                                                    <button
+                                                                                                        type="button"
+                                                                                                        id="copy-pesanan"
+                                                                                                        class="btn btn-primary btn-sm">
+                                                                                                        Copy Semua No. Pesanan
+                                                                                                    </button>
+                                                                                                </td>
+                                                                                            ` : ''}
                                     </tr>
                                 `)
                                 .join('');
