@@ -553,15 +553,25 @@ class PesananController extends Controller
         $imported = 0;
         $skipped = [];
         $platItemIds = [];
+
         $skuList = [];
 
         foreach ($payload as $item) {
             $noPesanan = trim((string) ($item['no_pesanan'] ?? ''));
             $previewItem = $previewByOrder->get($noPesanan, []);
-            $previewProduk = collect($previewItem['produk_detail'] ?? [])->values();
+            $previewItem = is_array($previewItem) ? $previewItem : [];
 
-            foreach ($item['produk'] ?? [] as $index => $prd) {
-                $skuPrd = $this->firstNonEmpty(
+            $semuaProduk = array_merge(
+                array_values($item['produk'] ?? []),
+                array_values($previewItem['produk_detail'] ?? [])
+            );
+
+            foreach ($semuaProduk as $prd) {
+                if (! is_array($prd)) {
+                    continue;
+                }
+
+                $skuOriginal = $this->firstNonEmpty(
                     $prd,
                     [
                         'sku_original',
@@ -573,52 +583,20 @@ class PesananController extends Controller
                     ]
                 );
 
-                $preview = [];
-
-                if ($skuPrd !== '') {
-                    $preview = $previewProduk->first(function ($row) use ($skuPrd) {
-                        if (! is_array($row)) {
-                            return false;
-                        }
-
-                        $skuPreview = $this->firstNonEmpty(
-                            $row,
-                            ['sku_original', 'sku_asli', '__sku', 'sku']
-                        );
-
-                        return Str::upper(trim((string) $skuPreview))
-                            === Str::upper(trim((string) $skuPrd));
-                    }) ?? [];
-                }
-
-                $skuOriginal = $this->firstNonEmpty(
-                    $prd,
-                    ['sku_original', 'sku_asli', '__sku']
-                );
-
                 if ($skuOriginal === '') {
-                    $skuOriginal = $this->firstNonEmpty(
-                        $preview,
-                        ['sku_original', 'sku_asli', '__sku', 'sku']
-                    );
-                }
-
-                if ($skuOriginal === '') {
-                    $skuOriginal = $this->firstNonEmpty(
-                        $prd,
-                        ['sku', 'SKU Induk', 'SKU']
-                    );
+                    continue;
                 }
 
                 $sku = $excelService->normalizeSku($skuOriginal);
 
-                if ($sku !== null && $sku !== '') {
-                    $skuList[] = Str::upper(trim($sku));
+                if ($sku !== null && trim((string) $sku) !== '') {
+                    $skuList[] = Str::upper(trim((string) $sku));
                 }
             }
         }
 
         $skuList = array_values(array_unique($skuList));
+
         $produkMaster = collect();
 
         if (! empty($skuList)) {
@@ -629,7 +607,6 @@ class PesananController extends Controller
                 ->keyBy(
                     fn ($row) => Str::upper(trim((string) $row->sku))
                 );
-
         }
 
         DB::beginTransaction();
@@ -653,9 +630,12 @@ class PesananController extends Controller
                 }
 
                 $previewItem = $previewByOrder->get($noPesanan, []);
+                $previewItem = is_array($previewItem) ? $previewItem : [];
+
                 $batasKirimRaw = $previewItem['batas_kirim_raw']
                     ?? $item['batas_kirim_raw']
                     ?? null;
+
                 $batasKirimSource = $previewItem['batas_kirim_source']
                     ?? $item['batas_kirim_source']
                     ?? null;
@@ -685,49 +665,224 @@ class PesananController extends Controller
                 progres_pesanan::create([
                     'no_pesanan' => $noPesanan,
                     'role' => Auth::user()->role,
-                    'user_id' => Auth::id(),
+                    'user_id' => $idUser,
                 ]);
 
                 $totalHpp = 0;
                 $totalHarga = 0;
+
                 $previewProduk = collect(
                     $previewItem['produk_detail'] ?? []
                 )->values();
 
-                foreach ($item['produk'] ?? [] as $produkIndex => $prd) {
-                    $preview = $previewProduk->get($produkIndex, []);
-                    $preview = is_array($preview) ? $preview : [];
+                // Menandai baris preview yang sudah dipakai.
+                // Satu baris preview tidak boleh dipakai dua kali.
+                $previewTerpakai = [];
 
-                    $skuOriginal = $this->firstNonEmpty(
+                foreach ($item['produk'] ?? [] as $produkIndex => $prd) {
+
+                    if (! is_array($prd)) {
+                        throw new \Exception(
+                            "Format produk tidak valid pada pesanan {$noPesanan}."
+                        );
+                    }
+
+                    // =========================================
+                    // 1. AMBIL SKU DARI PAYLOAD
+                    // =========================================
+
+                    $skuAsliPayload = $this->firstNonEmpty(
                         $prd,
-                        [
-                            'sku_original',
-                            'sku_asli',
-                            '__sku',
-                            'sku',
-                            'SKU Induk',
-                            'SKU',
-                        ]
+                        ['sku_original', 'sku_asli', '__sku']
                     );
 
-                    if ($skuOriginal === '') {
-                        $skuOriginal = $this->firstNonEmpty(
-                            $preview,
+                    $skuPayload = $this->firstNonEmpty(
+                        $prd,
+                        ['sku', 'SKU Induk', 'SKU']
+                    );
+
+                    $skuUntukCocok = $skuAsliPayload !== ''
+                        ? $skuAsliPayload
+                        : $skuPayload;
+
+                    $skuNormalPayload = $skuUntukCocok !== ''
+                        ? $excelService->normalizeSku($skuUntukCocok)
+                        : null;
+
+                    $skuNormalPayload = Str::upper(
+                        trim((string) $skuNormalPayload)
+                    );
+
+                    // =========================================
+                    // 2. CARI PREVIEW YANG SESUAI
+                    // =========================================
+
+                    $preview = [];
+                    $indexTerpilih = null;
+
+                    // Prioritaskan index yang sama jika SKU cocok.
+                    $calonIndex = $previewProduk->get($produkIndex);
+
+                    if (
+                        is_array($calonIndex) &&
+                        ! isset($previewTerpakai[$produkIndex])
+                    ) {
+                        $skuCalon = $this->firstNonEmpty(
+                            $calonIndex,
                             [
                                 'sku_original',
                                 'sku_asli',
                                 '__sku',
                                 'sku',
+                                'SKU Induk',
+                                'SKU',
                             ]
                         );
+
+                        $skuNormalCalon = $skuCalon !== ''
+                            ? Str::upper(trim((string)
+                                $excelService->normalizeSku($skuCalon)
+                            ))
+                            : '';
+
+                        if (
+                            $skuNormalPayload !== '' &&
+                            $skuNormalPayload === $skuNormalCalon
+                        ) {
+                            $indexTerpilih = $produkIndex;
+                        }
+                    }
+
+                    // Jika index tidak cocok, cari SKU asli yang sama.
+                    if ($indexTerpilih === null && $skuUntukCocok !== '') {
+                        foreach ($previewProduk as $idx => $row) {
+                            if (
+                                ! is_array($row) ||
+                                isset($previewTerpakai[$idx])
+                            ) {
+                                continue;
+                            }
+
+                            $skuPreview = $this->firstNonEmpty(
+                                $row,
+                                [
+                                    'sku_original',
+                                    'sku_asli',
+                                    '__sku',
+                                    'sku',
+                                    'SKU Induk',
+                                    'SKU',
+                                ]
+                            );
+
+                            if (
+                                $skuPreview !== '' &&
+                                Str::upper(trim($skuPreview)) ===
+                                Str::upper(trim($skuUntukCocok))
+                            ) {
+                                $indexTerpilih = $idx;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Jika belum cocok, cari berdasarkan SKU normal.
+                    if (
+                        $indexTerpilih === null &&
+                        $skuNormalPayload !== ''
+                    ) {
+                        foreach ($previewProduk as $idx => $row) {
+                            if (
+                                ! is_array($row) ||
+                                isset($previewTerpakai[$idx])
+                            ) {
+                                continue;
+                            }
+
+                            $skuPreview = $this->firstNonEmpty(
+                                $row,
+                                [
+                                    'sku_original',
+                                    'sku_asli',
+                                    '__sku',
+                                    'sku',
+                                    'SKU Induk',
+                                    'SKU',
+                                ]
+                            );
+
+                            if ($skuPreview === '') {
+                                continue;
+                            }
+
+                            $skuNormalPreview = Str::upper(
+                                trim((string)
+                                    $excelService->normalizeSku($skuPreview)
+                                )
+                            );
+
+                            if ($skuNormalPreview === $skuNormalPayload) {
+                                $indexTerpilih = $idx;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Fallback index hanya jika payload tidak punya SKU.
+                    if (
+                        $indexTerpilih === null &&
+                        $skuUntukCocok === '' &&
+                        is_array($calonIndex) &&
+                        ! isset($previewTerpakai[$produkIndex])
+                    ) {
+                        $indexTerpilih = $produkIndex;
+                    }
+
+                    if ($indexTerpilih !== null) {
+                        $preview = $previewProduk->get($indexTerpilih, []);
+                        $preview = is_array($preview) ? $preview : [];
+
+                        $previewTerpakai[$indexTerpilih] = true;
+                    }
+
+                    // =========================================
+                    // 3. TENTUKAN SKU ORIGINAL
+                    // =========================================
+
+                    $skuAsliPreview = $this->firstNonEmpty(
+                        $preview,
+                        ['sku_original', 'sku_asli', '__sku']
+                    );
+
+                    $skuFallbackPreview = $this->firstNonEmpty(
+                        $preview,
+                        ['sku', 'SKU Induk', 'SKU']
+                    );
+
+                    // SKU asli payload paling diutamakan.
+                    // Jika tidak ada, gunakan SKU asli preview.
+                    // Terakhir gunakan SKU biasa.
+                    if ($skuAsliPayload !== '') {
+                        $skuOriginal = $skuAsliPayload;
+                    } elseif ($skuAsliPreview !== '') {
+                        $skuOriginal = $skuAsliPreview;
+                    } elseif ($skuPayload !== '') {
+                        $skuOriginal = $skuPayload;
+                    } else {
+                        $skuOriginal = $skuFallbackPreview;
                     }
 
                     $sku = $excelService->normalizeSku($skuOriginal);
-                    $multiplier = $excelService->getSkuMultiplier($skuOriginal);
+
+                    $multiplier = max(
+                        1,
+                        (int) $excelService->getSkuMultiplier($skuOriginal)
+                    );
+
                     $custom = $excelService->isCustomSku($skuOriginal);
 
                     if (
-                        $custom === 0 &&
+                        $custom == 0 &&
                         (
                             (int) ($prd['custom'] ?? 0) === 1 ||
                             (int) ($preview['custom'] ?? 0) === 1
@@ -735,6 +890,10 @@ class PesananController extends Controller
                     ) {
                         $custom = 1;
                     }
+
+                    // =========================================
+                    // 4. HITUNG JUMLAH QTY
+                    // =========================================
 
                     $jumlahPesanan = (int) (
                         $prd['jumlah_pesanan']
@@ -757,12 +916,16 @@ class PesananController extends Controller
                         $jumlahPesanan = max(
                             1,
                             (int) ceil(
-                                $jumlahRealPayload / max(1, $multiplier)
+                                $jumlahRealPayload / $multiplier
                             )
                         );
                     }
 
                     $jumlahReal = $jumlahPesanan * $multiplier;
+
+                    // =========================================
+                    // 5. HITUNG HARGA
+                    // =========================================
 
                     $hargaMarketplace = $this->toNumber(
                         $prd['harga_original']
@@ -785,9 +948,13 @@ class PesananController extends Controller
                     }
 
                     $hargaJualReal = round(
-                        $hargaMarketplace / max(1, $multiplier),
+                        $hargaMarketplace / $multiplier,
                         2
                     );
+
+                    // =========================================
+                    // 6. NAMA DAN VARIASI PRODUK
+                    // =========================================
 
                     $namaProduk = trim((string) (
                         $prd['nama_produk']
@@ -805,16 +972,32 @@ class PesananController extends Controller
                         ?? ''
                     ));
 
+                    // =========================================
+                    // 7. AMBIL HPP MASTER
+                    // =========================================
+
                     $hpp = 0.0;
 
                     if ($sku !== null && $sku !== '') {
-                        $keySku = Str::upper(trim($sku));
+                        $keySku = Str::upper(trim((string) $sku));
+
                         $master = $produkMaster->get($keySku);
+
+                        if (! $master) {
+                            $master = DB::table('produk')
+                                ->where('sku', $sku)
+                                ->select('sku', 'hpp')
+                                ->first();
+                        }
 
                         if ($master) {
                             $hpp = (float) ($master->hpp ?? 0);
                         }
                     }
+
+                    // =========================================
+                    // 8. SIMPAN DETAIL PRODUK
+                    // =========================================
 
                     $idPerProduk = DB::table('pesanan_per_produk')
                         ->insertGetId([
@@ -830,6 +1013,10 @@ class PesananController extends Controller
                             'updated_at' => now(),
                         ], 'id_per_produk');
 
+                    // =========================================
+                    // 9. ALOKASI EDITOR PLAT
+                    // =========================================
+
                     $skuEditor = Str::upper(trim((string) $sku));
 
                     if (
@@ -840,9 +1027,17 @@ class PesananController extends Controller
                         $platItemIds[] = (int) $idPerProduk;
                     }
 
+                    // =========================================
+                    // 10. TOTAL PESANAN
+                    // =========================================
+
                     $totalHpp += $hpp * $jumlahReal;
                     $totalHarga += $hargaJualReal * $jumlahReal;
                 }
+
+                // =========================================
+                // 11. HITUNG BIAYA ADMIN
+                // =========================================
 
                 if ($biayaAdmin > 1 && $biayaAdmin <= 100) {
                     $totalAdmin =
@@ -856,6 +1051,10 @@ class PesananController extends Controller
                     $totalAdmin = $biayaTambahan;
                 }
 
+                // =========================================
+                // 12. UPDATE TOTAL PESANAN
+                // =========================================
+
                 DB::table('pesanan')
                     ->where('no_pesanan', $noPesanan)
                     ->update([
@@ -867,12 +1066,17 @@ class PesananController extends Controller
                 $imported++;
             }
 
+            // =========================================
+            // 13. ALOKASI PART EDITOR
+            // =========================================
+
             $hasilPart = $partService->alokasikanItemBaru(
                 $platItemIds,
                 $idUser
             );
 
             DB::commit();
+
             Session::forget('preview_pesanan');
 
             return response()->json([
@@ -885,8 +1089,10 @@ class PesananController extends Controller
                 'parts_baru' => $hasilPart['parts_baru'],
                 'part_oversize' => $hasilPart['oversize'],
             ]);
+
         } catch (\Throwable $e) {
             DB::rollBack();
+
             report($e);
 
             return response()->json([
@@ -894,6 +1100,7 @@ class PesananController extends Controller
                 'message' => $e->getMessage(),
             ], 500);
         }
+
     }
 
     public function previewResi($token)

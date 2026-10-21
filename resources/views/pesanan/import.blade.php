@@ -385,11 +385,77 @@
 
                 });
 
-                $('#btnSimpanSemua').on('click', function() {
+                // $('#btnSimpanSemua').on('click', async function() {
+                //     const btn = $(this);
+                //     const originalButtonHtml = btn.html();
+                //     const pesananMap = {};
+
+                //     $('#previewTbody .preview-row').each(function() {
+                //         const row = $(this);
+                //         const noPesanan = $.trim(row.find('.field-no-pesanan').val());
+
+                //         if (!noPesanan) {
+                //             return;
+                //         }
+
+                //         if (!pesananMap[noPesanan]) {
+                //             pesananMap[noPesanan] = {
+                //                 no_pesanan: noPesanan,
+                //                 no_resi: $.trim(row.find('.field-no-resi').val() || ''),
+                //                 kurir: $.trim(row.find('.field-kurir').val() || ''),
+                //                 nama_pembeli: $.trim(row.find('.field-pembeli').val() ||
+                //                     ''),
+                //                 username: $.trim(row.find('.field-username').val() ||
+                //                     ''),
+                //                 produk: []
+                //             };
+                //         }
+
+                //         pesananMap[noPesanan].produk.push({
+                //             nama_produk: $.trim(row.find('.field-nama-produk')
+                //                 .val() ||
+                //                 ''),
+                //             variasi: $.trim(row.find('.field-variasi').val() || ''),
+                //             jumlah: parseInt(row.find('.field-jumlah').val(), 10) ||
+                //                 1,
+                //             hpp: parseFloat(row.find('.field-hpp').val()) || 0,
+                //             harga: parseFloat(row.find('.field-harga').val()) || 0,
+                //             sku: $.trim(row.find('.field-sku').val() || ''),
+                //             custom: parseInt(row.find('.field-custom').val(), 10) ||
+                //                 0
+                //         });
+
+                //     });
+
+                //     const pesanan = Object.values(pesananMap);
+                //     if (pesanan.length === 0) {
+                //         alert('Tidak ada data untuk disimpan.');
+                //         return;
+                //     }
+
+                //     btn.prop('disabled', true)
+                //         .html(`
+            //                 <span
+            //                     class="spinner-border spinner-border-sm me-2"
+            //                 ></span>
+            //                 Menyimpan...
+            //             `);
+
+                //     try {
+                //         await cekresi(pesanan);
+                //         simpanPesanan(pesanan, btn, originalButtonHtml);
+                //     } catch (error) {
+                //         console.error('Proses import gagal:', error);
+                //         btn.prop('disabled', false).html(originalButtonHtml);
+                //     }
+                // });
+
+                $('#btnSimpanSemua').on('click', async function() {
                     const btn = $(this);
                     const originalButtonHtml = btn.html();
                     const pesananMap = {};
 
+                    // Ambil seluruh data dari tabel preview
                     $('#previewTbody .preview-row').each(function() {
                         const row = $(this);
                         const noPesanan = $.trim(row.find('.field-no-pesanan').val());
@@ -405,98 +471,318 @@
                                 kurir: $.trim(row.find('.field-kurir').val() || ''),
                                 nama_pembeli: $.trim(row.find('.field-pembeli').val() ||
                                     ''),
-                                username: $.trim(row.find('.field-username').val() || ''),
+                                username: $.trim(row.find('.field-username').val() ||
+                                    ''),
                                 produk: []
                             };
+                        } else {
+                            // Jika baris berikutnya memiliki resi, isi resi pesanan
+                            // yang sebelumnya masih kosong.
+                            const resiBaris = $.trim(row.find('.field-no-resi').val() ||
+                                '');
+
+                            if (!pesananMap[noPesanan].no_resi && resiBaris) {
+                                pesananMap[noPesanan].no_resi = resiBaris;
+                            }
                         }
 
                         pesananMap[noPesanan].produk.push({
-                            nama_produk: $.trim(row.find('.field-nama-produk').val() ||
-                                ''),
+                            nama_produk: $.trim(row.find('.field-nama-produk')
+                                .val() || ''),
                             variasi: $.trim(row.find('.field-variasi').val() || ''),
-                            jumlah: parseInt(row.find('.field-jumlah').val(), 10) || 1,
+                            jumlah: parseInt(row.find('.field-jumlah').val(), 10) ||
+                                1,
                             hpp: parseFloat(row.find('.field-hpp').val()) || 0,
                             harga: parseFloat(row.find('.field-harga').val()) || 0,
                             sku: $.trim(row.find('.field-sku').val() || ''),
-                            custom: parseInt(row.find('.field-custom').val(), 10) || 0
+                            custom: parseInt(row.find('.field-custom').val(), 10) ||
+                                0
                         });
-
                     });
 
                     const pesanan = Object.values(pesananMap);
+
                     if (pesanan.length === 0) {
-                        alert('Tidak ada data untuk disimpan.');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Tidak Ada Data!',
+                            text: 'Tidak ada data pesanan untuk disimpan.'
+                        });
                         return;
                     }
 
-                    btn.prop('disabled', true)
-                        .html(`
-                                <span
-                                    class="spinner-border spinner-border-sm me-2"
-                                ></span>
-                                Menyimpan...
-                            `);
+                    btn.prop('disabled', true).html(`
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        Memproses...
+                    `);
 
-                    $.ajax({
-                        url: "{{ route('pesanan.simpanImport') }}",
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                        },
-                        contentType: 'application/json; charset=utf-8',
-                        processData: false,
-                        data: JSON.stringify({
-                            pesanan: pesanan,
-                            tanggal_import: $('#tanggalImport').val(),
-                            id_toko: $('#namaToko').val(),
-                            nama_user: $('#namaUser').val()
-                        }),
-                        success: function(response) {
-                            if (response.status !== 'success') {
-                                alert(response.message || 'Gagal menyimpan data.');
-                                return;
-                            }
+                    try {
+                        // Tunggu sampai SweetAlert ditutup
+                        await cekresi(pesanan);
 
-                            const berhasil = response.imported || 0;
-                            const dilewati = response.skipped_count || 0;
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Import selesai!',
-                                html: `
-                                    Berhasil: <b>${berhasil} Pesanan</b><br>
-                                    Dilewati: <b>${dilewati} Pesanan</b>
-                                `,
-                                confirmButtonText: 'OK'
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.location.href =
-                                        "{{ route('pesanan.index') }}";
-                                }
-                            });
-                        },
+                        // Setelah ditutup, lanjutkan penyimpanan
+                        simpanPesanan(pesanan, btn, originalButtonHtml);
 
-                        error: function(xhr) {
-                            console.error('Simpan error:', xhr.responseText);
-                            let message = 'Terjadi kesalahan saat menyimpan.';
+                    } catch (error) {
+                        console.error('Proses import gagal:', error);
 
-                            if (xhr.responseJSON && xhr.responseJSON.message) {
-                                message = xhr.responseJSON.message;
-                            }
+                        btn.prop('disabled', false).html(originalButtonHtml);
 
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Gagal!',
-                                text: message,
-                                confirmButtonText: 'OK',
-                                confirmButtonColor: '#0d6efd'
-                            });
-                        },
-                        complete: function() {
-                            btn.prop('disabled', false).html(originalButtonHtml);
-                        }
-                    });
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Terjadi Kesalahan!',
+                            text: 'Proses pemeriksaan pesanan gagal.'
+                        });
+                    }
                 });
             });
         })(jQuery);
+
+        async function cekresi(pesanan) {
+            const pesananResiKosong = pesanan
+                .filter(item => !String(item.no_resi ?? '').trim())
+                .map(item => String(item.no_pesanan));
+
+            // Jika semua resi ada, langsung lanjut
+            if (pesananResiKosong.length === 0) {
+                return;
+            }
+
+            const daftarPesanan = pesananResiKosong.join('\n');
+            const escapeHtml = (text) => String(text).replace(
+                /[&<>"']/g,
+                char => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                } [char])
+            );
+
+            await Swal.fire({
+                icon: 'warning',
+                title: 'Nomor Resi Kosong!',
+                html: `
+                        <p>
+                            Ditemukan <b>${pesananResiKosong.length} pesanan</b>
+                            yang belum memiliki nomor resi:
+                        </p>
+
+                        <div class="border rounded p-2 text-start overflow-auto" style="max-height:250px;">
+                            ${pesananResiKosong.map((no, index) => `
+                                        <div class="py-2 px-2 border-bottom small">
+                                            <span class="text-muted me-2">
+                                                ${index + 1}.
+                                            </span>
+                                            <span class="fw-semibold">
+                                                ${escapeHtml(no)}
+                                            </span>
+                                        </div>
+                                    `).join('')}
+                        </div>
+
+                        <div class="alert alert-warning py-2 mt-3 mb-2 small">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Pesanan tsb tidak akan diinput. Silakan input ulang nanti.
+                        </div>
+
+                        <div id="statusSalin"
+                            class="mt-2 text-center small fw-semibold">
+                        </div>
+                    `,
+
+                showConfirmButton: true,
+                confirmButtonText: 'Tutup',
+                showDenyButton: true,
+                denyButtonText: `
+                    <i class="bi bi-clipboard me-2"></i>
+                    Salin Semua Nomor Pesanan
+                `,
+
+                reverseButtons: true,
+                buttonsStyling: false,
+
+                customClass: {
+                    actions: 'd-flex justify-content-center gap-2',
+                    confirmButton: 'btn btn-secondary',
+                    denyButton: 'btn btn-primary'
+                },
+
+                width: '550px',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                preDeny: () => false,
+                didOpen: () => {
+                    const popup = Swal.getPopup();
+                    const tombol = Swal.getDenyButton();
+                    const status = popup.querySelector('#statusSalin');
+                    tombol.addEventListener('click', async (event) => {
+                        event.preventDefault();
+                        event.stopImmediatePropagation();
+
+                        let berhasil = false;
+                        try {
+                            if (navigator.clipboard && window.isSecureContext) {
+                                await navigator.clipboard.writeText(daftarPesanan);
+                                berhasil = true;
+                            }
+                        } catch (error) {
+                            console.warn('Clipboard API gagal:', error);
+                        }
+
+                        if (!berhasil) {
+                            const textarea = document.createElement('textarea');
+                            textarea.value = daftarPesanan;
+                            textarea.setAttribute('readonly', '');
+                            textarea.style.position = 'fixed';
+                            textarea.style.left = '10px';
+                            textarea.style.top = '10px';
+                            textarea.style.opacity = '0';
+                            document.body.appendChild(textarea);
+                            textarea.focus();
+                            textarea.select();
+                            textarea.setSelectionRange(0, textarea.value.length);
+
+                            try {
+                                berhasil = document.execCommand('copy');
+                            } catch (error) {
+                                console.error('Fallback copy gagal:', error);
+                            } finally {
+                                textarea.remove();
+                            }
+                        }
+
+                        if (berhasil) {
+                            status.innerHTML = `
+                                <span class="text-success">
+                                    <i class="bi bi-check-circle-fill me-1"></i>
+                                    ${pesananResiKosong.length} nomor pesanan berhasil disalin!
+                                </span>
+                            `;
+
+                            tombol.innerHTML = `
+                                <i class="bi bi-check-circle me-2"></i>
+                                Berhasil Disalin
+                            `;
+
+                            tombol.classList.remove('btn-primary');
+                            tombol.classList.add('btn-success');
+
+                        } else {
+                            status.innerHTML = `
+                                <span class="text-danger">
+                                    <i class="bi bi-x-circle-fill me-1"></i>
+                                    Gagal menyalin nomor pesanan.
+                                </span>
+                            `;
+                        }
+                    }, true);
+                }
+            });
+        }
+
+        function simpanPesanan(pesanan, btn, originalButtonHtml) {
+            const pesananValid = pesanan.filter(item =>
+                String(item.no_resi ?? '').trim() !== ''
+            );
+
+            const jumlahDibuang = pesanan.length - pesananValid.length;
+            if (pesananValid.length === 0) {
+                btn.prop('disabled', false).html(originalButtonHtml);
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Tidak Ada Pesanan Valid!',
+                    text: 'Semua pesanan belum memiliki nomor resi.',
+                    confirmButtonText: 'OK'
+                });
+
+                return;
+            }
+
+            btn.html(`
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Menyimpan...
+            `);
+
+            $.ajax({
+                url: "{{ route('pesanan.simpanImport') }}",
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                },
+                contentType: 'application/json; charset=utf-8',
+                processData: false,
+                data: JSON.stringify({
+                    pesanan: pesananValid,
+                    tanggal_import: $('#tanggalImport').val(),
+                    id_toko: $('#namaToko').val(),
+                    nama_user: $('#namaUser').val()
+                }),
+                success: function(response) {
+                    if (response.status !== 'success') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Gagal!',
+                            text: response.message || 'Gagal menyimpan data.'
+                        });
+                        return;
+                    }
+
+                    const berhasil = response.imported || 0;
+                    const dilewati = response.skipped_count || 0;
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Import selesai!',
+                        html: `
+                            <div class="text-start">
+                                <div class="mb-2">
+                                    <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                    Berhasil: <b>${berhasil} Pesanan</b>
+                                </div>
+
+                                <div class="mb-2">
+                                    <i class="bi bi-arrow-right-circle text-secondary me-2"></i>
+                                    Sudah ada / dilewati: <b>${dilewati} Pesanan</b>
+                                </div>
+
+                                <div>
+                                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+                                    Resi kosong / tidak diinput:
+                                    <b>${jumlahDibuang} Pesanan</b>
+                                </div>
+                            </div>
+                        `,
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#0d6efd'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href =
+                                "{{ route('pesanan.index') }}";
+                        }
+                    });
+                },
+
+                error: function(xhr) {
+                    console.error('Simpan error:', xhr.responseText);
+                    let message = 'Terjadi kesalahan saat menyimpan.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    }
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Gagal!',
+                        text: message,
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#0d6efd'
+                    });
+                },
+
+                complete: function() {
+                    btn.prop('disabled', false).html(originalButtonHtml);
+                }
+            });
+        }
     </script>
 @endpush
