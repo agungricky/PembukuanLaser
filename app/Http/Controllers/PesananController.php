@@ -675,21 +675,14 @@ class PesananController extends Controller
                     $previewItem['produk_detail'] ?? []
                 )->values();
 
-                // Menandai baris preview yang sudah dipakai.
-                // Satu baris preview tidak boleh dipakai dua kali.
+               
                 $previewTerpakai = [];
-
                 foreach ($item['produk'] ?? [] as $produkIndex => $prd) {
-
                     if (! is_array($prd)) {
                         throw new \Exception(
                             "Format produk tidak valid pada pesanan {$noPesanan}."
                         );
                     }
-
-                    // =========================================
-                    // 1. AMBIL SKU DARI PAYLOAD
-                    // =========================================
 
                     $skuAsliPayload = $this->firstNonEmpty(
                         $prd,
@@ -713,14 +706,8 @@ class PesananController extends Controller
                         trim((string) $skuNormalPayload)
                     );
 
-                    // =========================================
-                    // 2. CARI PREVIEW YANG SESUAI
-                    // =========================================
-
                     $preview = [];
                     $indexTerpilih = null;
-
-                    // Prioritaskan index yang sama jika SKU cocok.
                     $calonIndex = $previewProduk->get($produkIndex);
 
                     if (
@@ -753,7 +740,6 @@ class PesananController extends Controller
                         }
                     }
 
-                    // Jika index tidak cocok, cari SKU asli yang sama.
                     if ($indexTerpilih === null && $skuUntukCocok !== '') {
                         foreach ($previewProduk as $idx => $row) {
                             if (
@@ -786,7 +772,6 @@ class PesananController extends Controller
                         }
                     }
 
-                    // Jika belum cocok, cari berdasarkan SKU normal.
                     if (
                         $indexTerpilih === null &&
                         $skuNormalPayload !== ''
@@ -828,7 +813,6 @@ class PesananController extends Controller
                         }
                     }
 
-                    // Fallback index hanya jika payload tidak punya SKU.
                     if (
                         $indexTerpilih === null &&
                         $skuUntukCocok === '' &&
@@ -845,10 +829,6 @@ class PesananController extends Controller
                         $previewTerpakai[$indexTerpilih] = true;
                     }
 
-                    // =========================================
-                    // 3. TENTUKAN SKU ORIGINAL
-                    // =========================================
-
                     $skuAsliPreview = $this->firstNonEmpty(
                         $preview,
                         ['sku_original', 'sku_asli', '__sku']
@@ -859,9 +839,6 @@ class PesananController extends Controller
                         ['sku', 'SKU Induk', 'SKU']
                     );
 
-                    // SKU asli payload paling diutamakan.
-                    // Jika tidak ada, gunakan SKU asli preview.
-                    // Terakhir gunakan SKU biasa.
                     if ($skuAsliPayload !== '') {
                         $skuOriginal = $skuAsliPayload;
                     } elseif ($skuAsliPreview !== '') {
@@ -873,14 +850,12 @@ class PesananController extends Controller
                     }
 
                     $sku = $excelService->normalizeSku($skuOriginal);
-
                     $multiplier = max(
                         1,
                         (int) $excelService->getSkuMultiplier($skuOriginal)
                     );
 
                     $custom = $excelService->isCustomSku($skuOriginal);
-
                     if (
                         $custom == 0 &&
                         (
@@ -890,10 +865,6 @@ class PesananController extends Controller
                     ) {
                         $custom = 1;
                     }
-
-                    // =========================================
-                    // 4. HITUNG JUMLAH QTY
-                    // =========================================
 
                     $jumlahPesanan = (int) (
                         $prd['jumlah_pesanan']
@@ -922,11 +893,6 @@ class PesananController extends Controller
                     }
 
                     $jumlahReal = $jumlahPesanan * $multiplier;
-
-                    // =========================================
-                    // 5. HITUNG HARGA
-                    // =========================================
-
                     $hargaMarketplace = $this->toNumber(
                         $prd['harga_original']
                         ?? $prd['Harga_original']
@@ -952,10 +918,6 @@ class PesananController extends Controller
                         2
                     );
 
-                    // =========================================
-                    // 6. NAMA DAN VARIASI PRODUK
-                    // =========================================
-
                     $namaProduk = trim((string) (
                         $prd['nama_produk']
                         ?? $prd['Nama Produk']
@@ -971,10 +933,6 @@ class PesananController extends Controller
                         ?? $preview['Nama Variasi']
                         ?? ''
                     ));
-
-                    // =========================================
-                    // 7. AMBIL HPP MASTER
-                    // =========================================
 
                     $hpp = 0.0;
 
@@ -995,10 +953,6 @@ class PesananController extends Controller
                         }
                     }
 
-                    // =========================================
-                    // 8. SIMPAN DETAIL PRODUK
-                    // =========================================
-
                     $idPerProduk = DB::table('pesanan_per_produk')
                         ->insertGetId([
                             'no_pesanan' => $noPesanan,
@@ -1013,10 +967,7 @@ class PesananController extends Controller
                             'updated_at' => now(),
                         ], 'id_per_produk');
 
-                    // =========================================
-                    // 9. ALOKASI EDITOR PLAT
-                    // =========================================
-
+                   
                     $skuEditor = Str::upper(trim((string) $sku));
 
                     if (
@@ -1027,17 +978,9 @@ class PesananController extends Controller
                         $platItemIds[] = (int) $idPerProduk;
                     }
 
-                    // =========================================
-                    // 10. TOTAL PESANAN
-                    // =========================================
-
                     $totalHpp += $hpp * $jumlahReal;
                     $totalHarga += $hargaJualReal * $jumlahReal;
                 }
-
-                // =========================================
-                // 11. HITUNG BIAYA ADMIN
-                // =========================================
 
                 if ($biayaAdmin > 1 && $biayaAdmin <= 100) {
                     $totalAdmin =
@@ -1051,10 +994,6 @@ class PesananController extends Controller
                     $totalAdmin = $biayaTambahan;
                 }
 
-                // =========================================
-                // 12. UPDATE TOTAL PESANAN
-                // =========================================
-
                 DB::table('pesanan')
                     ->where('no_pesanan', $noPesanan)
                     ->update([
@@ -1065,10 +1004,6 @@ class PesananController extends Controller
 
                 $imported++;
             }
-
-            // =========================================
-            // 13. ALOKASI PART EDITOR
-            // =========================================
 
             $hasilPart = $partService->alokasikanItemBaru(
                 $platItemIds,

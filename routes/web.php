@@ -91,7 +91,6 @@ Route::middleware(['web', 'auth'])->group(function () {
 
                 // ajax toko berdasarkan marketplace
                 Route::get('get-toko/{market}', 'getTokoByMarketplace')->name('pesanan.getToko');
-
                 Route::get('pesanan-detail/{id}', 'pesananDetail')->name('pesanan.detail');
             });
 
