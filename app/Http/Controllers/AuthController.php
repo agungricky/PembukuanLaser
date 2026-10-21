@@ -40,7 +40,6 @@ class AuthController extends Controller
         $userLogin = null;
 
         foreach ($users as $user) {
-
             if (Hash::check($password, $user->password)) {
                 $userLogin = $user;
                 break;
