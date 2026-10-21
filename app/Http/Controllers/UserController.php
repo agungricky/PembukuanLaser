@@ -58,7 +58,7 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,'.$user->id,
-            'role' => 'required|in:pegawai,manager,packing',
+            'role' => 'required|in:pegawai,manager,packing,editor,gudang',
             'password' => 'nullable|min:6',
         ]);
 
