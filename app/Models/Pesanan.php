@@ -148,4 +148,9 @@ class Pesanan extends Model
     {
         return $this->hasMany(progres_pesanan::class, 'no_pesanan', 'no_pesanan');
     }
+
+    public function pencairans()
+    {
+        return $this->hasMany(Pencairan::class, 'no_pesanan', 'no_pesanan');
+    }
 }

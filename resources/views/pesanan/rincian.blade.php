@@ -95,7 +95,7 @@
                             <div class="col-md-6">
                                 <table class="table table-borderless table-sm mb-0 table-row-line">
                                     <tr>
-                                        <td class="text-muted" width="40%">No. Pesanan</td>
+                                        <td class="text-muted text-nowrap pe-3">No. Pesanan</td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
                                                 <span class="fw-semibold">{{ $pesanan->no_pesanan }}</span>
@@ -107,89 +107,83 @@
                                         </td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">Tanggal Input</td>
-                                        <td>{{ $tanggalInput }}</td>
+                                        <td class="text-muted">Toko</td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                @if ($pesanan->toko?->marketplace)
+                                                    @php
+                                                        $marketplace = strtolower(trim($pesanan->toko->marketplace));
+                                                    @endphp
+
+                                                    @if (str_contains($marketplace, 'shopee'))
+                                                        <img src="{{ asset('icon/Shopee.svg') }}" alt="Shopee"
+                                                            height="22" title="Shopee" class="flex-shrink-0">
+                                                    @elseif (str_contains($marketplace, 'tiktok'))
+                                                        <img src="{{ asset('icon/TikTok.svg') }}" alt="TikTok Shop"
+                                                            height="22" title="TikTok Shop" class="flex-shrink-0">
+                                                    @else
+                                                        <span class="small text-muted">
+                                                            {{ $pesanan->toko->marketplace }}
+                                                        </span>
+                                                    @endif
+                                                @endif
+
+                                                <span class="fw-semibold">
+                                                    {{ $pesanan->toko?->nama_toko ?? '-' }}
+                                                </span>
+                                            </div>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td class="text-muted">Pembeli</td>
                                         <td>{{ $pesanan->nama_pembeli ?? '-' }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">Toko</td>
-                                        <td>
-                                            <div class="fw-semibold">
-                                                {{ $pesanan->toko?->nama_toko ?? '-' }}
-                                            </div>
-
-                                            @if ($pesanan->toko?->marketplace)
-                                                <div class="small text-muted">
-                                                    {{ $pesanan->toko->marketplace }}
-                                                </div>
-                                            @endif
-                                        </td>
+                                        <td class="text-muted">Item</td>
+                                        <td>{{ number_format($totalItem, 0, ',', '.') }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="text-muted">
-                                            Kurir
-                                        </td>
-
-                                        <td>
-                                            {{ $pesanan->kurir ?? '-' }}
-                                        </td>
+                                        <td class="text-muted">Qty</td>
+                                        <td>{{ number_format($totalQty, 0, ',', '.') }}</td>
                                     </tr>
-                                    <tr>
-                                        <td class="text-muted">
-                                            Batas Kirim
-                                        </td>
 
-                                        <td>
-                                            @if ($batasKirim)
-                                                <div class="fw-semibold">
-                                                    {{ $batasKirim->format('d/m/Y H:i') }}
-                                                </div>
+                                    @if ($dataPlat != [] || $dataPlat != null)
+                                        <tr class="{{ $items->contains('nama_kategori', 'PLAT') ? '' : 'd-none' }}">
+                                            <td colspan="2"
+                                                style="height: 30px; padding: 0 !important; border: none !important; box-shadow: none !important;">
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" class="text-nowrap">STATUS OPERASIONAL</td>
+                                        </tr>
+                                        <tr class="{{ $items->contains('nama_kategori', 'PLAT') ? '' : 'd-none' }}">
+                                            <td class="text-muted">Cetak Resi</td>
+                                            <td>
+                                                @if ($resiSudahDicetak)
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span class="badge bg-success">
+                                                            SUDAH DICETAK
+                                                        </span>
 
-                                                <div class="mt-1">
-                                                    <span
-                                                        class="badge bg-{{ $prioritasBadge }} {{ $prioritasBadge === 'warning' ? 'text-dark' : '' }}">
-                                                        {{ $prioritasLabel }}
+                                                        <span class="small text-muted">
+                                                            {{ number_format($resiPrintCount, 0, ',', '.') }}x cetak
+                                                        </span>
+                                                    </div>
+                                                @else
+                                                    <span class="badge bg-secondary">
+                                                        BELUM DICETAK
                                                     </span>
-                                                </div>
-                                            @else
-                                                <span class="text-muted">
-                                                    -
-                                                </span>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted align-middle">
-                                            Status Pengerjaan
-                                        </td>
-
-                                        <td class="align-middle pt-2">
-                                            @if ($statusPengerjaan['proses'] == null)
-                                                <span
-                                                    class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">
-                                                    <i class="fa-solid fa-circle-xmark me-1"></i>
-                                                    Belum di Proses
-                                                </span>
-                                            @else
-                                                <span
-                                                    class="badge rounded-pill bg-success-subtle text-success border border-success-subtle px-3 py-2">
-                                                    <i class="fa-solid fa-circle-check me-1"></i>
-                                                    {{ $statusPengerjaan['proses'] }}, {{ $statusPengerjaan['role'] }} by
-                                                    {{ $statusPengerjaan['user'] }}
-                                                </span>
-                                            @endif
-                                        </td>
-                                    </tr>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endif
                                 </table>
                             </div>
 
                             <div class="col-md-6">
                                 <table class="table table-borderless table-sm mb-0 table-row-line">
                                     <tr>
-                                        <td class="text-muted" width="40%">
+                                        <td class="text-muted text-nowrap" width="40%">
                                             No. Resi
                                         </td>
 
@@ -210,108 +204,51 @@
                                             </div>
                                         </td>
                                     </tr>
+
                                     <tr>
                                         <td class="text-muted">
-                                            Tgl Kirim
+                                            Kurir
+                                        </td>
+                                        <td>
+                                            {{ $pesanan->kurir ?? '-' }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">
+                                            Batas Kirim
                                         </td>
 
                                         <td>
-                                            @if ($pesanan->tanggal_kirim)
-                                                @php
-                                                    try {
-                                                        $tanggalKirim = \Carbon\Carbon::parse($pesanan->tanggal_kirim);
-                                                    } catch (\Throwable $e) {
-                                                        $tanggalKirim = null;
-                                                    }
-                                                @endphp
+                                            @if ($batasKirim)
+                                                <div class="fw-semibold">
+                                                    {{ $batasKirim->format('d/m/Y H:i') }}
+                                                </div>
 
-                                                @if ($tanggalKirim)
-                                                    <div>
-                                                        {{ $tanggalKirim->format('d/m/Y') }}
+                                                @if ($pesanan->status_cek == 'proses')
+                                                    <div class="mt-1">
+                                                        <span
+                                                            class="badge bg-{{ $prioritasBadge }} {{ $prioritasBadge === 'warning' ? 'text-dark' : '' }}">
+                                                            {{ $prioritasLabel }}
+                                                        </span>
                                                     </div>
-
-                                                    <div class="small text-muted">
-                                                        {{ $tanggalKirim->format('H:i') }}
-                                                    </div>
-                                                @else
-                                                    -
                                                 @endif
                                             @else
-                                                -
+                                                <span class="text-muted">
+                                                    -
+                                                </span>
                                             @endif
                                         </td>
                                     </tr>
+
+                                    {{-- @if ($pesanan->batas_kirim_raw) --}}
                                     <tr>
-                                        <td class="text-muted">Dikirim Oleh</td>
-                                        <td>{{ $pesanan->userKirim?->name ?? '-' }}</td>
-                                    </tr>
-
-                                    @if ($dataPlat != [] || $dataPlat != null)
-                                        <tr class="{{ $items->contains('nama_kategori', 'PLAT') ? '' : 'd-none' }}">
-                                            <td class="text-muted">Cetak Resi</td>
-                                            <td>
-                                                @if ($resiSudahDicetak)
-                                                    <span class="badge bg-success">SUDAH DICETAK</span>
-                                                    <div class="small text-muted mt-1">
-                                                        {{ number_format($resiPrintCount, 0, ',', '.') }}x cetak
-                                                    </div>
-
-                                                    @if ($pesanan->resi_printed_at)
-                                                        @php
-                                                            try {
-                                                                $resiPrintedAt = \Carbon\Carbon::parse(
-                                                                    $pesanan->resi_printed_at,
-                                                                );
-                                                            } catch (\Throwable $e) {
-                                                                $resiPrintedAt = null;
-                                                            }
-                                                        @endphp
-
-                                                        @if ($resiPrintedAt)
-                                                            <div class="small text-muted">
-                                                                Pertama:
-                                                                {{ $resiPrintedAt->format('d/m/Y H:i') }}
-                                                            </div>
-                                                        @endif
-                                                    @endif
-
-
-                                                    @if ($pesanan->resiPrinter)
-                                                        <div class="small text-muted">
-                                                            Oleh:
-                                                            {{ $pesanan->resiPrinter->name }}
-                                                        </div>
-                                                    @endif
-                                                @else
-                                                    <span class="badge bg-secondary">
-                                                        BELUM DICETAK
-                                                    </span>
-
-                                                @endif
-
-                                            </td>
-
-                                        </tr>
-
-                                    @endif
-                                    <tr>
-                                        <td class="text-muted">Item</td>
-                                        <td>{{ number_format($totalItem, 0, ',', '.') }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-muted">Qty</td>
-                                        <td class="fw-semibold">
-                                            {{ number_format($totalQty, 0, ',', '.') }}
+                                        <td class="text-muted">Deadline Asli</td>
+                                        <td>
+                                            <span class="small">{{ $pesanan->batas_kirim_raw ?? '-' }}</span>
                                         </td>
                                     </tr>
-                                    @if ($pesanan->batas_kirim_raw)
-                                        <tr>
-                                            <td class="text-muted">Deadline Asli</td>
-                                            <td>
-                                                <span class="small">{{ $pesanan->batas_kirim_raw }}</span>
-                                            </td>
-                                        </tr>
-                                    @endif
+                                    {{-- @endif --}}
+
                                     <tr>
                                         <td class="text-muted">
                                             Sumber Deadline
@@ -328,91 +265,290 @@
             </div>
 
             <div class="col-lg-4">
-                <div class="card shadow-sm border-0 h-100">
+                <div class="card shadow-sm border-0 h-100 financial-card">
                     <div class="card-header bg-white">
                         <h6 class="mb-0 fw-semibold">
                             <i class="bi bi-cash-stack text-success me-2"></i>
                             Ringkasan Keuangan
                         </h6>
                     </div>
+
                     <div class="card-body">
-                        <table class="table table-sm table-borderless mb-0">
-                            <tr>
-                                <td>
-                                    Omzet
-                                </td>
-                                <td class="text-end fw-semibold">
-                                    Rp{{ number_format($subtotal, 0, ',', '.') }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    Biaya Admin
-                                </td>
-                                <td class="text-end text-danger">
-                                    @if ($biayaAdmin > 0)
-                                        -Rp{{ number_format($biayaAdmin, 0, ',', '.') }}
-                                    @else
-                                        Rp0
-                                    @endif
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    Dana Dicairkan
-                                </td>
-                                <td class="text-end text-primary">
-                                    Rp{{ number_format($totalPencairan, 0, ',', '.') }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    HPP
-                                </td>
-                                <td class="text-end text-danger">
-                                    @if ($totalHPP > 0)
-                                        -Rp{{ number_format($totalHPP, 0, ',', '.') }}
-                                    @else
-                                        Rp0
-                                    @endif
-                                </td>
-                            </tr>
-                            <tr class="border-top">
-                                <th>
-                                    Laba Bersih
-                                </th>
-                                <th class="text-end {{ $isProfit ? 'text-success' : 'text-danger' }}">
-                                    {{ $totalPenghasilan < 0 ? '-' : '' }}
-                                    Rp{{ number_format(abs($totalPenghasilan), 0, ',', '.') }}
-                                </th>
-                            </tr>
-                            <tr>
-                                <td>
-                                    Margin
-                                </td>
-                                <td class="text-end {{ $margin < 0 ? 'text-danger' : '' }}">
-                                    {{ number_format($margin, 2, ',', '.') }} %
-                                </td>
-                            </tr>
-                            @if (strtolower((string) $pesanan->status) === 'selesai')
+                        <table class="table table-sm table-borderless mb-0 financial-table">
+                            <tbody>
                                 <tr>
-                                    <td>
-                                        Selisih
+                                    <td class="text-dark">
+                                        Omzet
                                     </td>
-                                    <td class="text-end {{ $selisihClass }}">
-                                        {{ $selisihText }}
+                                    <td class="text-end fw-semibold">
+                                        Rp{{ number_format($subtotal, 0, ',', '.') }}
                                     </td>
                                 </tr>
-                            @endif
+                                <tr>
+                                    <td class="text-dark">
+                                        Biaya Admin
+                                    </td>
+                                    <td class="text-end text-danger fw-semibold">
+                                        @if ($biayaAdmin > 0)
+                                            -Rp{{ number_format($biayaAdmin, 0, ',', '.') }}
+                                        @else
+                                            Rp0
+                                        @endif
+                                    </td>
+                                </tr>
+
+                                <tr class="financial-section-line">
+                                    <td class="fw-semibold">
+                                        Dana Dicairkan
+                                    </td>
+                                    <td class="text-end text-primary fw-bold">
+                                        Rp{{ number_format($totalPencairan, 0, ',', '.') }}
+                                    </td>
+                                </tr>
+
+                                @foreach ($pencairan as $p)
+                                    <tr class="financial-payout-row">
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2 ps-2">
+                                                <i class="bi bi-arrow-return-right text-muted"></i>
+                                                <span class="semi-bold">
+                                                    Pencairan {{ $loop->iteration }}
+                                                </span>
+                                            </div>
+
+                                            <div class="financial-payout-date text-dark">
+                                                <i class="bi bi-person me-1"></i>
+                                                {{ ucwords(strtolower($p->user->name)) }} |
+                                                {{ \Carbon\Carbon::parse($p['created_at'])->format('d/m/Y : H.i') }}
+                                            </div>
+                                        </td>
+
+                                        <td class="text-end text-dark fw-medium">
+                                            Rp{{ number_format($p->nominal, 0, ',', '.') }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+
+                                <tr class="financial-section-line">
+                                    <td class="text-dark">
+                                        HPP
+                                    </td>
+                                    <td class="text-end text-danger fw-semibold">
+                                        @if ($totalHPP > 0)
+                                            -Rp{{ number_format($totalHPP, 0, ',', '.') }}
+                                        @else
+                                            Rp0
+                                        @endif
+                                    </td>
+                                </tr>
+
+                                <!-- SELISIH -->
+                                @if (strtolower((string) $pesanan->status) === 'selesai')
+                                    <tr>
+                                        <td class="text-dark">
+                                            Selisih
+                                        </td>
+                                        <td class="text-end fw-semibold {{ $selisihClass }}">
+                                            {{ $selisihText }}
+                                        </td>
+                                    </tr>
+                                @endif
+
+
+                            </tbody>
                         </table>
-                        <div class="text-center mt-3">
-                            <span class="badge bg-{{ $isProfit ? 'success' : 'danger' }} px-3 py-2">
-                                {{ $isProfit ? 'Menguntungkan' : 'Rugi' }}
-                            </span>
+
+                        <div class="financial-result mt-3">
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <div class="financial-result-box h-100">
+                                        <div class="financial-result-label">
+                                            Laba Bersih
+                                        </div>
+
+                                        <div
+                                            class="financial-result-value
+                    {{ $isProfit ? 'text-success' : 'text-danger' }}">
+                                            {{ $totalPenghasilan < 0 ? '-' : '' }}Rp{{ number_format(abs($totalPenghasilan), 0, ',', '.') }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- MARGIN -->
+                                <div class="col-4">
+                                    <div class="financial-result-box h-100">
+                                        <div class="financial-result-label">
+                                            Margin
+                                        </div>
+
+                                        <div
+                                            class="financial-result-value
+                    {{ $margin < 0 ? 'text-danger' : 'text-success' }}">
+                                            {{ number_format($margin, 2, ',', '.') }}%
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- STATUS -->
+                                <div class="col-4">
+                                    <div class="financial-result-box h-100">
+                                        <div class="financial-result-label">
+                                            Status
+                                        </div>
+
+                                        <div
+                                            class="financial-result-value {{ $isProfit ? 'text-success' : 'text-danger' }}">
+                                            <i
+                                                class="bi {{ $isProfit ? 'bi-graph-up-arrow' : 'bi-graph-down-arrow' }} me-1"></i>
+                                            {{ $isProfit ? 'Untung' : 'Rugi' }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+
                         </div>
+
+
                     </div>
                 </div>
             </div>
+
+
+            <style>
+                /* ===== CARD KEUANGAN ===== */
+
+                .financial-card {
+                    border-radius: 12px;
+                    overflow: hidden;
+                }
+
+                .financial-card .card-header h6 {
+                    font-size: 15px;
+                }
+
+                /* ===== TABEL KEUANGAN ===== */
+
+                .financial-table {
+                    font-size: 14px;
+                    margin-bottom: 0;
+                }
+
+                .financial-table td,
+                .financial-table th {
+                    padding: 4px 4px !important;
+                    vertical-align: middle;
+                    line-height: 1.4;
+                }
+
+                .financial-table td:last-child {
+                    white-space: nowrap;
+                    font-variant-numeric: tabular-nums;
+                }
+
+                /* ===== PEMISAH ANTARBAGIAN ===== */
+
+                .financial-section-line td {
+                    padding-top: 7px !important;
+                    border-top: 1px solid #e9ecef !important;
+                }
+
+                /* ===== RIWAYAT PENCAIRAN ===== */
+
+                .financial-payout-row td {
+                    padding-top: 3px !important;
+                    padding-bottom: 3px !important;
+                }
+
+                .financial-payout-date {
+                    font-size: 11px;
+                    color: #94a3b8;
+                    padding-left: 30px;
+                    margin-top: 3px;
+                }
+
+                /* ===== HASIL KEUANGAN 3 KOTAK ===== */
+
+                .financial-result {
+                    background: transparent;
+                    border: none;
+                    padding: 0;
+                }
+
+                .financial-result-box {
+                    background: #ffffff;
+                    border: 1px solid #ced4da;
+                    border-radius: 8px;
+                    padding: 12px 9px;
+                    height: 100%;
+                    min-width: 0;
+                }
+
+                /* Label: Laba Bersih, Margin, Status */
+                .financial-result-label {
+                    font-size: 12px;
+                    font-weight: 500;
+                    color: #6c757d;
+                    margin-bottom: 8px;
+                    line-height: 1.3;
+                }
+
+                /* Nilai Laba dan Margin */
+                .financial-result-value {
+                    font-size: 16px;
+                    font-weight: 600;
+                    line-height: 1.4;
+                    font-variant-numeric: tabular-nums;
+                }
+
+                .financial-result-value i {
+                    font-size: 16px;
+                }
+
+                /* Badge status */
+                .financial-result-box .badge {
+                    font-size: 11px;
+                    font-weight: 500;
+                    padding: 6px 8px;
+                    max-width: 100%;
+                    white-space: normal;
+                    line-height: 1.3;
+                }
+
+                /* ===== SELISIH ===== */
+
+                .financial-result-selisih {
+                    border-top: 1px solid #e9ecef;
+                    padding-top: 12px;
+                    margin-top: 15px;
+                    font-size: 14px;
+                }
+
+                /* ===== RESPONSIVE ===== */
+
+                @media (max-width: 420px) {
+
+                    .financial-result-box {
+                        padding: 10px 7px;
+                    }
+
+                    .financial-result-label {
+                        font-size: 11px;
+                        margin-bottom: 6px;
+                    }
+
+                    .financial-result-value {
+                        font-size: 13px;
+                    }
+
+                    .financial-result-box .badge {
+                        font-size: 10px;
+                        padding: 5px 6px;
+                    }
+                }
+            </style>
+
         </div>
 
         @if ($progresPesanan->isNotEmpty())
@@ -919,7 +1055,6 @@
             border-bottom: 0;
         }
 
-
         /* ===== ALUR PESANAN ===== */
 
         .order-flow {
@@ -1286,7 +1421,7 @@
 
                 packing: [{
                         icon: 'bi-box-seam',
-                        text: 'Pesanan telah masuk packing'
+                        text: 'Resi pesanan telah dicetak'
                     },
                     {
                         icon: 'bi-check-circle-fill',

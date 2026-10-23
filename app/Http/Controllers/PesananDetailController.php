@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\EditorRequest;
+use App\Models\Pencairan;
 use App\Models\Pesanan;
 use App\Models\progres_pesanan;
 use App\Models\Toko;
@@ -179,6 +180,8 @@ class PesananDetailController extends Controller
             ->sortBy('updated_at')
             ->keyBy('role');
 
+        $pencairan = Pencairan::with('user')->where('no_pesanan', $pesanan->no_pesanan)->get();
+
         return view(
             'pesanan.rincian',
             [
@@ -220,6 +223,7 @@ class PesananDetailController extends Controller
                 'dataPlat' => $dataPlat,
                 'statusPengerjaan' => $statusPengerjaan,
                 'progresPesanan' => $progresPesanan,
+                'pencairan' => $pencairan
             ]
         );
     }

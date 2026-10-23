@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Pencairan;
 use App\Models\Pesanan;
 use App\Models\Toko;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -135,23 +137,27 @@ class PesananKirimController extends Controller
                 continue;
             }
 
+            $text = strtolower(trim($row['B'] ?? ''));
             if ($pesanan->status !== 'kirim') {
-                continue;
+                if ($pesanan->status !== 'selesai' || $text !== 'penyesuaian') {
+                    continue;
+                }
             }
 
             $data[] = [
                 'no_pesanan' => $noPesanan,
                 'pencairan' => $pencairan,
-                'notes' => $notes,
-                'status_db' => $pesanan->status ?? 'tidak ditemukan',
-                'ada_di_database' => $pesanan ? true : false,
+                'tanggal' => $row['A'],
+                'notes' => $pesanan->status === 'selesai' ? 'Penyesuaian Afiliate' : $notes,
+                'status_db' => $pesanan->status,
+                'ada_di_database' => true,
             ];
         }
 
         if (empty($data)) {
             return response()->json([
                 'status' => 'success',
-                'message' => 'File berhasil dibaca, tetapi tidak ada pesanan berstatus kirim yang perlu diproses.',
+                'message' => 'Seluruh pesanan berstatus KIRIM sudah berhasil diproses pencairannya.',
                 'data' => [],
             ]);
         }
@@ -193,49 +199,66 @@ class PesananKirimController extends Controller
 
                 if ($noPesanan === '') {
                     $skipped++;
+
                     continue;
                 }
 
-                $pesanan = Pesanan::where(
-                    'no_pesanan',
-                    $noPesanan
-                )
+                $pesanan = Pesanan::where('no_pesanan', $noPesanan)
                     ->lockForUpdate()
                     ->first();
 
                 if (! $pesanan) {
                     $skipped++;
+
                     continue;
                 }
 
+                $text = strtolower(trim($item['notes'] ?? ''));
                 if ($pesanan->status !== 'kirim') {
-                    $skipped++;
-                    continue;
+                    if (
+                        $pesanan->status !== 'selesai' ||
+                        strtolower(trim($text ?? '')) !== 'penyesuaian afiliate'
+                    ) {
+                        $skipped++;
+
+                        continue;
+                    }
                 }
 
-                $pesanan->pencairan =
-                    (float) ($item['pencairan'] ?? 0);
+                $jumlahPencairan = Pencairan::where('no_pesanan', $noPesanan)->count();
 
-                $pesanan->notes =
-                    $item['notes'] ?? null;
+                if ($jumlahPencairan < 2) {
+                    $pencairanBaru = (float) ($item['pencairan'] ?? 0);
+                    if ($pesanan->status === 'selesai' && strtolower(trim($text ?? '')) === 'penyesuaian afiliate') {
+                        $pencairanLama = (float) ($pesanan->pencairan ?? 0);
+                        $pesanan->pencairan = $pencairanLama + $pencairanBaru;
+                    } else {
+                        $pesanan->pencairan = $pencairanBaru;
+                    }
 
-                $pesanan->status = 'selesai';
+                    $pesanan->notes = $text;
+                    $pesanan->status = 'selesai';
+                    $pesanan->save();
 
-                $pesanan->save();
+                    Pencairan::create([
+                        'no_pesanan' => $noPesanan,
+                        'nominal' => $pencairanBaru,
+                        'tanggal' => $item['tanggal'],
+                        'user_id' => Auth::id(),
+                    ]);
+                }
 
                 $updated++;
             }
 
             DB::commit();
-
             Session::forget('preview_pencairan');
 
             return response()->json([
                 'status' => 'success',
                 'updated' => $updated,
                 'skipped' => $skipped,
-                'message' =>
-                    "{$updated} pesanan berhasil diproses, {$skipped} pesanan dilewati.",
+                'message' => "{$updated} pesanan berhasil diproses, {$skipped} pesanan dilewati.",
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -246,6 +269,7 @@ class PesananKirimController extends Controller
             ], 500);
         }
     }
+
     public function ubahStatus(Request $request)
     {
         $validated = $request->validate([
