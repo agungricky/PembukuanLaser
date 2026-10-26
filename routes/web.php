@@ -290,3 +290,7 @@ Route::get('/jadwal-iza', function () {
 Route::get('/jadwal-elsa', function () {
     return view('jadwalelsa');
 })->name('jadwal-elsa');
+
+Route::get('/jadwal-piket-lck', function () {
+    return view('piket');
+})->name('jadwal-piket-lck');
