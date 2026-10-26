@@ -106,15 +106,6 @@ class Pesanan extends Model
         )->withTrashed();
     }
 
-    public function kesalahan()
-    {
-        return $this->belongsTo(
-            kesalahan::class,
-            'no_pesanan',
-            'no_pesanan'
-        );
-    }
-
     public function pesanan_per_produk()
     {
         return $this->hasMany(
