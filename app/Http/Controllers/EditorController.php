@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\EditorPart;
 use App\Models\EditorPartItem;
 use App\Models\EditorRequest;
+use App\Models\Pesanan;
+use App\Models\PesananPerProduk;
 use App\Models\progres_pesanan;
 use App\Services\EditorPartService;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
@@ -21,6 +23,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
 
 class EditorController extends Controller
 {
@@ -213,11 +216,7 @@ class EditorController extends Controller
             });
 
         return view(
-            'editor.part.show',
-            compact(
-                'part',
-                'kelompok'
-            )
+            'editor.part.show', compact('part', 'kelompok')
         );
     }
 
@@ -314,7 +313,7 @@ class EditorController extends Controller
                     }
 
                     if ($lockedPart->status === 'open') {
-                        $this->validasiWaktuDownload($lockedPart);
+                        // $this->validasiWaktuDownload($lockedPart);
                         $lockedPart->update([
                             'status' => 'downloaded',
                             'downloaded_by' => Auth::id(),
@@ -666,6 +665,7 @@ class EditorController extends Controller
                 }
 
                 $statusRequest = $this->normalizeStatusRequest($statusRaw);
+
                 if ($statusRequest === null) {
                     $invalidItemIds[$idItem] = true;
                     $errors[] = "Baris {$row}: STATUS REQUEST hanya boleh kosong, NORMAL, MENUNGGU, atau RANDOM.";
@@ -786,6 +786,27 @@ class EditorController extends Controller
                             }
 
                             $status = $rows[0]['status_request'];
+                            if ($status === 'batal') {
+                                $pesanan = PesananPerProduk::where('id_per_produk', $idPerProduk)->first();
+                                Pesanan::where('no_pesanan', $pesanan->no_pesanan)->update([
+                                    'status' => 'batal',
+                                ]);
+
+                                EditorRequest::where('id_per_produk', $idPerProduk)
+                                    ->whereNull('locked_at')
+                                    ->delete();
+
+                                $partItem->update([
+                                    'status' => 'batal',
+                                    'jumlah_final' => null,
+                                    'processed_at' => now(),
+                                ]);
+
+                                $jumlahDilewati++;
+
+                                return;
+                            }
+
                             if ($status === 'menunggu') {
                                 EditorRequest::where('id_per_produk', $idPerProduk)
                                     ->whereNull('locked_at')
@@ -1050,9 +1071,7 @@ class EditorController extends Controller
             ->whereRaw('1 = 0');
     }
 
-    private function validasiHeader(
-        $sheet
-    ): void {
+    private function validasiHeader($sheet): void {
         $headers = [
             'A1' => 'SKU',
             'B1' => 'PLAT LENGKAP',
@@ -1066,25 +1085,13 @@ class EditorController extends Controller
             'J1' => 'BATAS KIRIM',
         ];
 
-        foreach (
-            $headers as $cell => $expected
-        ) {
-            $actual =
-                strtoupper(
-                    trim(
-                        (string)
-                        $sheet
-                            ->getCell(
-                                $cell
-                            )
-                            ->getFormattedValue()
+        foreach ($headers as $cell => $expected) {
+            $actual = strtoupper(trim((string)
+                        $sheet->getCell($cell)->getFormattedValue()
                     )
                 );
 
-            if (
-                $actual !==
-                $expected
-            ) {
+            if ($actual !== $expected) {
                 throw new \Exception(
                     "Format Excel tidak valid. {$cell} harus berisi {$expected}."
                 );
@@ -1092,79 +1099,38 @@ class EditorController extends Controller
         }
     }
 
-    private function buatMetaSheet(
-        Spreadsheet $spreadsheet,
-        EditorPart $part
-    ): void {
-        $meta = $spreadsheet
-            ->getSheetByName(
-                'META'
-            );
+    private function buatMetaSheet(Spreadsheet $spreadsheet, EditorPart $part): void {
+        $meta = $spreadsheet->getSheetByName('META');
 
         if (! $meta) {
-            $meta = new Worksheet(
-                $spreadsheet,
-                'META'
-            );
-
-            $spreadsheet->addSheet(
-                $meta
-            );
+            $meta = new Worksheet($spreadsheet, 'META');
+            $spreadsheet->addSheet($meta);
         }
 
-        $meta->setCellValue(
-            'A1',
-            'KODE PART'
-        );
-
+        $meta->setCellValue('A1', 'KODE PART');
         $meta->setCellValueExplicit(
-            'B1',
-            (string) $part->kode_part,
+            'B1', (string) 
+            $part->kode_part,
             DataType::TYPE_STRING
         );
 
-        $meta->setCellValue(
-            'A2',
-            'PART ID'
-        );
-
-        $meta->setCellValue(
-            'B2',
-            (int) $part->id
-        );
-
-        $meta->setCellValue(
-            'A3',
-            'TANGGAL PART'
-        );
-
-        $meta->setCellValue(
-            'B3',
+        $meta->setCellValue('A2', 'PART ID');
+        $meta->setCellValue('B2', (int) $part->id);
+        $meta->setCellValue('A3', 'TANGGAL PART');
+        $meta->setCellValue('B3',
             $this->formatTanggalPart(
                 $part->tanggal_part
             )
         );
 
-        $meta->setCellValue(
-            'A4',
-            'SESI'
-        );
-
+        $meta->setCellValue('A4', 'SESI');
         $meta->setCellValueExplicit(
             'B4',
-            mb_strtoupper(
-                trim(
-                    (string) $part->sesi
-                )
-            ),
+            mb_strtoupper(trim((string) $part->sesi)),
             DataType::TYPE_STRING
         );
 
-        $meta->setCellValue(
-            'A5',
-            'MARKETPLACE'
-        );
-
+        $meta->setCellValue('A5', 'MARKETPLACE');
         $meta->setCellValueExplicit(
             'B5',
             mb_strtoupper(
@@ -1255,33 +1221,22 @@ class EditorController extends Controller
     private function normalizeStatusRequest(
         $value
     ): ?string {
-        $value =
-            mb_strtoupper(
-                trim(
-                    (string)
-                    $value
-                )
-            );
+        $value = mb_strtoupper(trim((string) $value));
 
-        if (
-            $value === '' ||
-            $value === 'NORMAL'
-        ) {
+        if ($value === '' || $value === 'NORMAL') {
             return 'normal';
         }
 
-        if (
-            $value ===
-            'MENUNGGU'
-        ) {
+        if ($value === 'MENUNGGU') {
             return 'menunggu';
         }
 
-        if (
-            $value ===
-            'RANDOM'
-        ) {
+        if ($value === 'RANDOM') {
             return 'random';
+        }
+
+        if ($value === 'BATAL') {
+            return 'batal';
         }
 
         return null;

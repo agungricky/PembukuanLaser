@@ -223,157 +223,84 @@ class PesananDetailController extends Controller
                 'dataPlat' => $dataPlat,
                 'statusPengerjaan' => $statusPengerjaan,
                 'progresPesanan' => $progresPesanan,
-                'pencairan' => $pencairan
+                'pencairan' => $pencairan,
             ]
         );
     }
 
-    public function update(
-        Request $request,
-        string $no_pesanan
-    ) {
+    public function update(Request $request, string $no_pesanan)
+    {
         $validated = $request->validate([
-            'tanggal' => [
-                'nullable',
-                'date',
+            'tanggal' => ['nullable', 'date'],
+            'id_toko' => ['required', 'exists:toko,id_toko'],
+            'no_resi' => ['nullable', 'string', 'max:100'],
+            'status' =>  ['nullable',
+                Rule::in(['proses', 'kirim', 'selesai', 'affiliate', 'pengiriman gagal', 'pengembalian', 'batal']),
             ],
-
-            'id_toko' => [
-                'required',
-                'exists:toko,id_toko',
-            ],
-
-            'no_resi' => [
-                'nullable',
-                'string',
-                'max:100',
-            ],
-
-            'status' => [
-                'nullable',
-                Rule::in([
-                    'proses',
-                    'kirim',
-                    'selesai',
-                    'affiliate',
-                    'pengiriman gagal',
-                    'pengembalian',
-                    'batal',
-                ]),
-            ],
-
-            'pencairan' => [
-                'nullable',
-                'numeric',
-            ],
-
-            'total_hpp' => [
-                'nullable',
-                'numeric',
-                'min:0',
-            ],
-
-            'total_harga' => [
-                'nullable',
-                'numeric',
-                'min:0',
-            ],
+            'pencairan' => ['nullable', 'numeric'],
+            'total_hpp' => ['nullable', 'numeric', 'min:0'],
+            'total_harga' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        DB::transaction(
-            function () use (
-                $validated,
-                $no_pesanan
-            ) {
-                $pesanan =
-                    Pesanan::where(
-                        'no_pesanan',
-                        $no_pesanan
-                    )
-                        ->lockForUpdate()
-                        ->firstOrFail();
+        try {
+            DB::transaction(function () use ($validated, $no_pesanan) {
+                $pesanan = Pesanan::with('pesanan_per_produk.editorPartItems')
+                    ->where('no_pesanan', $no_pesanan)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-                $statusLama =
-                    (string) $pesanan->status;
+                $statusLama = (string) $pesanan->status;
+                $statusBaru = $validated['status'] ?? $statusLama;
+                $pesanan->tanggal = $validated['tanggal'] ?? $pesanan->tanggal;
+                $pesanan->id_toko = $validated['id_toko'];
+                $pesanan->no_resi = ! empty($validated['no_resi']) ? trim($validated['no_resi']) : null;
+                $pesanan->status = $statusBaru;
+                $pesanan->pencairan = isset($validated['pencairan']) ? (float) $validated['pencairan'] : 0;
+                $pesanan->total_hpp = isset($validated['total_hpp']) ? (float) $validated['total_hpp'] : 0;
+                $pesanan->total_harga = isset($validated['total_harga']) ? (float) $validated['total_harga'] : 0;
 
-                $statusBaru =
-                    $validated['status']
-                    ?? $statusLama;
-
-                $pesanan->tanggal =
-                    $validated['tanggal']
-                    ?? $pesanan->tanggal;
-
-                $pesanan->id_toko =
-                    $validated['id_toko'];
-
-                $pesanan->no_resi =
-                    ! empty(
-                        $validated['no_resi']
-                    )
-                        ? trim(
-                            $validated['no_resi']
-                        )
-                        : null;
-
-                $pesanan->status =
-                    $statusBaru;
-
-                $pesanan->pencairan =
-                    isset(
-                        $validated['pencairan']
-                    )
-                        ? (float)
-                            $validated['pencairan']
-                        : 0;
-
-                $pesanan->total_hpp =
-                    isset(
-                        $validated['total_hpp']
-                    )
-                        ? (float)
-                            $validated['total_hpp']
-                        : 0;
-
-                $pesanan->total_harga =
-                    isset(
-                        $validated['total_harga']
-                    )
-                        ? (float)
-                            $validated['total_harga']
-                        : 0;
-
-                if (
-                    $statusBaru === 'kirim' &&
-                    $statusLama !== 'kirim'
-                ) {
-                    if (
-                        ! $pesanan->tanggal_kirim
-                    ) {
-                        $pesanan->tanggal_kirim =
-                            now();
+                if ($statusBaru === 'kirim' && $statusLama !== 'kirim') {
+                    if (! $pesanan->tanggal_kirim) {
+                        $pesanan->tanggal_kirim = now();
                     }
 
-                    if (
-                        ! $pesanan->id_user_kirim
-                    ) {
-                        $pesanan->id_user_kirim =
-                            Auth::id();
+                    if (! $pesanan->id_user_kirim) {
+                        $pesanan->id_user_kirim = Auth::id();
+                    }
+                }
+
+                if ($statusBaru === 'batal') {
+                    foreach ($pesanan->pesanan_per_produk as $value) {
+                        $adaLocked = $value->editorPartItems()
+                            ->where('status', 'locked')
+                            ->exists();
+
+                        if ($adaLocked) {
+                            throw new \Exception(
+                                'Pesanan sudah dikerjakan dan tidak dapat dibatalkan.'
+                            );
+                        }
+                    }
+
+                    foreach ($pesanan->pesanan_per_produk as $value) {
+                        $value->editorPartItems()
+                            ->whereIn('status', ['pending', 'skipped'])
+                            ->update([
+                                'status' => 'batal',
+                            ]);
                     }
                 }
 
                 $pesanan->save();
-            }
-        );
+            });
 
-        return redirect()
-            ->route(
-                'pesanan.show',
-                $no_pesanan
-            )
-            ->with(
-                'success',
-                'Pesanan berhasil diperbarui.'
-            );
+            return redirect()
+                ->route('pesanan.show', $no_pesanan)
+                ->with('success', 'Pesanan berhasil diperbarui.');
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('pesanan.show', $no_pesanan)
+                ->with('error', $e->getMessage());
+        }
     }
 }

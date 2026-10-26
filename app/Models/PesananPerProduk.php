@@ -57,7 +57,7 @@ class PesananPerProduk extends Model
     }
     public function editorPartItems()
     {
-        return $this->hasMany(
+        return $this->hasOne(
             EditorPartItem::class,
             'id_per_produk',
             'id_per_produk'
