@@ -10,13 +10,17 @@ use Illuminate\Support\Facades\DB;
 class EditorPartService
 {
     private const MULAI_EDITOR = '2026-08-26';
+
     private const TIMEZONE = 'Asia/Jakarta';
 
     private const SESI_PAGI = 'pagi';
+
     private const SESI_SIANG = 'siang';
+
     private const SESI_MALAM = 'malam';
 
     private const MARKETPLACE_SHOPEE = 'Shopee';
+
     private const MARKETPLACE_TIKTOK = 'TikTok';
 
     private const SKU_DILEWATI = [
@@ -55,7 +59,7 @@ class EditorPartService
                 ->where(
                     'p.input_at',
                     '>=',
-                    self::MULAI_EDITOR . ' 00:00:00'
+                    self::MULAI_EDITOR.' 00:00:00'
                 )
                 ->whereNotExists(function ($q) {
                     $q->select(DB::raw(1))
@@ -162,7 +166,7 @@ class EditorPartService
 
             if (
                 $marketplace === null ||
-                !in_array(
+                ! in_array(
                     $partAsal->sesi,
                     [
                         self::SESI_PAGI,
@@ -223,39 +227,23 @@ class EditorPartService
         }
 
         $items = DB::table('pesanan_per_produk as pp')
-            ->join(
-                'pesanan as p',
-                'p.no_pesanan',
-                '=',
-                'pp.no_pesanan'
-            )
-            ->join(
-                'toko as t',
-                't.id_toko',
-                '=',
-                'p.id_toko'
-            )
-            ->leftJoin(
-                'produk as pr',
-                'pr.sku',
-                '=',
-                'pp.sku'
-            )
-            ->whereIn(
-                'pp.id_per_produk',
-                $idPerProduk
-            )
+            ->join('pesanan as p', 'p.no_pesanan', '=', 'pp.no_pesanan')
+            ->join('toko as t', 't.id_toko', '=', 'p.id_toko')
+            ->leftJoin('produk as pr', 'pr.sku', '=', 'pp.sku')
+            ->whereIn('pp.id_per_produk', $idPerProduk)
             ->whereNotNull('pp.sku')
-            ->whereRaw("UPPER(TRIM(pp.sku)) LIKE 'PLT%'")
-            ->whereRaw("UPPER(TRIM(pp.sku)) <> 'PLT028C'")
+            ->where(function ($query) {
+                $query
+                    ->where(function ($q) {
+                        $q->whereRaw("UPPER(TRIM(pp.sku)) LIKE 'PLT%'")
+                            ->whereRaw("UPPER(TRIM(pp.sku)) <> 'PLT028C'");
+                    })
+                    ->orWhereRaw("UPPER(pr.variasi) LIKE '%JDM%'");
+            })
             ->whereRaw("LOWER(TRIM(t.marketplace)) IN ('shopee', 'tiktok')")
             ->where('p.status', 'proses')
             ->whereNotNull('p.input_at')
-            ->where(
-                'p.input_at',
-                '>=',
-                self::MULAI_EDITOR . ' 00:00:00'
-            )
+            ->where('p.input_at', '>=', self::MULAI_EDITOR.' 00:00:00')
             ->select([
                 'pp.id_per_produk',
                 'pp.no_pesanan',
@@ -322,6 +310,7 @@ class EditorPartService
                 in_array($sku, self::SKU_DILEWATI, true)
             ) {
                 $ignored[] = $idItem;
+
                 continue;
             }
 
@@ -337,6 +326,7 @@ class EditorPartService
 
             if ($sedangDialokasikan) {
                 $ignored[] = $idItem;
+
                 continue;
             }
 
@@ -347,14 +337,16 @@ class EditorPartService
 
             if ($sudahLocked) {
                 $ignored[] = $idItem;
+
                 continue;
             }
 
-            $namaProduk = $item->master_nama_produk
-                ?: $item->item_nama_produk;
-
-            $variasi = $item->master_variasi
-                ?: $item->item_variasi;
+            $namaProduk = $item->master_nama_produk ?: $item->item_nama_produk;
+            $variasi = $item->master_variasi ?: $item->item_variasi;
+            $isJdm = str_contains(
+                mb_strtoupper((string) ($item->master_variasi ?? '')),
+                'JDM'
+            );
 
             $kelompok = $this->buatKelompokProduksi(
                 $namaProduk,
@@ -395,12 +387,13 @@ class EditorPartService
                 $userId,
                 $partsBaru,
                 $partCache,
-                $urutanCache
+                $urutanCache,
+                $isJdm
             );
 
             $partId = (int) $part->id;
 
-            if (!array_key_exists($partId, $urutanCache)) {
+            if (! array_key_exists($partId, $urutanCache)) {
                 $urutanCache[$partId] = (int) EditorPartItem::where(
                     'editor_part_id',
                     $partId
@@ -498,6 +491,10 @@ class EditorPartService
                 continue;
             }
 
+            $isJdm = mb_strtoupper(
+                trim((string) ($partMalam->jenis_part ?? 'NORMAL'))
+            ) === 'JDM';
+
             $pendingItems = EditorPartItem::where(
                 'editor_part_id',
                 $partMalam->id
@@ -509,7 +506,7 @@ class EditorPartService
                 ->get();
 
             if ($pendingItems->isEmpty()) {
-                if (!$partMalam->items()->exists()) {
+                if (! $partMalam->items()->exists()) {
                     $partMalam->delete();
                 }
 
@@ -530,12 +527,13 @@ class EditorPartService
                 $userId,
                 $partsBaru,
                 $partCache,
-                $urutanCache
+                $urutanCache,
+                $isJdm
             );
 
             $partTujuanId = (int) $partTujuan->id;
 
-            if (!array_key_exists($partTujuanId, $urutanCache)) {
+            if (! array_key_exists($partTujuanId, $urutanCache)) {
                 $urutanCache[$partTujuanId] = (int) EditorPartItem::where(
                     'editor_part_id',
                     $partTujuanId
@@ -555,6 +553,7 @@ class EditorPartService
 
                 if ($sudahAdaDiTujuan) {
                     $pendingItem->delete();
+
                     continue;
                 }
 
@@ -568,7 +567,7 @@ class EditorPartService
                 $dipindah++;
             }
 
-            if (!$partMalam->items()->exists()) {
+            if (! $partMalam->items()->exists()) {
                 $partMalam->delete();
             }
         }
@@ -583,10 +582,14 @@ class EditorPartService
         ?int $userId,
         int &$partsBaru,
         array &$partCache,
-        array &$urutanCache
+        array &$urutanCache,
+        bool $isJdm = false
     ): EditorPart {
+        $jenisPart = $isJdm ? 'JDM' : 'NORMAL';
+
         for ($i = 0; $i < 370; $i++) {
-            $key = $tanggal . '|' . $sesi . '|' . $marketplace;
+
+            $key = $tanggal.'|'.$sesi.'|'.$marketplace.'|'.$jenisPart;
 
             if (array_key_exists($key, $partCache)) {
                 $part = $partCache[$key];
@@ -597,6 +600,7 @@ class EditorPartService
                 )
                     ->where('sesi', $sesi)
                     ->where('marketplace', $marketplace)
+                    ->where('jenis_part', $jenisPart)
                     ->lockForUpdate()
                     ->first();
 
@@ -616,16 +620,20 @@ class EditorPartService
                 continue;
             }
 
+            $kodePart = $this->buatKodePart(
+                $tanggal,
+                $sesi,
+                $marketplace,
+                $jenisPart
+            );
+
             $part = EditorPart::create([
                 'tanggal_part' => $tanggal,
                 'sesi' => $sesi,
                 'marketplace' => $marketplace,
+                'jenis_part' => $jenisPart,
                 'nomor_part' => $this->nomorPartBerikutnya($tanggal),
-                'kode_part' => $this->buatKodePart(
-                    $tanggal,
-                    $sesi,
-                    $marketplace
-                ),
+                'kode_part' => $kodePart,
                 'kapasitas_per_kelompok' => 0,
                 'status' => 'open',
                 'created_by' => $userId,
@@ -806,7 +814,7 @@ class EditorPartService
         }
 
         return mb_substr(
-            $namaProduk . '|' . $variasi,
+            $namaProduk.'|'.$variasi,
             0,
             150
         );
@@ -815,13 +823,24 @@ class EditorPartService
     private function buatKodePart(
         string $tanggal,
         string $sesi,
-        string $marketplace
+        string $marketplace,
+        string $jenisPart = 'NORMAL'
     ): string {
-        return str_replace(
-            '-',
-            '',
-            $tanggal
-        ) . '-' . mb_strtoupper($sesi) . '-' . mb_strtoupper($marketplace);
+        $kodeTanggal = str_replace('-', '', $tanggal);
+
+        $kodeSesi = mb_strtoupper($sesi);
+        $kodeMarketplace = mb_strtoupper($marketplace);
+
+        if ($jenisPart === 'JDM') {
+            return $kodeTanggal
+                .'-JDM'
+                .'-'.$kodeSesi
+                .'-'.$kodeMarketplace;
+        }
+
+        return $kodeTanggal
+            .'-'.$kodeSesi
+            .'-'.$kodeMarketplace;
     }
 
     private function hasilKosong(): array
