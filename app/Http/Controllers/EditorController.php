@@ -313,7 +313,7 @@ class EditorController extends Controller
                     }
 
                     if ($lockedPart->status === 'open') {
-                        // $this->validasiWaktuDownload($lockedPart);
+                        $this->validasiWaktuDownload($lockedPart);
                         $lockedPart->update([
                             'status' => 'downloaded',
                             'downloaded_by' => Auth::id(),
@@ -668,7 +668,7 @@ class EditorController extends Controller
 
                 if ($statusRequest === null) {
                     $invalidItemIds[$idItem] = true;
-                    $errors[] = "Baris {$row}: STATUS REQUEST hanya boleh kosong, NORMAL, MENUNGGU, atau RANDOM.";
+                    $errors[] = "Baris {$row}: STATUS REQUEST hanya boleh kosong, NORMAL, MENUNGGU, RANDOM atau BATAL.";
 
                     continue;
                 }

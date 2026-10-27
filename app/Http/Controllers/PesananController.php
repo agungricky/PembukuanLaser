@@ -596,7 +596,6 @@ class PesananController extends Controller
         }
 
         $skuList = array_values(array_unique($skuList));
-
         $produkMaster = collect();
 
         if (! empty($skuList)) {
@@ -772,15 +771,9 @@ class PesananController extends Controller
                         }
                     }
 
-                    if (
-                        $indexTerpilih === null &&
-                        $skuNormalPayload !== ''
-                    ) {
+                    if ($indexTerpilih === null && $skuNormalPayload !== '') {
                         foreach ($previewProduk as $idx => $row) {
-                            if (
-                                ! is_array($row) ||
-                                isset($previewTerpakai[$idx])
-                            ) {
+                            if (! is_array($row) || isset($previewTerpakai[$idx])) {
                                 continue;
                             }
 

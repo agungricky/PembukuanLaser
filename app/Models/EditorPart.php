@@ -18,6 +18,7 @@ class EditorPart extends Model
         'marketplace',
         'nomor_part',
         'kode_part',
+        'jenis_part',
         'kapasitas_per_kelompok',
         'status',
         'created_by',
