@@ -60,15 +60,11 @@ class TransaksiService
                 'toko',
             ])
             ->where('status', 'proses')
-
-            // Harus punya minimal 1 produk yang masih perlu diproses
             ->whereHas('pesanan_per_produk', function ($query) {
                 $query
                     ->where('status_pesanan', '0')
                     ->whereNull('mutasi_stok_id');
             })
-
-            // Kalau ada custom = 1, seluruh pesanan jangan ditampilkan
             ->whereDoesntHave('pesanan_per_produk', function ($query) {
                 $query->where('custom', 1);
             })
@@ -212,10 +208,7 @@ class TransaksiService
                             $alokasiStok,
                             $stokProduk
                         ) {
-                            $alokasi =
-                                $alokasiStok[
-                                    $item->id_per_produk
-                                ] ?? null;
+                            $alokasi = $alokasiStok[$item->id_per_produk] ?? null;
 
                             return [
                                 'id_per_produk' => $item->id_per_produk,
@@ -224,11 +217,7 @@ class TransaksiService
                                 'nama_produk' => $item->nama_produk,
                                 'variasi' => $item->variasi,
                                 'jumlah' => $item->jumlah,
-                                'stok_total' => (int) (
-                                    $stokProduk[
-                                        $item->sku
-                                    ] ?? 0
-                                ),
+                                'stok_total' => (int) ($stokProduk[$item->sku] ?? 0),
                                 'stok_awal' => $alokasi['stok_awal'] ?? 0,
                                 'stok_sisa' => $alokasi['stok_sisa'] ?? 0,
                                 'tersedia' => $alokasi['tersedia'] ?? false,
@@ -1291,15 +1280,32 @@ class TransaksiService
                 ]);
             }
 
-            PesananPerProduk::whereIn('no_pesanan', $request->pesanan)->update([
-                'exporter_id' => $exporter->id,
-            ]);
+            Pesanan::whereIn('no_pesanan', $request->pesanan)
+                ->whereNotNull('batas_kirim_at')
+                ->update([
+                    'resi_printed_at' => DB::raw('COALESCE(resi_printed_at, NOW())'),
+                    'resi_last_printed_at' => now(),
+                    'resi_printed_by' => Auth::id(),
+                    'resi_print_count' => DB::raw('COALESCE(resi_print_count, 0) + 1'),
+                ]);
+
+            PesananPerProduk::whereIn('no_pesanan', $request->pesanan)
+                ->whereHas('pesanan', function ($query) {
+                    $query->whereNotNull('batas_kirim_at');
+                })
+                ->update([
+                    'exporter_id' => $exporter->id,
+                ]);
 
             $now = now();
             $userId = Auth::id();
             $role = Auth::user()->role;
 
-            $data = collect($request->pesanan)->map(function ($noPesanan) use ($now, $userId, $role) {
+            $pesananValid = Pesanan::whereIn('no_pesanan', $request->pesanan)
+                ->whereNotNull('batas_kirim_at')
+                ->pluck('no_pesanan');
+
+            $data = $pesananValid->map(function ($noPesanan) use ($now, $userId, $role) {
                 return [
                     'no_pesanan' => $noPesanan,
                     'role' => $role,
@@ -1309,7 +1315,9 @@ class TransaksiService
                 ];
             })->toArray();
 
-            progres_pesanan::insert($data);
+            if (! empty($data)) {
+                progres_pesanan::insert($data);
+            }
 
             DB::commit();
 

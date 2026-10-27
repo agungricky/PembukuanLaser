@@ -754,8 +754,8 @@
                                     <i class="fa-solid fa-circle fa-stack-2x text-success"></i>
                                     <i class="fa-solid fa-print fa-stack-1x text-white"></i>
                                 </span>` : '';
-
                             const terlambat = batasKirim && new Date() > batasKirim;
+                            const tanggalCetakResi = row.tanggal_cetak_resi;
                             return `
                                 <div class="d-flex flex-column gap-1">
 
@@ -834,20 +834,51 @@
                                         </div>
                                     </div>
 
+                                    <div class="d-flex flex-column">
+                                        <div class="d-flex align-items-center gap-2 text-nowrap">
+
+                                            <span class="text-muted fw-semibold"
+                                                style="font-size: 10px;">
+
+                                                <i class="fa-solid fa-print me-1"></i>
+                                                Cetak Resi
+                                            </span>
+
+                                            <span class="fw-semibold text-success"
+                                                style="font-size: 11px;">
+
+                                                ${
+                                                    row.resi_printed_at
+                                                        ? new Date(row.resi_printed_at)
+                                                            .toLocaleString('id-ID', {
+                                                                day: '2-digit',
+                                                                month: 'short',
+                                                                year: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit',
+                                                                hour12: false
+                                                            })
+                                                        : '-'
+                                                }
+
+                                            </span>
+                                        </div>
+                                    </div>
+
                                     ${
                                         terlambat
                                             ? `
-                                                                                                                                                                                                                                                                                                        <div class="mt-1">
-                                                                                                                                                                                                                                                                                                            <span
-                                                                                                                                                                                                                                                                                                                class="badge bg-danger text-white"
-                                                                                                                                                                                                                                                                                                                style="font-size: 9px;">
+                                                                                                                                                                                                                                                                                                            <div class="mt-1">
+                                                                                                                                                                                                                                                                                                                <span
+                                                                                                                                                                                                                                                                                                                    class="badge bg-danger text-white"
+                                                                                                                                                                                                                                                                                                                    style="font-size: 9px;">
 
-                                                                                                                                                                                                                                                                                                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
-                                                                                                                                                                                                                                                                                                                Terlambat
+                                                                                                                                                                                                                                                                                                                    <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                                                                                                                                                                                                                                                                                                    Terlambat
 
-                                                                                                                                                                                                                                                                                                            </span>
-                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                    `
+                                                                                                                                                                                                                                                                                                                </span>
+                                                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                                                        `
                                             : ''
                                     }
                                 </div>
@@ -955,12 +986,12 @@
                                             ${
                                                 item.variasi
                                                     ? `
-                                                                                                                                                                                                                                                                                    <span
-                                                                                                                                                                                                                                                                                        class="badge bg-light text-dark border fw-normal"
-                                                                                                                                                                                                                                                                                        style="font-size:10px;">
-                                                                                                                                                                                                                                                                                        ${item.variasi}
-                                                                                                                                                                                                                                                                                    </span>
-                                                                                                                                                                                                                                                                                `
+                                                                                                                                                                                                                                                                                        <span
+                                                                                                                                                                                                                                                                                            class="badge bg-light text-dark border fw-normal"
+                                                                                                                                                                                                                                                                                            style="font-size:10px;">
+                                                                                                                                                                                                                                                                                            ${item.variasi}
+                                                                                                                                                                                                                                                                                        </span>
+                                                                                                                                                                                                                                                                                    `
                                                     : ''
                                             }
 
@@ -1035,17 +1066,17 @@
                                         ${
                                             tersedia
                                                 ? `
-                                                                                                                                                            <span class="status-stok stok-tersedia">
-                                                                                                                                                                <i class="fa-solid fa-circle-check"></i>
-                                                                                                                                                                Tersedia
-                                                                                                                                                            </span>
-                                                                                                                                                        `
+                                                                                                                                                                <span class="status-stok stok-tersedia">
+                                                                                                                                                                    <i class="fa-solid fa-circle-check"></i>
+                                                                                                                                                                    Tersedia
+                                                                                                                                                                </span>
+                                                                                                                                                            `
                                                 : `
-                                                                                                                                                            <span class="status-stok stok-kurang">
-                                                                                                                                                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                                                                                                                                                Kurang
-                                                                                                                                                            </span>
-                                                                                                                                                        `
+                                                                                                                                                                <span class="status-stok stok-kurang">
+                                                                                                                                                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                                                                                                                                                    Kurang
+                                                                                                                                                                </span>
+                                                                                                                                                            `
                                         }
 
                                     </div>
@@ -1421,15 +1452,15 @@
                                         <td>${index + 1}</td>
                                         <td>${item ?? '-'}</td>
                                         ${index === 0 ? `
-                                                                                                        <td rowspan="${response.data.length}" class="text-center align-middle">
-                                                                                                            <button
-                                                                                                                type="button"
-                                                                                                                id="copy-pesanan"
-                                                                                                                class="btn btn-primary btn-sm">
-                                                                                                                Copy Semua No. Pesanan
-                                                                                                            </button>
-                                                                                                        </td>
-                                                                                                    ` : ''}
+                                                                                                            <td rowspan="${response.data.length}" class="text-center align-middle">
+                                                                                                                <button
+                                                                                                                    type="button"
+                                                                                                                    id="copy-pesanan"
+                                                                                                                    class="btn btn-primary btn-sm">
+                                                                                                                    Copy Semua No. Pesanan
+                                                                                                                </button>
+                                                                                                            </td>
+                                                                                                        ` : ''}
                                     </tr>
                                 `)
                                 .join('');
