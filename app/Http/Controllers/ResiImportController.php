@@ -199,7 +199,7 @@ class ResiImportController extends Controller
     {
         $dataPreview = session('resi_preview');
 
-        if (! $dataPreview) {
+        if (!$dataPreview) {
             return redirect()
                 ->route('resi.import')
                 ->with(
@@ -216,7 +216,8 @@ class ResiImportController extends Controller
         ]);
 
         $tempPath = $dataPreview['temp_path'] ?? null;
-        if (empty($tempPath) || ! File::exists($tempPath)) {
+        $idToko = (int) $dataPreview['id_toko'];
+        if (empty($tempPath) || !File::exists($tempPath)) {
             session()->forget('resi_preview');
 
             return redirect()
@@ -231,22 +232,27 @@ class ResiImportController extends Controller
             ->map(function ($page) {
                 return [
                     'halaman' => (int) ($page['halaman'] ?? 0),
-                    'no_pesanan' => preg_replace('/\s+/', '', (string) ($page['no_pesanan'] ?? '')),
-                    'no_resi' => trim((string) ($page['no_resi'] ?? '')),
+                    'no_pesanan' => preg_replace(
+                        '/\s+/',
+                        '',
+                        (string) ($page['no_pesanan'] ?? '')
+                    ),
+                    'no_resi' => trim(
+                        (string) ($page['no_resi'] ?? '')
+                    ),
                 ];
             })
             ->filter(
-                fn($page) => $page['halaman'] > 0 &&
+                fn($page) =>
+                $page['halaman'] > 0 &&
                     $page['no_pesanan'] !== ''
             )
             ->values();
 
         if ($mappings->isEmpty()) {
-            return back()
-                ->with(
-                    'error',
-                    'Tidak ada halaman yang memiliki No Pesanan.'
-                );
+            return redirect()
+                ->route('resi.import')
+                ->with('error', 'Tidak ada halaman yang memiliki No Pesanan.');
         }
 
         $detectedPages = collect($dataPreview['detected_pages'] ?? [])->keyBy(
@@ -258,16 +264,14 @@ class ResiImportController extends Controller
             ->unique()
             ->values();
 
-        // Batasi binding setiap query untuk import dengan banyak halaman.
         $pesanan = collect();
         $existingMappedOrders = collect();
-
         foreach ($orderNumbers->chunk(500) as $batch) {
             $pesanan = $pesanan->concat(
                 Pesanan::query()
-                    ->where('id_toko', $dataPreview['id_toko'])
+                    ->where('id_toko', $idToko)
                     ->whereIn('no_pesanan', $batch)
-                    ->get(['no_pesanan', 'no_resi'])
+                    ->get(['no_pesanan', 'no_resi', 'batas_kirim_at'])
             );
 
             $existingMappedOrders = $existingMappedOrders->concat(
@@ -277,80 +281,143 @@ class ResiImportController extends Controller
             );
         }
 
-        $pesanan = $pesanan->keyBy(fn($item) => (string) $item->no_pesanan);
+        $pesanan = $pesanan->keyBy(
+            fn($item) => (string) $item->no_pesanan
+        );
+
         $existingMappedOrders = $existingMappedOrders
             ->map(fn($value) => (string) $value)
             ->unique()
             ->flip();
 
         $validPages = [];
+        $deadlineOnlyPages = [];
         $errors = [];
         $urutan = [];
+        $processedExistingDeadlines = [];
 
         foreach ($mappings as $page) {
             $noPesanan = (string) $page['no_pesanan'];
+            $halaman = $page['halaman'];
 
-            if (! $pesanan->has($noPesanan)) {
+            if (!$pesanan->has($noPesanan)) {
                 $errors[] =
-                    "Halaman {$page['halaman']}: "
-                    . "Pesanan {$noPesanan} tidak ditemukan pada toko ini.";
-
-                continue;
-            }
-
-            if ($existingMappedOrders->has($noPesanan)) {
-                $errors[] = "Halaman {$page['halaman']}: " . "Pesanan {$noPesanan} sudah memiliki PDF resi.";
+                    "Halaman {$halaman}: Pesanan {$noPesanan} "
+                    . "tidak ditemukan pada toko ini.";
 
                 continue;
             }
 
             $order = $pesanan->get($noPesanan);
-            $urutan[$noPesanan] = ($urutan[$noPesanan] ?? 0) + 1;
-            $detected = (array) ($detectedPages->get($page['halaman']) ?? []);
-            $deadline = $this->normalizeDeadlinePayload($detected);
+            $detected = (array) (
+                $detectedPages->get($halaman) ?? []
+            );
 
+            $deadline = $this->normalizeDeadlinePayload($detected);
+            $batasKirimAt = $deadline['batas_kirim_at'] ?? null;
+            $noResi = $page['no_resi'] !== ''
+                ? $page['no_resi']
+                : (string) $order->no_resi;
+
+            if ($existingMappedOrders->has($noPesanan)) {
+                if (!is_null($order->batas_kirim_at)) {
+                    $errors[] =
+                        "Halaman {$halaman}: Pesanan {$noPesanan} "
+                        . "sudah memiliki PDF resi dan batas kirim.";
+
+                    continue;
+                }
+
+                if (empty($batasKirimAt)) {
+                    $errors[] =
+                        "Halaman {$halaman}: Pesanan {$noPesanan} "
+                        . "sudah memiliki PDF resi, tetapi "
+                        . "tanggal batas kirim tidak terbaca.";
+
+                    continue;
+                }
+
+                if (isset($processedExistingDeadlines[$noPesanan])) {
+                    continue;
+                }
+
+                $processedExistingDeadlines[$noPesanan] = true;
+                $deadlineOnlyPages[] = [
+                    'halaman' => $halaman,
+                    'no_pesanan' => $noPesanan,
+                    'no_resi' => $noResi,
+                    'batas_kirim_at' => $batasKirimAt,
+                    'batas_kirim_source' => $deadline['batas_kirim_source'] ?? null,
+                    'batas_kirim_raw' => $deadline['batas_kirim_raw'] ?? null,
+                ];
+
+                continue;
+            }
+
+            $urutan[$noPesanan] = ($urutan[$noPesanan] ?? 0) + 1;
             $validPages[] = [
-                'halaman' => $page['halaman'],
+                'halaman' => $halaman,
                 'no_pesanan' => $noPesanan,
-                'no_resi' => $page['no_resi'] !== '' ? $page['no_resi'] : (string) $order->no_resi,
+                'no_resi' => $noResi,
                 'urutan' => $urutan[$noPesanan],
-                'batas_kirim_at' => $deadline['batas_kirim_at'] ?? null,
+                'batas_kirim_at' => $batasKirimAt,
                 'batas_kirim_source' => $deadline['batas_kirim_source'] ?? null,
                 'batas_kirim_raw' => $deadline['batas_kirim_raw'] ?? null,
             ];
         }
 
-        if (empty($validPages)) {
-            return back()
+        if (empty($validPages) && empty($deadlineOnlyPages)) {
+            return redirect()
+                ->route('resi.import')
                 ->with(
                     'error',
-                    'Tidak ada halaman yang dapat disimpan.'
+                    'Tidak ada resi baru atau batas kirim yang dapat diperbarui.'
                 )
                 ->with('import_errors', $errors);
         }
 
         $now = now();
-        $directory = 'resi/' . $now->format('Y') . '/' . $now->format('m');
+        $directory = 'resi/'. $now->format('Y'). '/'. $now->format('m');
         $fullDirectory = storage_path('app/private/' . $directory);
-        File::ensureDirectoryExists($fullDirectory);
         $newName = Str::uuid() . '.pdf';
         $relativePath = $directory . '/' . $newName;
-        $fullPath = $fullDirectory . DIRECTORY_SEPARATOR . $newName;
+        $fullPath = $fullDirectory
+            . DIRECTORY_SEPARATOR
+            . $newName;
+
+        $fileMoved = false;
+        $jumlahBatasKirimUpdated = 0;
 
         try {
-            File::move($tempPath, $fullPath);
+            if (!empty($validPages)) {
+                File::ensureDirectoryExists($fullDirectory);
+                if (!File::move($tempPath, $fullPath)) {
+                    throw new \RuntimeException(
+                        'Gagal memindahkan PDF resi.'
+                    );
+                }
 
-            DB::transaction(
-                function () use ($dataPreview, $validPages, $relativePath, $now) {
-                    $import =
-                        ResiImport::create([
-                            'nama_file' => $dataPreview['original_name'],
-                            'path_file' => $relativePath,
-                            'jumlah_halaman' => $dataPreview['jumlah_halaman'],
-                            'marketplace' => $dataPreview['marketplace'],
-                            'id_toko' => $dataPreview['id_toko'],
-                            'user_id' => Auth::id(),
-                        ]);
+                $fileMoved = true;
+            }
+
+            DB::transaction(function () use (
+                $dataPreview,
+                $idToko,
+                $validPages,
+                $deadlineOnlyPages,
+                $relativePath,
+                $now,
+                &$jumlahBatasKirimUpdated
+            ) {
+                if (!empty($validPages)) {
+                    $import = ResiImport::create([
+                        'nama_file' => $dataPreview['original_name'],
+                        'path_file' => $relativePath,
+                        'jumlah_halaman' => $dataPreview['jumlah_halaman'],
+                        'marketplace' => $dataPreview['marketplace'],
+                        'id_toko' => $idToko,
+                        'user_id' => Auth::id(),
+                    ]);
 
                     $resiPages = [];
                     foreach ($validPages as $page) {
@@ -369,27 +436,56 @@ class ResiImportController extends Controller
                         ResiPage::insert($batch);
                     }
 
-                    app(DeadlineUpdater::class)->update((int) $dataPreview['id_toko'], $validPages);
+                    app(DeadlineUpdater::class)->update(
+                        $idToko,
+                        $validPages
+                    );
                 }
-            );
+
+                foreach ($deadlineOnlyPages as $page) {
+                    if (empty($page['batas_kirim_at'])) {
+                        continue;
+                    }
+
+                    $updated = Pesanan::query()
+                        ->where('id_toko', $idToko)
+                        ->where('no_pesanan', $page['no_pesanan'])
+                        ->whereNull('batas_kirim_at')
+                        ->update([
+                            'batas_kirim_at' => $page['batas_kirim_at'],
+                        ]);
+
+                    $jumlahBatasKirimUpdated += $updated;
+                }
+            });
+
+            if (!$fileMoved && File::exists($tempPath)) {
+                File::delete($tempPath);
+            }
 
             session()->forget('resi_preview');
+            $pesan =
+                count($validPages)
+                . ' halaman resi baru berhasil disimpan. '
+                . $jumlahBatasKirimUpdated
+                . ' batas kirim resi lama berhasil diperbarui.';
 
             return redirect()
                 ->route('resi.import')
-                ->with('success', count($validPages) . ' halaman resi berhasil disimpan.')
+                ->with('success', $pesan)
                 ->with('import_errors', $errors);
         } catch (\Throwable $e) {
-            if (File::exists($fullPath)) {
+            if ($fileMoved && File::exists($fullPath)) {
                 File::delete($fullPath);
             }
 
             report($e);
 
-            return back()
+            return redirect()
+                ->route('resi.import')
                 ->with(
                     'error',
-                    'Gagal menyimpan PDF resi: ' . $e->getMessage()
+                    'Gagal menyimpan PDF resi. Periksa log aplikasi.'
                 );
         }
     }
