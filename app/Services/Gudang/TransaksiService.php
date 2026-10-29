@@ -2,7 +2,6 @@
 
 namespace App\Services\Gudang;
 
-use App\Models\Exporter;
 use App\Models\mutasi_stok;
 use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
@@ -119,7 +118,6 @@ class TransaksiService
                 'ppp.no_pesanan',
                 'ppp.sku',
                 'ppp.jumlah',
-                'ppp.exporter_id',
                 'p.batas_kirim_at',
             ])
             ->orderByRaw(
@@ -222,7 +220,7 @@ class TransaksiService
                                 'stok_sisa' => $alokasi['stok_sisa'] ?? 0,
                                 'tersedia' => $alokasi['tersedia'] ?? false,
                                 'produk' => $item->produk,
-                                'cetak_resi' => $item->exporter_id,
+                                // 'cetak_resi' => $item->exporter_id,
                             ];
                         })
                         ->values()
@@ -521,7 +519,7 @@ class TransaksiService
             foreach ($kebutuhan as $sku => $data) {
                 $mutasi = mutasi_stok::create([
                     'stok_produk_id' => $data['stok_produk_id'],
-                    'gudang_id' => auth()->id(),
+                    'gudang_id' => Auth::id(),
                     'jenis_mutasi' => 'siap',
                     'jumlah' => $data['jumlah'],
                     'keterangan' => '',
@@ -632,12 +630,6 @@ class TransaksiService
 
                 $progres->touch();
             });
-
-            Exporter::where('user_id', Auth::id())
-                ->where('status', 'proses')
-                ->update([
-                    'status' => 'selesai',
-                ]);
 
             DB::commit();
 
@@ -803,7 +795,7 @@ class TransaksiService
         $pdf->Cell(0, 5, ': '.strtoupper(Auth::user()->name ?? '-'), 0, 1);
 
         $pdf->Cell(25, 5, 'KETERANGAN', 0, 0);
-        $pdf->Cell(0, 5, ': '.strtoupper($request->alasan_export ?? '-'), 0, 1);
+        // $pdf->Cell(0, 5, ': '.strtoupper($request->alasan_export ?? '-'), 0, 1);
 
         if ($request->typeCetak && $request->typeCetak != 'clear') {
 
@@ -1254,31 +1246,11 @@ class TransaksiService
             'kebutuhan.*.nama_produk' => 'required|string',
             'kebutuhan.*.stok_awal' => 'required|integer|min:0',
             'kebutuhan.*.kebutuhan' => 'required|integer|min:1',
-            'alasan_export' => 'required|string',
         ]);
 
         DB::beginTransaction();
         try {
             $response = $this->viewResi($request);
-
-            $exportAktif = Exporter::where('user_id', Auth::id())
-                ->where('status', 'proses')
-                ->first();
-
-            if ($exportAktif != null) {
-                $exporter = Exporter::where('id', $exportAktif->id)->update([
-                    'keterangan' => $request->alasan_export,
-                ]);
-
-                $exporter = $exportAktif;
-            } else {
-                $exporter = Exporter::create([
-                    'user_id' => Auth::id(),
-                    'role' => 'gudang',
-                    'status' => 'proses',
-                    'keterangan' => $request->alasan_export,
-                ]);
-            }
 
             Pesanan::whereIn('no_pesanan', $request->pesanan)
                 ->whereNotNull('batas_kirim_at')
@@ -1287,14 +1259,6 @@ class TransaksiService
                     'resi_last_printed_at' => now(),
                     'resi_printed_by' => Auth::id(),
                     'resi_print_count' => DB::raw('COALESCE(resi_print_count, 0) + 1'),
-                ]);
-
-            PesananPerProduk::whereIn('no_pesanan', $request->pesanan)
-                ->whereHas('pesanan', function ($query) {
-                    $query->whereNotNull('batas_kirim_at');
-                })
-                ->update([
-                    'exporter_id' => $exporter->id,
                 ]);
 
             $now = now();

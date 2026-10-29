@@ -2,11 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\mutasi_stok;
 use App\Models\Pesanan;
-use App\Models\Produk;
-use App\Models\stok_produk;
-use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -182,5 +178,4 @@ class DashboardController extends Controller
             'endDate' => $endStr,
         ]);
     }
-
 }

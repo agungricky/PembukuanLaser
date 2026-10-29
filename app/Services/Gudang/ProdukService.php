@@ -49,7 +49,7 @@ class ProdukService
 
                 mutasi_stok::create([
                     'stok_produk_id' => $stok->id,
-                    'gudang_id' => auth()->id(),
+                    'gudang_id' => Auth::id(),
                     'jenis_mutasi' => 'masuk',
                     'jumlah' => $request->jumlah_add,
                     'keterangan' => null,

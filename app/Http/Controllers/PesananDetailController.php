@@ -22,7 +22,6 @@ class PesananDetailController extends Controller
             'toko',
             'userKirim',
             'resiPrinter',
-            'pesanan_per_produk.exporter.user',
             'pesanan_per_produk.mutasi.admin_penjualan',
             'pesanan_per_produk.mutasi.gudang',
         ])->findOrFail($no_pesanan);
@@ -142,7 +141,7 @@ class PesananDetailController extends Controller
         $dataPlat = $dataPlat === [] ? null : $dataPlat;
         $pengerjaanPesanan = $pesanan->pesanan_per_produk[0];
         $mutasi = $pengerjaanPesanan->mutasi != null ? true : false;
-        $exported = $pengerjaanPesanan->exporter != null ? true : false;
+        // $exported = $pengerjaanPesanan->exporter != null ? true : false;
 
         if ($mutasi == true) {
             $statusPengerjaan = [
@@ -150,13 +149,15 @@ class PesananDetailController extends Controller
                 'role' => $pengerjaanPesanan?->mutasi?->admin_penjualan?->role == 'pegawai' ? 'Admin Penjualan' : null,
                 'user' => $pengerjaanPesanan?->mutasi?->admin_penjualan?->name,
             ];
-        } elseif ($exported == true) {
-            $statusPengerjaan = [
-                'proses' => 'Exported',
-                'role' => $pengerjaanPesanan?->exporter?->role == 'gudang' ? 'Gudang' : 'Produksi',
-                'user' => $pengerjaanPesanan?->exporter?->user?->name,
-            ];
-        } else {
+        } 
+        // elseif ($exported == true) {
+        //     $statusPengerjaan = [
+        //         'proses' => 'Exported',
+        //         'role' => $pengerjaanPesanan?->exporter?->role == 'gudang' ? 'Gudang' : 'Produksi',
+        //         'user' => $pengerjaanPesanan?->exporter?->user?->name,
+        //     ];
+        // } 
+        else {
             $statusPengerjaan = [
                 'proses' => null,
                 'role' => null,
@@ -196,21 +197,18 @@ class PesananDetailController extends Controller
                 'tarik' => $tarik,
                 'totalPencairan' => $totalPencairan,
                 'totalPenghasilan' => $totalPenghasilan,
-
                 'margin' => $margin,
                 'isProfit' => $isProfit,
-
                 'selisih' => $selisih,
-                'selisihClass' => $selisihClass,
-                'selisihText' => $selisihText,
+                // 'selisihClass' => $selisihClass,
+                // 'selisihText' => $selisihText,
 
                 'totalItem' => $totalItem,
                 'totalQty' => $totalQty,
-
                 'statusBadge' => $statusBadge,
                 'statusLabel' => $statusLabel,
 
-                'tanggalInput' => $tanggalInput,
+                // 'tanggalInput' => $tanggalInput,
 
                 'batasKirim' => $batasKirim,
                 'batasKirimSource' => $batasKirimSource,
@@ -221,7 +219,7 @@ class PesananDetailController extends Controller
                 'resiPrintCount' => $resiPrintCount,
 
                 'dataPlat' => $dataPlat,
-                'statusPengerjaan' => $statusPengerjaan,
+                // 'statusPengerjaan' => $statusPengerjaan,
                 'progresPesanan' => $progresPesanan,
                 'pencairan' => $pencairan,
             ]

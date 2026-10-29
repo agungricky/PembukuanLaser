@@ -53,10 +53,4 @@ class HomeController extends Controller
 
         return view('emblem', compact('fonts'));
     }
-
-
-    public function coba()
-    {
-        return view('coba');
-    }
 }

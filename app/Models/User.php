@@ -85,11 +85,6 @@ class User extends Authenticatable
         );
     }
 
-    public function exporter()
-    {
-        return $this->hasMany(Exporter::class, 'user_id', 'id');
-    }
-
     public function pencairans()
     {
         return $this->hasMany(Pencairan::class, 'user_id');
