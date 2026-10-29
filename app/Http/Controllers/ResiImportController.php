@@ -71,11 +71,11 @@ class ResiImportController extends Controller
         // pindahkan pdf sementara ke Temp directory
         $tempDirectory = storage_path('app/private/resi_temp');
         File::ensureDirectoryExists($tempDirectory);
-        $tempName = Str::uuid().'.pdf';
+        $tempName = Str::uuid() . '.pdf';
         $request->file('file_resi')->move($tempDirectory, $tempName);
         $tempPath =
-            $tempDirectory.
-            DIRECTORY_SEPARATOR.
+            $tempDirectory .
+            DIRECTORY_SEPARATOR .
             $tempName;
 
         // Parse PDF / Pengenalan halaman
@@ -90,8 +90,8 @@ class ResiImportController extends Controller
                 ->withInput()
                 ->with(
                     'error',
-                    'PDF gagal dibaca: '.
-                    $e->getMessage()
+                    'PDF gagal dibaca: ' .
+                        $e->getMessage()
                 );
         }
 
@@ -131,6 +131,30 @@ class ResiImportController extends Controller
             }
 
             $hasil = $service->detectPage($text, (int) $request->id_toko);
+            if (empty($hasil['batas_kirim_at'])) {
+
+                if (preg_match(
+                    '/Batas\s*Kirim\s*:\s*(?:-\s*)?(\d{1,2}[-\/]\d{1,2}[-\/]\d{4})/iu',
+                    $text,
+                    $matches
+                )) {
+                    $raw = $matches[1];
+
+                    try {
+                        $tanggal = \Carbon\Carbon::createFromFormat(
+                            '!d-m-Y',
+                            str_replace('/', '-', $raw)
+                        );
+
+                        if ($tanggal->format('d-m-Y') === str_replace('/', '-', $raw)) {
+                            $hasil['batas_kirim_at'] = $tanggal->format('Y-m-d');
+                            $hasil['batas_kirim_source'] = 'resi';
+                            $hasil['batas_kirim_raw'] = $raw;
+                        }
+                    } catch (\Throwable $e) {
+                    }
+                }
+            }
 
             $preview[] = [
                 'halaman' => $index + 1,
@@ -160,12 +184,14 @@ class ResiImportController extends Controller
             ->orderBy('nama_toko')
             ->get();
 
-        return view('resi.import', [
-            'toko' => $toko,
-            'preview' => $preview,
-            'selectedMarketplace' => $request->marketplace,
-            'selectedToko' => (int) $request->id_toko,
-        ]
+        return view(
+            'resi.import',
+            [
+                'toko' => $toko,
+                'preview' => $preview,
+                'selectedMarketplace' => $request->marketplace,
+                'selectedToko' => (int) $request->id_toko,
+            ]
         );
     }
 
@@ -210,7 +236,7 @@ class ResiImportController extends Controller
                 ];
             })
             ->filter(
-                fn ($page) => $page['halaman'] > 0 &&
+                fn($page) => $page['halaman'] > 0 &&
                     $page['no_pesanan'] !== ''
             )
             ->values();
@@ -224,7 +250,7 @@ class ResiImportController extends Controller
         }
 
         $detectedPages = collect($dataPreview['detected_pages'] ?? [])->keyBy(
-            fn ($item) => (int) ($item['halaman'] ?? 0)
+            fn($item) => (int) ($item['halaman'] ?? 0)
         );
 
         $orderNumbers = $mappings
@@ -251,9 +277,9 @@ class ResiImportController extends Controller
             );
         }
 
-        $pesanan = $pesanan->keyBy(fn ($item) => (string) $item->no_pesanan);
+        $pesanan = $pesanan->keyBy(fn($item) => (string) $item->no_pesanan);
         $existingMappedOrders = $existingMappedOrders
-            ->map(fn ($value) => (string) $value)
+            ->map(fn($value) => (string) $value)
             ->unique()
             ->flip();
 
@@ -267,7 +293,7 @@ class ResiImportController extends Controller
             if (! $pesanan->has($noPesanan)) {
                 $errors[] =
                     "Halaman {$page['halaman']}: "
-                    ."Pesanan {$noPesanan} tidak ditemukan pada toko ini.";
+                    . "Pesanan {$noPesanan} tidak ditemukan pada toko ini.";
 
                 continue;
             }
@@ -304,12 +330,12 @@ class ResiImportController extends Controller
         }
 
         $now = now();
-        $directory = 'resi/'.$now->format('Y').'/'.$now->format('m');
-        $fullDirectory = storage_path('app/private/'.$directory);
+        $directory = 'resi/' . $now->format('Y') . '/' . $now->format('m');
+        $fullDirectory = storage_path('app/private/' . $directory);
         File::ensureDirectoryExists($fullDirectory);
-        $newName = Str::uuid().'.pdf';
-        $relativePath = $directory.'/'.$newName;
-        $fullPath = $fullDirectory.DIRECTORY_SEPARATOR.$newName;
+        $newName = Str::uuid() . '.pdf';
+        $relativePath = $directory . '/' . $newName;
+        $fullPath = $fullDirectory . DIRECTORY_SEPARATOR . $newName;
 
         try {
             File::move($tempPath, $fullPath);
@@ -351,7 +377,7 @@ class ResiImportController extends Controller
 
             return redirect()
                 ->route('resi.import')
-                ->with('success', count($validPages).' halaman resi berhasil disimpan.')
+                ->with('success', count($validPages) . ' halaman resi berhasil disimpan.')
                 ->with('import_errors', $errors);
         } catch (\Throwable $e) {
             if (File::exists($fullPath)) {
@@ -363,7 +389,7 @@ class ResiImportController extends Controller
             return back()
                 ->with(
                     'error',
-                    'Gagal menyimpan PDF resi: '.$e->getMessage()
+                    'Gagal menyimpan PDF resi: ' . $e->getMessage()
                 );
         }
     }

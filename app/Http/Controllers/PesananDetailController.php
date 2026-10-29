@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class PesananDetailController extends Controller
 {
@@ -65,7 +66,7 @@ class PesananDetailController extends Controller
         $isProfit = $totalPenghasilan >= 0;
         $selisih = $totalPencairan - $tarik;
         $selisihClass = $selisih < 0 ? 'text-danger' : ($selisih > 0 ? 'text-success' : 'text-muted');
-        $selisihText = ($selisih < 0 ? '-' : '').'Rp'.number_format(abs($selisih), 0, ',', '.');
+        $selisihText = ($selisih < 0 ? '-' : '') . 'Rp' . number_format(abs($selisih), 0, ',', '.');
 
         $totalItem = (int) $items->count();
         $totalQty = (int) $items->sum('jumlah');
@@ -234,7 +235,8 @@ class PesananDetailController extends Controller
             'tanggal' => ['nullable', 'date'],
             'id_toko' => ['required', 'exists:toko,id_toko'],
             'no_resi' => ['nullable', 'string', 'max:100'],
-            'status' =>  ['nullable',
+            'status' =>  [
+                'nullable',
                 Rule::in(['proses', 'kirim', 'selesai', 'affiliate', 'pengiriman gagal', 'pengembalian', 'batal']),
             ],
             'pencairan' => ['nullable', 'numeric'],
@@ -275,10 +277,25 @@ class PesananDetailController extends Controller
                             ->where('status', 'locked')
                             ->exists();
 
+                        $isPlat = Str::startsWith($value['sku'], 'PLT') && Str::endsWith($value['sku'], 'C');
+                        $isTerlambat = $pesanan->batas_kirim_at
+                            ? Carbon::parse($pesanan->batas_kirim_at)->startOfDay()->lt(today())
+                            : false;
+
                         if ($adaLocked) {
-                            throw new \Exception(
-                                'Pesanan sudah dikerjakan dan tidak dapat dibatalkan.'
-                            );
+
+                            if ($isPlat == true && $isTerlambat == true) {
+                                $value->editorPartItems()
+                                    ->whereIn('status', ['pending', 'skipped'])
+                                    ->update([
+                                        'status' => 'batal',
+                                    ]);
+                            } else {
+                                throw new \Exception(
+                                    'Pesanan sudah dikerjakan dan tidak dapat dibatalkan.'
+                                );
+                            }
+                            
                         }
                     }
 
