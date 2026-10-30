@@ -133,7 +133,8 @@ class TransaksiService
             )
             ->get();
 
-        // STOK
+        
+            // STOK
         $semuaSku = $antrian
             ->pluck('sku')
             ->filter()
@@ -220,7 +221,6 @@ class TransaksiService
                                 'stok_sisa' => $alokasi['stok_sisa'] ?? 0,
                                 'tersedia' => $alokasi['tersedia'] ?? false,
                                 'produk' => $item->produk,
-                                // 'cetak_resi' => $item->exporter_id,
                             ];
                         })
                         ->values()
@@ -795,7 +795,7 @@ class TransaksiService
         $pdf->Cell(0, 5, ': '.strtoupper(Auth::user()->name ?? '-'), 0, 1);
 
         $pdf->Cell(25, 5, 'KETERANGAN', 0, 0);
-        // $pdf->Cell(0, 5, ': '.strtoupper($request->alasan_export ?? '-'), 0, 1);
+        $pdf->Cell(0, 5, ': '.strtoupper($request->alasan_export ?? '-'), 0, 1);
 
         if ($request->typeCetak && $request->typeCetak != 'clear') {
 

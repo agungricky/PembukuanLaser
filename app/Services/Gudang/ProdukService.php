@@ -197,7 +197,6 @@ class ProdukService
             'dataBerubah.*.stok_lama' => ['required', 'integer', 'min:0'],
             'dataBerubah.*.stok_baru' => ['required', 'integer', 'min:0'],
             'dataBerubah.*.selisih' => ['required', 'integer'],
-
             'skuBaru.*.sku' => ['required', 'string', 'max:100'],
             'skuBaru.*.stok_excel' => ['required', 'integer', 'min:0'],
         ]);

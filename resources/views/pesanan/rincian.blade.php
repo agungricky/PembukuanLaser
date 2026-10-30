@@ -51,6 +51,7 @@
                 @endif
             </div>
         </div>
+
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show">
                 <i class="bi bi-check-circle me-1"></i>
@@ -81,6 +82,7 @@
                 </button>
             </div>
         @endif
+
         <div class="row g-3 mb-3">
             <div class="col-lg-8">
                 <div class="card shadow-sm border-0 h-100">
@@ -146,37 +148,6 @@
                                         <td class="text-muted">Qty</td>
                                         <td>{{ number_format($totalQty, 0, ',', '.') }}</td>
                                     </tr>
-
-                                    @if ($dataPlat != [] || $dataPlat != null)
-                                        <tr class="{{ $items->contains('nama_kategori', 'PLAT') ? '' : 'd-none' }}">
-                                            <td colspan="2"
-                                                style="height: 30px; padding: 0 !important; border: none !important; box-shadow: none !important;">
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td colspan="2" class="text-nowrap">STATUS OPERASIONAL</td>
-                                        </tr>
-                                        <tr class="{{ $items->contains('nama_kategori', 'PLAT') ? '' : 'd-none' }}">
-                                            <td class="text-muted">Cetak Resi</td>
-                                            <td>
-                                                @if ($resiSudahDicetak)
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        <span class="badge bg-success">
-                                                            SUDAH DICETAK
-                                                        </span>
-
-                                                        <span class="small text-muted">
-                                                            {{ number_format($resiPrintCount, 0, ',', '.') }}x cetak
-                                                        </span>
-                                                    </div>
-                                                @else
-                                                    <span class="badge bg-secondary">
-                                                        BELUM DICETAK
-                                                    </span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endif
                                 </table>
                             </div>
 
@@ -204,7 +175,6 @@
                                             </div>
                                         </td>
                                     </tr>
-
                                     <tr>
                                         <td class="text-muted">
                                             Kurir
@@ -223,15 +193,6 @@
                                                 <div class="fw-semibold">
                                                     {{ $batasKirim->format('d/m/Y H:i') }}
                                                 </div>
-
-                                                @if ($pesanan->status_cek == 'proses')
-                                                    <div class="mt-1">
-                                                        <span
-                                                            class="badge bg-{{ $prioritasBadge }} {{ $prioritasBadge === 'warning' ? 'text-dark' : '' }}">
-                                                            {{ $prioritasLabel }}
-                                                        </span>
-                                                    </div>
-                                                @endif
                                             @else
                                                 <span class="text-muted">
                                                     -
@@ -239,22 +200,39 @@
                                             @endif
                                         </td>
                                     </tr>
-
-                                    {{-- @if ($pesanan->batas_kirim_raw) --}}
                                     <tr>
-                                        <td class="text-muted">Deadline Asli</td>
-                                        <td>
-                                            <span class="small">{{ $pesanan->batas_kirim_raw ?? '-' }}</span>
+                                        <td class="text-muted">Deadline Pesanan</td>
+                                        <td class="align-middle">
+                                            @if ($statusLabel == 'Proses')
+                                                <span
+                                                    class="badge bg-{{ $prioritasBadge }} {{ $prioritasBadge === 'warning' ? 'text-dark' : '' }}">
+                                                    {{ $prioritasLabel }}
+                                                </span>
+                                            @else
+                                                <span class="badge bg-secondary">
+                                                    {{ $statusLabel }}
+                                                </span>
+                                            @endif
+
                                         </td>
                                     </tr>
-                                    {{-- @endif --}}
 
                                     <tr>
                                         <td class="text-muted">
-                                            Sumber Deadline
+                                            Cetak Resi
                                         </td>
-                                        <td>
-                                            {{ $batasKirimSource }}
+                                        <td class="text-start align-middle">
+                                            @php
+                                                $count = (int) ($resiPrintCount ?? 0);
+                                            @endphp
+
+                                            <span
+                                                class="d-inline-flex align-items-center justify-content-start gap-2 text-muted"
+                                                title="Dicetak {{ $count }} kali"
+                                                style="font-size: 13px; font-weight: 600;">
+                                                <span>{{ $count }}x</span>
+                                                <i class="fa-solid fa-print"></i>
+                                            </span>
                                         </td>
                                     </tr>
                                 </table>
@@ -414,141 +392,6 @@
                     </div>
                 </div>
             </div>
-
-
-            <style>
-                /* ===== CARD KEUANGAN ===== */
-
-                .financial-card {
-                    border-radius: 12px;
-                    overflow: hidden;
-                }
-
-                .financial-card .card-header h6 {
-                    font-size: 15px;
-                }
-
-                /* ===== TABEL KEUANGAN ===== */
-
-                .financial-table {
-                    font-size: 14px;
-                    margin-bottom: 0;
-                }
-
-                .financial-table td,
-                .financial-table th {
-                    padding: 4px 4px !important;
-                    vertical-align: middle;
-                    line-height: 1.4;
-                }
-
-                .financial-table td:last-child {
-                    white-space: nowrap;
-                    font-variant-numeric: tabular-nums;
-                }
-
-                /* ===== PEMISAH ANTARBAGIAN ===== */
-
-                .financial-section-line td {
-                    padding-top: 7px !important;
-                    border-top: 1px solid #e9ecef !important;
-                }
-
-                /* ===== RIWAYAT PENCAIRAN ===== */
-
-                .financial-payout-row td {
-                    padding-top: 3px !important;
-                    padding-bottom: 3px !important;
-                }
-
-                .financial-payout-date {
-                    font-size: 11px;
-                    color: #94a3b8;
-                    padding-left: 30px;
-                    margin-top: 3px;
-                }
-
-                /* ===== HASIL KEUANGAN 3 KOTAK ===== */
-
-                .financial-result {
-                    background: transparent;
-                    border: none;
-                    padding: 0;
-                }
-
-                .financial-result-box {
-                    background: #ffffff;
-                    border: 1px solid #ced4da;
-                    border-radius: 8px;
-                    padding: 12px 9px;
-                    height: 100%;
-                    min-width: 0;
-                }
-
-                /* Label: Laba Bersih, Margin, Status */
-                .financial-result-label {
-                    font-size: 12px;
-                    font-weight: 500;
-                    color: #6c757d;
-                    margin-bottom: 8px;
-                    line-height: 1.3;
-                }
-
-                /* Nilai Laba dan Margin */
-                .financial-result-value {
-                    font-size: 16px;
-                    font-weight: 600;
-                    line-height: 1.4;
-                    font-variant-numeric: tabular-nums;
-                }
-
-                .financial-result-value i {
-                    font-size: 16px;
-                }
-
-                /* Badge status */
-                .financial-result-box .badge {
-                    font-size: 11px;
-                    font-weight: 500;
-                    padding: 6px 8px;
-                    max-width: 100%;
-                    white-space: normal;
-                    line-height: 1.3;
-                }
-
-                /* ===== SELISIH ===== */
-
-                .financial-result-selisih {
-                    border-top: 1px solid #e9ecef;
-                    padding-top: 12px;
-                    margin-top: 15px;
-                    font-size: 14px;
-                }
-
-                /* ===== RESPONSIVE ===== */
-
-                @media (max-width: 420px) {
-
-                    .financial-result-box {
-                        padding: 10px 7px;
-                    }
-
-                    .financial-result-label {
-                        font-size: 11px;
-                        margin-bottom: 6px;
-                    }
-
-                    .financial-result-value {
-                        font-size: 13px;
-                    }
-
-                    .financial-result-box .badge {
-                        font-size: 10px;
-                        padding: 5px 6px;
-                    }
-                }
-            </style>
-
         </div>
 
         @if ($progresPesanan->isNotEmpty())
@@ -564,7 +407,19 @@
                 <div class="card-body py-3">
                     <div class="order-flow">
 
+                        @php
+                            $isPlat = collect($pesanan['pesanan_per_produk'] ?? [])->contains(function ($item) {
+                                $sku = $item['sku'] ?? '';
+
+                                return str_starts_with($sku, 'PLT') && str_ends_with($sku, 'C');
+                            });
+                        @endphp
+
                         @foreach ($progresPesanan as $role => $progres)
+                            @if ($role === 'gudang' && $isPlat)
+                                @continue
+                            @endif
+
                             @php
                                 $namaRole = match ($role) {
                                     'pegawai' => 'ADMIN PENJUALAN',
@@ -576,7 +431,6 @@
                                     default => strtoupper($role),
                                 };
 
-                                // status roll
                                 $dataStep = match ($role) {
                                     'pegawai' => 'input',
                                     'gudang' => 'exported',
@@ -587,7 +441,6 @@
                                     default => $role,
                                 };
 
-                                // Status Centang muncul ketika ............
                                 $selesai = match ($role) {
                                     'pegawai' => !is_null($pesanan->batas_kirim_at),
                                     'gudang' => !is_null($pesanan->pesanan_per_produk->first()?->mutasi_stok_id),
@@ -614,7 +467,6 @@
                                         <span>•</span>
                                         {{ $progres->updated_at?->format('d/m • H.i') }}
                                     </div>
-
                                 </div>
                             </div>
                         @endforeach
@@ -1174,6 +1026,137 @@
             color: #2563eb;
             font-size: 15px;
             flex-shrink: 0;
+        }
+
+        /* ===== CARD KEUANGAN ===== */
+
+        .financial-card {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .financial-card .card-header h6 {
+            font-size: 15px;
+        }
+
+        /* ===== TABEL KEUANGAN ===== */
+
+        .financial-table {
+            font-size: 14px;
+            margin-bottom: 0;
+        }
+
+        .financial-table td,
+        .financial-table th {
+            padding: 4px 4px !important;
+            vertical-align: middle;
+            line-height: 1.4;
+        }
+
+        .financial-table td:last-child {
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ===== PEMISAH ANTARBAGIAN ===== */
+
+        .financial-section-line td {
+            padding-top: 7px !important;
+            border-top: 1px solid #e9ecef !important;
+        }
+
+        /* ===== RIWAYAT PENCAIRAN ===== */
+
+        .financial-payout-row td {
+            padding-top: 3px !important;
+            padding-bottom: 3px !important;
+        }
+
+        .financial-payout-date {
+            font-size: 11px;
+            color: #94a3b8;
+            padding-left: 30px;
+            margin-top: 3px;
+        }
+
+        /* ===== HASIL KEUANGAN 3 KOTAK ===== */
+
+        .financial-result {
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+        .financial-result-box {
+            background: #ffffff;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            padding: 12px 9px;
+            height: 100%;
+            min-width: 0;
+        }
+
+        /* Label: Laba Bersih, Margin, Status */
+        .financial-result-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #6c757d;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        /* Nilai Laba dan Margin */
+        .financial-result-value {
+            font-size: 16px;
+            font-weight: 600;
+            line-height: 1.4;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .financial-result-value i {
+            font-size: 16px;
+        }
+
+        /* Badge status */
+        .financial-result-box .badge {
+            font-size: 11px;
+            font-weight: 500;
+            padding: 6px 8px;
+            max-width: 100%;
+            white-space: normal;
+            line-height: 1.3;
+        }
+
+        /* ===== SELISIH ===== */
+
+        .financial-result-selisih {
+            border-top: 1px solid #e9ecef;
+            padding-top: 12px;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+
+        @media (max-width: 420px) {
+
+            .financial-result-box {
+                padding: 10px 7px;
+            }
+
+            .financial-result-label {
+                font-size: 11px;
+                margin-bottom: 6px;
+            }
+
+            .financial-result-value {
+                font-size: 13px;
+            }
+
+            .financial-result-box .badge {
+                font-size: 10px;
+                padding: 5px 6px;
+            }
         }
     </style>
 @endpush

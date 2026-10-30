@@ -100,7 +100,6 @@ class CustomService
                 'ppp.no_pesanan',
                 'ppp.sku',
                 'ppp.jumlah',
-                // 'ppp.exporter_id',
                 'p.batas_kirim_at',
             ])
             ->orderByRaw('p.batas_kirim_at IS NULL ASC')
@@ -188,7 +187,6 @@ class CustomService
                                     'stok_sisa' => $alokasi['stok_sisa'] ?? 0,
                                     'tersedia' => $alokasi['tersedia'] ?? false,
                                     'produk' => $item->produk,
-                                    // 'cetak_resi' => $item->exporter_id,
                                 ];
                             }
                         )

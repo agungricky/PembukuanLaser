@@ -64,7 +64,7 @@ class PesananDetailController extends Controller
         $isProfit = $totalPenghasilan >= 0;
         $selisih = $totalPencairan - $tarik;
         $selisihClass = $selisih < 0 ? 'text-danger' : ($selisih > 0 ? 'text-success' : 'text-muted');
-        $selisihText = ($selisih < 0 ? '-' : '').'Rp'.number_format(abs($selisih), 0, ',', '.');
+        $selisihText = ($selisih < 0 ? '-' : '') . 'Rp' . number_format(abs($selisih), 0, ',', '.');
 
         $totalItem = (int) $items->count();
         $totalQty = (int) $items->sum('jumlah');
@@ -87,7 +87,6 @@ class PesananDetailController extends Controller
             default => ucfirst($status ?: '-'),
         };
 
-        $tanggalInput = $pesanan->input_at ? Carbon::parse($pesanan->input_at)->format('d/m/Y H:i') : '-';
         $batasKirim = null;
 
         if ($pesanan->batas_kirim_at) {
@@ -98,22 +97,29 @@ class PesananDetailController extends Controller
             }
         }
 
-        $sisaJam = $batasKirim ? now()->diffInHours($batasKirim, false) : null;
-        if ($sisaJam === null) {
-            $prioritasLabel = 'BELUM ADA';
-            $prioritasBadge = 'secondary';
-        } elseif ($sisaJam < 0) {
-            $prioritasLabel = 'TERLAMBAT';
-            $prioritasBadge = 'danger';
-        } elseif ($sisaJam <= 24) {
-            $prioritasLabel = 'URGENT';
-            $prioritasBadge = 'danger';
-        } elseif ($sisaJam <= 48) {
-            $prioritasLabel = 'MENDEKATI';
-            $prioritasBadge = 'warning';
-        } else {
-            $prioritasLabel = 'AMAN';
-            $prioritasBadge = 'success';
+        $prioritasLabel = 'BELUM ADA';
+        $prioritasBadge = 'secondary';
+
+        if ($batasKirim) {
+            $hariIni = today();
+            $tanggalBatas = Carbon::parse($batasKirim)->startOfDay();
+            $sisaHari = (int) $hariIni->diffInDays($tanggalBatas, false);
+
+            if ($sisaHari < 0) {
+                $terlambat = abs($sisaHari);
+
+                $prioritasLabel = "TERLAMBAT {$terlambat} HARI";
+                $prioritasBadge = 'danger';
+            } elseif ($sisaHari === 0) {
+                $prioritasLabel = 'HARI INI';
+                $prioritasBadge = 'warning';
+            } elseif ($sisaHari === 1) {
+                $prioritasLabel = 'BESOK';
+                $prioritasBadge = 'primary';
+            } else {
+                $prioritasLabel = "{$sisaHari} HARI LAGI";
+                $prioritasBadge = 'success';
+            }
         }
 
         $batasKirimSource = match ($pesanan->batas_kirim_source) {
@@ -139,31 +145,6 @@ class PesananDetailController extends Controller
         }
 
         $dataPlat = $dataPlat === [] ? null : $dataPlat;
-        $pengerjaanPesanan = $pesanan->pesanan_per_produk[0];
-        $mutasi = $pengerjaanPesanan->mutasi != null ? true : false;
-        // $exported = $pengerjaanPesanan->exporter != null ? true : false;
-
-        if ($mutasi == true) {
-            $statusPengerjaan = [
-                'proses' => 'Dikerjakan',
-                'role' => $pengerjaanPesanan?->mutasi?->admin_penjualan?->role == 'pegawai' ? 'Admin Penjualan' : null,
-                'user' => $pengerjaanPesanan?->mutasi?->admin_penjualan?->name,
-            ];
-        } 
-        // elseif ($exported == true) {
-        //     $statusPengerjaan = [
-        //         'proses' => 'Exported',
-        //         'role' => $pengerjaanPesanan?->exporter?->role == 'gudang' ? 'Gudang' : 'Produksi',
-        //         'user' => $pengerjaanPesanan?->exporter?->user?->name,
-        //     ];
-        // } 
-        else {
-            $statusPengerjaan = [
-                'proses' => null,
-                'role' => null,
-                'user' => null,
-            ];
-        }
 
         $progresPesanan = progres_pesanan::with([
             'users',
@@ -200,15 +181,13 @@ class PesananDetailController extends Controller
                 'margin' => $margin,
                 'isProfit' => $isProfit,
                 'selisih' => $selisih,
-                // 'selisihClass' => $selisihClass,
-                // 'selisihText' => $selisihText,
+                'selisihClass' => $selisihClass,
+                'selisihText' => $selisihText,
 
                 'totalItem' => $totalItem,
                 'totalQty' => $totalQty,
                 'statusBadge' => $statusBadge,
                 'statusLabel' => $statusLabel,
-
-                // 'tanggalInput' => $tanggalInput,
 
                 'batasKirim' => $batasKirim,
                 'batasKirimSource' => $batasKirimSource,
@@ -219,7 +198,6 @@ class PesananDetailController extends Controller
                 'resiPrintCount' => $resiPrintCount,
 
                 'dataPlat' => $dataPlat,
-                // 'statusPengerjaan' => $statusPengerjaan,
                 'progresPesanan' => $progresPesanan,
                 'pencairan' => $pencairan,
             ]
@@ -232,7 +210,8 @@ class PesananDetailController extends Controller
             'tanggal' => ['nullable', 'date'],
             'id_toko' => ['required', 'exists:toko,id_toko'],
             'no_resi' => ['nullable', 'string', 'max:100'],
-            'status' =>  ['nullable',
+            'status' =>  [
+                'nullable',
                 Rule::in(['proses', 'kirim', 'selesai', 'affiliate', 'pengiriman gagal', 'pengembalian', 'batal']),
             ],
             'pencairan' => ['nullable', 'numeric'],
