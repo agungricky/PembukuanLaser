@@ -178,98 +178,6 @@
             {{ $pesanan->withQueryString()->links('vendor.pagination.bootstrap-5-compact') }}
         </div>
     </div>
-
-    {{-- Modal --}}
-    <div class="modal fade" id="modalKesalahan" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-
-                <div class="modal-header">
-                    <h5 class="modal-title">Apa yang terjadi?</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="row">
-
-                        <div class="col-6 border-end">
-                            <table class="table table-borderless table-sm mb-0">
-                                <tr>
-                                    <th width="170">Nomor Pesanan</th>
-                                    <td>: <span id="nomor_pesanan">-</span></td>
-                                </tr>
-                                <tr>
-                                    <th>Kode Resi</th>
-                                    <td>: <span id="kode_resi">-</span></td>
-                                </tr>
-                                <tr>
-                                    <th>Nama Pemesan</th>
-                                    <td>: <span id="nama_pemesan">-</span></td>
-                                </tr>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <td>: <span id="tanggal">-</span></td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-6">
-                            <form id="formKesalahan">
-                                @csrf
-                                <div class="row">
-                                    <div class="col-12">
-                                        <label class="form-label">Status Pesanan</label>
-                                        <select class="form-select" name="status" data-placeholder="Pilih Status Pesanan"
-                                            id="status">
-                                            <option value="pengiriman gagal">Pengiriman Gagal</option>
-                                            <option value="pengembalian">Pengembalian</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="col-12 mt-3">
-                                        <label class="form-label">Pencairan</label>
-                                        <input type="text" class="form-control" id="pencairan" name="pencairan"
-                                            placeholder="Masukan Pencairan">
-                                    </div>
-
-                                    <div class="col-12 mt-3 d-none" id="divKesalahan">
-                                        <label class="form-label">Jenis Kesalahan</label>
-                                        <select class="form-select" id="idKesalahan" name="idKesalahan"
-                                            data-placeholder="Pilih Jenis Kesalahan">
-                                            {{-- <option></option> --}}
-
-                                            @if ($roleKesalahan && $roleKesalahan->count())
-                                                @foreach ($roleKesalahan as $item)
-                                                    <option value="{{ $item->id }}">
-                                                        {{ $item->jenis_kesalahan }} - {{ $item->divisi }}
-                                                    </option>
-                                                @endforeach
-                                            @else
-                                                <option value=""></option>
-                                            @endif
-                                        </select>
-                                        <input type="hidden" id="no_pesanan" name="no_pesanan">
-                                    </div>
-
-                                    <div class="col-12 mt-3 d-none" id="divKeterangan">
-                                        <label class="form-label">Keterangan</label>
-                                        <input type="text" class="form-control" id="notes" name="notes"
-                                            placeholder="Masukkan Keterangan">
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button class="btn btn-primary" id="simpan">Simpan</button>
-                </div>
-
-            </div>
-        </div>
-    </div>
 @endsection
 
 @push('scripts')
@@ -299,15 +207,6 @@
                 allowClear: true
             });
 
-            $('#idKesalahan').select2({
-                theme: 'bootstrap-5',
-                width: '100%',
-                dropdownParent: $('#modalKesalahan'),
-                placeholder: 'Pilih Jenis Kesalahan',
-                allowClear: true,
-                minimumResultsForSearch: 0
-            });
-
             // Filter toko
             $('#id_toko').on('change', function() {
                 form.submit();
@@ -316,10 +215,8 @@
             $('#status').on('change', function() {
                 let status = $(this).val();
                 if (status == "pengembalian") {
-                    $('#divKesalahan').removeClass('d-none');
                     $('#divKeterangan').removeClass('d-none');
                 } else {
-                    $('#divKesalahan').addClass('d-none');
                     $('#divKeterangan').addClass('d-none');
                 }
             });
@@ -340,9 +237,6 @@
                         $('#no_pesanan').val(response.no_pesanan);
                     }
                 });
-                $('#formKesalahan')[0].reset();
-                $('#idKesalahan').val(null).trigger('change');
-                $('#modalKesalahan').modal('show');
             });
 
             $('#pencairan').on('input', function() {
@@ -358,7 +252,6 @@
             });
 
             $('#simpan').on('click', function() {
-                let form = $('#formKesalahan');
                 let data = form.serializeArray();
 
                 data.forEach(function(item) {
@@ -371,33 +264,6 @@
                 });
 
                 data = $.param(data);
-
-                $.ajax({
-                    type: "POST",
-                    url: "{{ route('kesalahan.store') }}",
-                    data: data,
-                    dataType: "json",
-                    success: function(response) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil',
-                            text: response.message,
-                            timer: 1000,
-                            showConfirmButton: false
-                        }).then(() => {
-                            $('#modalKesalahan').modal('hide');
-                            $('#tableCek').load(location.href + ' #tableCek > *');
-                        });
-                    },
-                    error: function(xhr, status, error) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Gagal',
-                            text: 'Terjadi kesalahan saat menyimpan data.',
-                        });
-                    }
-                });
-
             });
         });
     </script>

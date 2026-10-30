@@ -751,8 +751,7 @@
                                 new Date(row.batas_kirim_at) :
                                 null;
 
-                            const cetakResi = row.pesanan_per_produk?.some(item => item
-                                    .cetak_resi != null) ?
+                            const cetakResi = row.resi_printed_at !== null ?
                                 `<span class="fa-stack" style="font-size: 9px;" title="Pernah Cetak Resi">
                                     <i class="fa-solid fa-circle fa-stack-2x text-success"></i>
                                     <i class="fa-solid fa-print fa-stack-1x text-white"></i>
@@ -804,6 +803,42 @@
 
                                         </div>
                                     </div>
+
+                                    ${
+                                        row.resi_printed_at !== null ? 
+                                        `
+                                            <div class="d-flex flex-column">
+                                                <div class="d-flex align-items-center gap-2 text-nowrap">
+
+                                                    <span class="text-muted fw-semibold"
+                                                        style="font-size: 10px;">
+
+                                                        <i class="fa-solid fa-print me-1"></i>
+                                                        Cetak Resi
+                                                    </span>
+
+                                                    <span class="fw-semibold text-success"
+                                                        style="font-size: 11px;">
+
+                                                        ${
+                                                            row.resi_printed_at
+                                                                ? new Date(row.resi_printed_at)
+                                                                    .toLocaleString('id-ID', {
+                                                                        day: '2-digit',
+                                                                        month: 'short',
+                                                                        year: 'numeric',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit',
+                                                                        hour12: false
+                                                                    })
+                                                                : '-'
+                                                        }
+
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ` : ''
+                                    }
 
                                     <div class="d-flex flex-column">
                                         <div class="d-flex align-items-center gap-2 text-nowrap">

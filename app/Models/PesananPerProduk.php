@@ -19,7 +19,6 @@ class PesananPerProduk extends Model
         'harga',
         'sku',
         'status_pesanan',
-        'exporter_id',
         'mutasi_stok_id'
     ];
 
@@ -31,20 +30,12 @@ class PesananPerProduk extends Model
 
     public function pesanan()
     {
-        return $this->belongsTo(
-            Pesanan::class,
-            'no_pesanan',
-            'no_pesanan'
-        );
+        return $this->belongsTo(Pesanan::class, 'no_pesanan', 'no_pesanan');
     }
 
     public function produk()
     {
-        return $this->belongsTo(
-            Produk::class,
-            'sku',
-            'sku'
-        );
+        return $this->belongsTo(Produk::class, 'sku', 'sku');
     }
 
     public function editorRequests()
@@ -70,10 +61,6 @@ class PesananPerProduk extends Model
 
     public function retur(){
         return $this->hasOne(retur::class, 'per_produk_id', 'id_per_produk');
-    }
-
-    public function exporter(){
-        return $this->belongsTo(Exporter::class, 'exporter_id', 'id');
     }
 
     public function editorRequest(){

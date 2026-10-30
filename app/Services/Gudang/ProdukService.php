@@ -49,7 +49,7 @@ class ProdukService
 
                 mutasi_stok::create([
                     'stok_produk_id' => $stok->id,
-                    'gudang_id' => auth()->id(),
+                    'gudang_id' => Auth::id(),
                     'jenis_mutasi' => 'masuk',
                     'jumlah' => $request->jumlah_add,
                     'keterangan' => null,
@@ -197,7 +197,6 @@ class ProdukService
             'dataBerubah.*.stok_lama' => ['required', 'integer', 'min:0'],
             'dataBerubah.*.stok_baru' => ['required', 'integer', 'min:0'],
             'dataBerubah.*.selisih' => ['required', 'integer'],
-
             'skuBaru.*.sku' => ['required', 'string', 'max:100'],
             'skuBaru.*.stok_excel' => ['required', 'integer', 'min:0'],
         ]);

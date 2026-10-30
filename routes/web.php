@@ -7,7 +7,6 @@ use App\Http\Controllers\GudangController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\IklanController;
 use App\Http\Controllers\kategoriController;
-use App\Http\Controllers\kesalahanController;
 use App\Http\Controllers\PackingPesananController;
 use App\Http\Controllers\PembeliController;
 use App\Http\Controllers\PenjualanController;
@@ -35,7 +34,6 @@ Route::middleware(['web', 'auth'])->group(function () {
     // ===================== ADMIN PENJUALAN ===================== //
     Route::middleware(['role:pegawai'])->group(function () {
         Route::get('/me', [UserController::class, 'me'])->name('users.me');
-        Route::resource('/kesalahan', kesalahanController::class);
 
         Route::post('/produk/export', [ProdukController::class, 'export'])->name('produk.export');
         Route::post('/produk/import', [ProdukController::class, 'import'])->name('produk.import');
@@ -270,17 +268,6 @@ Route::get('/cek-template-editor', function () {
     ];
 });
 
-Route::get('/cs', [rotatorController::class, 'redirect'])->name('redirect');
-
-Route::get('/cs/redirect', function () {
-    $pesan = urlencode('Halo admin bila, saya ingin beli banner sound custom jaring...');
-
-    return redirect()->away(
-        'https://wa.me/6285334778790?text='.$pesan
-    );
-})->name('redirect.cs');
-
-Route::get('/dashboard/admin-cs', [rotatorController::class, 'index'])->name('rotator.index');
 Route::redirect('/', '/login');
 // Jadwal Upload TikTok IZA
 Route::get('/jadwal-iza', function () {

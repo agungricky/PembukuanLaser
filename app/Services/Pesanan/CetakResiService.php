@@ -2,7 +2,6 @@
 
 namespace App\Services\Pesanan;
 
-use App\Models\Exporter;
 use App\Models\PesananPerProduk;
 use App\Models\ResiPage;
 use App\Services\Pdf\CompatibleFpdi as Fpdi;
@@ -190,16 +189,6 @@ class CetakResiService
                 return $response;
             }
 
-            $exporter = Exporter::create([
-                'user_id' => Auth::id(),
-                'role' => 'gudang',
-                'status' => 'proses',
-                'keterangan' => $request->alasan_export,
-            ]);
-
-            PesananPerProduk::whereIn('no_pesanan', $request->pesanan)->update([
-                'exporter_id' => $exporter->id,
-            ]);
             DB::commit();
 
             return $response;

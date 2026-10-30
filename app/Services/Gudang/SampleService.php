@@ -8,6 +8,7 @@ use App\Models\stok_produk;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class SampleService
@@ -56,7 +57,7 @@ class SampleService
 
             mutasi_stok::create([
                 'stok_produk_id' => $stok->id,
-                'gudang_id' => auth()->id(),
+                'gudang_id' => Auth::id(),
                 'adm_penjualan_id' => $request->nama_peminta,
                 'jenis_mutasi' => 'sampel',
                 'jumlah' => $request->jumlah,
