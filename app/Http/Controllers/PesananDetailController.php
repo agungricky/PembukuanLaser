@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class PesananDetailController extends Controller
 {
@@ -252,10 +253,25 @@ class PesananDetailController extends Controller
                             ->where('status', 'locked')
                             ->exists();
 
+                        $isPlat = Str::startsWith($value['sku'], 'PLT') && Str::endsWith($value['sku'], 'C');
+                        $isTerlambat = $pesanan->batas_kirim_at
+                            ? Carbon::parse($pesanan->batas_kirim_at)->startOfDay()->lt(today())
+                            : false;
+
                         if ($adaLocked) {
-                            throw new \Exception(
-                                'Pesanan sudah dikerjakan dan tidak dapat dibatalkan.'
-                            );
+
+                            if ($isPlat == true && $isTerlambat == true) {
+                                $value->editorPartItems()
+                                    ->whereIn('status', ['pending', 'skipped'])
+                                    ->update([
+                                        'status' => 'batal',
+                                    ]);
+                            } else {
+                                throw new \Exception(
+                                    'Pesanan sudah dikerjakan dan tidak dapat dibatalkan.'
+                                );
+                            }
+                            
                         }
                     }
 
