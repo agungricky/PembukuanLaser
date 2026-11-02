@@ -68,6 +68,8 @@ class AuthController extends Controller
             return redirect()->route('editor.index');
         } elseif ($user->role === 'produksi') {
             return redirect()->route('produksi.index');
+        } elseif ($user->role === 'developer') {
+            return redirect()->route('docs.panel');
         }
 
         Auth::logout();

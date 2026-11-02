@@ -21,10 +21,11 @@ use App\Http\Controllers\PesananProsesController;
 use App\Http\Controllers\ProdukController;
 use App\Http\Controllers\ProduksiController;
 use App\Http\Controllers\ResiImportController;
-use App\Http\Controllers\rotatorController;
 use App\Http\Controllers\SkuController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth'])->group(function () {
@@ -243,6 +244,20 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/pesanan/preview-resi/{token}', [PesananController::class, 'previewResi'])->name('pesanan.preview-resi');
     });
 
+    Route::middleware(['role:developer'])->group(function () {
+        Route::post('/docs/logout', function (Request $request) {
+            Auth::guard('web')->logout();
+
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect('/login');
+        })->name('docs.logout');
+
+        Route::get('/docs/panel', function () {
+            return view('api.sweger');
+        })->name('docs.panel');
+    });
 });
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -255,6 +270,7 @@ Route::get('/punyalcknihbossenggoldong', [HomeController::class, 'gancinama']);
 Route::get('/sound', function () {
     return view('sound');
 });
+
 Route::get('/cek-template-editor', function () {
     $path = storage_path('app/templates/editor_plat.xlsx');
 
