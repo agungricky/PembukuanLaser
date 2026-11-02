@@ -48,7 +48,7 @@ class AppServiceProvider extends ServiceProvider
         // ============ Permision Akses Api Key =============== //
         // Hanya boleh diakses oleh role tertentu
         Gate::define('viewApiDocs', function (User $user) {
-            return $user->role === 'pegawai';
+            return $user->role === 'developer';
         });
 
         // Boleh diakses oleh user yang tidak login

@@ -23,19 +23,19 @@ class DatabaseSeeder extends Seeder
         //     'password' => Hash::make('123456')
         // ]);
 
-        User::factory()->create([
-            'name' => 'santo',
-            'role' => 'gudang',
-            'email' => 'test@example.com',
-            'password' => Hash::make('123456')
-        ]);
+       // User::factory()->create([
+       //     'name' => 'santo',
+       //     'role' => 'gudang',
+       //     'email' => 'test@example.com',
+       //     'password' => Hash::make('123456')
+       // ]);
 
-        User::factory()->create([
-            'name' => 'rega',
-            'role' => 'produksi',
-            'email' => 'produksi@example.com',
-            'password' => Hash::make('123456')
-        ]);
+        //User::factory()->create([
+        //    'name' => 'rega',
+        //    'role' => 'produksi',
+        //    'email' => 'produksi@example.com',
+        //    'password' => Hash::make('123456')
+        // ]);
 
         // User::factory()->create([
         //     'name' => 'rico',
@@ -44,12 +44,14 @@ class DatabaseSeeder extends Seeder
         //     'password' => Hash::make('rico2345')
         // ]);
 
-        User::factory()->create([
-            'name' => 'dev',
-            'role' => 'developer',
-            'email' => 'dev@gmail.com',
-            'password' => Hash::make('dev2026')
-        ]);
+        User::firstOrCreate(
+            ['name' => 'dev'],
+            [
+                'role' => 'developer',
+                'email' => 'dev@gmail.com',
+                'password' => Hash::make('dev2026'),
+            ]
+        );
 
         $this->call([
             // KategorisSeeder::class,
