@@ -2,7 +2,10 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
 
-title Sync Database Server ke Laragon
+@echo off
+setlocal EnableExtensions
+
+title SYNC DATABASE SERVER KE LARAGON
 
 REM ==================================================
 REM 1. KONFIGURASI DATABASE
@@ -140,8 +143,25 @@ REM ==================================================
 echo [1/5] Membuat dump database server...
 echo.
 
-"%WINSCP%" ^
-    /command ^
+REM Menghapus file download lama agar tidak
+REM dianggap sebagai hasil download terbaru.
+
+if exist "%SQL_FILE%" (
+    del /q "%SQL_FILE%"
+)
+
+if exist "%SQL_FILE%" (
+    echo.
+    echo ERROR: File SQL lama gagal dihapus.
+    echo DATABASE LOKAL BELUM DIUBAH.
+    pause
+    exit /b 1
+)
+
+REM PENTING:
+REM Tidak memakai /ini=nul agar profil Laser terbaca.
+
+"%WINSCP%" /command ^
     "option batch abort" ^
     "option confirm off" ^
     "open Laser" ^
@@ -155,6 +175,8 @@ if errorlevel 1 (
     echo GAGAL DOWNLOAD DATABASE SERVER
     echo DATABASE LOKAL BELUM DIUBAH
     echo ==============================================
+    echo.
+    echo Periksa koneksi WinSCP dan profil Laser.
     pause
     exit /b 1
 )
@@ -196,9 +218,9 @@ echo [3/5] Backup database lokal...
 echo.
 
 "%MYSQL_BIN%\mysqldump.exe" ^
-    -h %LOCAL_HOST% ^
+    -h "%LOCAL_HOST%" ^
     -P %LOCAL_PORT% ^
-    -u %LOCAL_USER% ^
+    -u "%LOCAL_USER%" ^
     --single-transaction ^
     --quick ^
     --no-tablespaces ^
@@ -237,9 +259,9 @@ echo [4/5] Reset database lokal...
 echo.
 
 "%MYSQL_BIN%\mysql.exe" ^
-    -h %LOCAL_HOST% ^
+    -h "%LOCAL_HOST%" ^
     -P %LOCAL_PORT% ^
-    -u %LOCAL_USER% ^
+    -u "%LOCAL_USER%" ^
     -e "DROP DATABASE IF EXISTS %LOCAL_DB%; CREATE DATABASE %LOCAL_DB% CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
 if errorlevel 1 (
@@ -254,6 +276,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
+echo.
 echo Database lokal berhasil dibuat ulang.
 echo.
 
@@ -265,15 +288,15 @@ echo [5/5] Import database server ke Laragon...
 echo.
 
 "%MYSQL_BIN%\mysql.exe" ^
-    -h %LOCAL_HOST% ^
+    -h "%LOCAL_HOST%" ^
     -P %LOCAL_PORT% ^
-    -u %LOCAL_USER% ^
-    %LOCAL_DB% < "%SQL_FILE%"
+    -u "%LOCAL_USER%" ^
+    "%LOCAL_DB%" < "%SQL_FILE%"
 
 if errorlevel 1 (
     echo.
     echo ==============================================
-    echo IMPORT DATABASE GAGAL
+    echo IMPORT DATABASE SERVER GAGAL
     echo ==============================================
     echo.
     echo Database lokal mungkin belum lengkap.
@@ -295,7 +318,7 @@ REM ==================================================
 
 echo.
 echo ==============================================
-echo       DATABASE BERHASIL DISINKRONKAN
+echo        DATABASE BERHASIL DISINKRONKAN
 echo ==============================================
 echo.
 echo Database Server : %SERVER_DB%
@@ -312,6 +335,8 @@ echo.
 echo File Backup Lokal:
 echo %LOCAL_BACKUP%
 echo.
+echo ==============================================
+echo           PROSES SELESAI
 echo ==============================================
 echo.
 
