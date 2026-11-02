@@ -153,7 +153,6 @@ Route::middleware(['web', 'auth'])->group(function () {
 
         // SKU
         Route::resource('sku', SkuController::class)->only(['index', 'store', 'edit', 'update', 'destroy', 'show']);
-        // Route::get('sku-json', [SkuController::class, 'skudata'])->name('sku.json');
         Route::post('/sku-view', [SkuController::class, 'viewstore'])->name('sku.viewstore');
 
         // Iklan
