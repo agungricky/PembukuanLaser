@@ -2,11 +2,9 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
     <title>API Documentation - PembukuanLaser</title>
-
     <style>
         * {
             box-sizing: border-box;
@@ -22,10 +20,23 @@
             padding: 0 24px;
             background: #111827;
             color: white;
-
             display: flex;
             align-items: center;
             justify-content: space-between;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .env-badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            background: {{ $environment === 'local' ? '#16a34a' : '#d97706' }};
+            color: white;
         }
 
         .logout-btn {
@@ -37,36 +48,54 @@
             cursor: pointer;
         }
 
-        iframe {
-            display: block;
-            width: 100%;
+        #app {
             height: calc(100vh - 60px);
-            border: none;
+            overflow: auto;
         }
     </style>
 </head>
 
 <body>
-
     <div class="header">
+        <div class="header-left">
+            <strong>PembukuanLaser API Documentation</strong>
+            <span class="env-badge">
+                {{ strtoupper($environment) }}
+                -
+                {{ $environment === 'local' ? 'FULL ACCESS' : 'GET ONLY' }}
+            </span>
+        </div>
 
-        <strong>PembukuanLaser API Documentation</strong>
-
-        <form action="{{ route('docs.logout') }}"
-              method="POST">
+        <form action="{{ route('docs.logout') }}" method="POST">
             @csrf
 
             <button type="submit" class="logout-btn">
                 Logout
             </button>
         </form>
-
     </div>
 
-    <iframe
-        src="{{ url('/docs/api') }}"
-        title="API Documentation">
-    </iframe>
+    <div id="app"></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    <script>
+        const trialToken = @json($token);
+        Scalar.createApiReference('#app', {
+            url: @json(url('/docs/api.json')),
+            theme: 'default',
+            onBeforeRequest: ({ requestBuilder }) => {
+                requestBuilder.options.disableSecurity = true;
+                requestBuilder.headers.set(
+                    'Authorization',
+                    'Bearer ' + trialToken
+                );
+
+                requestBuilder.headers.set(
+                    'Accept',
+                    'application/json'
+                );
+            }
+        });
+    </script>
 </body>
 </html>

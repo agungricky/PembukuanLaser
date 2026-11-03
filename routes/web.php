@@ -24,6 +24,7 @@ use App\Http\Controllers\ResiImportController;
 use App\Http\Controllers\SkuController;
 use App\Http\Controllers\TokoController;
 use App\Http\Controllers\UserController;
+use App\Services\Api\DeveloperTrialToken as ApiDeveloperTrialToken;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -243,8 +244,38 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/pesanan/preview-resi/{token}', [PesananController::class, 'previewResi'])->name('pesanan.preview-resi');
     });
 
-    Route::middleware(['role:developer'])->group(function () {
+    Route::middleware(['auth', 'role:developer'])->group(function () {
+        Route::get('/docs/panel', function (Request $request) {
+            $token = $request->session()->get('developer_trial_token');
+            $tokenId = $request->session()->get('developer_trial_token_id');
+            $environment = app()->environment('local') ? 'local' : 'production';
+            $record = $tokenId ? $request->user()->tokens()->find($tokenId) : null;
+            $valid = $token
+                && $record
+                && $record->name === 'docs-trial-' . $environment
+                && (!$record->expires_at || $record->expires_at->isFuture())
+                && $request->session()->get('developer_trial_environment') === $environment;
+
+            if (!$valid) {
+                $token = ApiDeveloperTrialToken::issue($request);
+            }
+
+            return response()
+                ->view('api.sweger', ['token' => $token, 'environment' => $environment])
+                ->header('Cache-Control', 'no-store, private');
+        })->name('docs.panel');
+
         Route::post('/docs/logout', function (Request $request) {
+            $tokenId = $request->session()->get('developer_trial_token_id');
+
+            if ($tokenId) {
+                $request->user()
+                    ->tokens()
+                    ->whereKey($tokenId)
+                    ->where('name', 'like', 'docs-trial-%')
+                    ->delete();
+            }
+
             Auth::guard('web')->logout();
 
             $request->session()->invalidate();
@@ -252,10 +283,6 @@ Route::middleware(['web', 'auth'])->group(function () {
 
             return redirect('/login');
         })->name('docs.logout');
-
-        Route::get('/docs/panel', function () {
-            return view('api.sweger');
-        })->name('docs.panel');
     });
 });
 

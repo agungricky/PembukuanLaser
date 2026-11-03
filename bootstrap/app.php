@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\RestrictDeveloperTrialToken;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,6 +17,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.middleware' => \App\Http\Middleware\AuthMiddleware::class,
             'role' => \App\Http\Middleware\RoleOnly::class,
         ]);
+
+        $middleware->api(append: [
+            RestrictDeveloperTrialToken::class,
+        ]);
+
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
