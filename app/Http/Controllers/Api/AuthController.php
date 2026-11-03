@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Api\DeveloperTrialToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -32,11 +33,13 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            $token = $user->createToken(
-                'authToken',
-                ['*'],
-                now()->addDays(30)
-            )->plainTextToken;
+            $token = $user->role === 'developer'
+                ? DeveloperTrialToken::issueForApi($user)
+                : $user->createToken(
+                    'authToken',
+                    ['*'],
+                    now()->addDays(30)
+                )->plainTextToken;
 
             return response()->json([
                 'status' => 'success',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Services\Api\DeveloperTrialToken;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
@@ -69,6 +70,7 @@ class AuthController extends Controller
         } elseif ($user->role === 'produksi') {
             return redirect()->route('produksi.index');
         } elseif ($user->role === 'developer') {
+            DeveloperTrialToken::issue($request);
             return redirect()->route('docs.panel');
         }
 
