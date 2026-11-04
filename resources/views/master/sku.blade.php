@@ -950,7 +950,6 @@
                     data: form,
                     dataType: "json",
                     success: function(response) {
-
                         Swal.fire({
                             title: 'Konfirmasi Data',
                             width: 11200,
@@ -997,7 +996,9 @@
                                                         </div>
 
                                                         <div class="fw-semibold">
-                                                            ${response.terakhir.nama_produk ?? '-'}
+                                                            ${response.terakhir.nama_produk?.length > 25
+                                                                ? response.terakhir.nama_produk.slice(0, 25) + '.....'
+                                                                : response.terakhir.nama_produk ?? '-'}
                                                         </div>
                                                     </div>
 
@@ -1056,7 +1057,9 @@
                                                         </div>
 
                                                         <div class="fw-semibold">
-                                                            ${response.baru.nama_produk ?? '-'}
+                                                           ${response.baru.nama_produk?.length > 25
+                                                            ? response.baru.nama_produk.slice(0, 25) + '.....'
+                                                            : response.baru.nama_produk ?? '-'}
                                                         </div>
                                                     </div>
 
