@@ -16,33 +16,32 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        // User::factory()->create([
-        //     'name' => 'ricko',
-        //     'role' => 'editor',
-        //     'email' => 'editor@example.com',
-        //     'password' => Hash::make('123456')
-        // ]);
+        User::firstOrCreate(
+            ['name' => 'santo'],
+            [
+                'role' => 'gudang',
+                'email' => 'test@example.com',
+                'password' => Hash::make('123456'),
+            ]
+        );
 
-    //    User::factory()->create([
-    //        'name' => 'santo',
-    //        'role' => 'gudang',
-    //        'email' => 'test@example.com',
-    //        'password' => Hash::make('123456')
-    //    ]);
+        User::firstOrCreate(
+            ['name' => 'rega'],
+            [
+                'role' => 'produksi',
+                'email' => 'produksi@example.com',
+                'password' => Hash::make('123456'),
+            ]
+        );
 
-        //User::factory()->create([
-        //    'name' => 'rega',
-        //    'role' => 'produksi',
-        //    'email' => 'produksi@example.com',
-        //    'password' => Hash::make('123456')
-        // ]);
-
-        User::factory()->create([
-            'name' => 'rico',
-            'role' => 'editor',
-            'email' => 'rico@gmail.com',
-            'password' => Hash::make('rico2345')
-        ]);
+        User::firstOrCreate(
+            ['name' => 'rico'],
+            [
+                'role' => 'editor',
+                'email' => 'rico@gmail.com',
+                'password' => Hash::make('rico2345'),
+            ]
+        );
 
         User::firstOrCreate(
             ['name' => 'dev'],
