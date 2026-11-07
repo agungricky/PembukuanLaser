@@ -283,37 +283,28 @@
 </head>
 
 <body>
-
     <!-- HEADER -->
     <header class="topbar">
-
         <div class="brand">
             <span class="brand-icon">&lt;/&gt;</span>
-
             <span>PembukuanLaser</span>
-
             <span class="brand-muted">/ API Docs</span>
         </div>
 
         <form action="{{ route('docs.logout') }}" method="POST">
             @csrf
-
             <button type="submit" class="logout">
                 Logout
             </button>
         </form>
-
     </header>
 
     <main class="container">
-
         <!-- INTRODUCTION -->
         <div class="eyebrow">
             Developer Documentation
         </div>
-
         <h1>API Overview</h1>
-
         <p class="subtitle">
             Pilih kelompok middleware untuk melihat
             dokumentasi dan mencoba endpoint API.
@@ -321,12 +312,10 @@
 
         <!-- SUMMARY -->
         <div class="summary">
-
             <div class="summary-item">
                 <span class="summary-value">
                     {{ $totalGroups }}
                 </span>
-
                 <span class="summary-label">
                     Middleware Groups
                 </span>
@@ -345,7 +334,6 @@
             <div class="framework">
                 Laravel Sanctum
             </div>
-
         </div>
 
         <!-- GROUPS -->
@@ -383,7 +371,7 @@
                     <h3>{{ $group['title'] }}</h3>
 
                     <div class="middleware">
-                        {{ $group['middleware'] }}
+                        {{ strtoupper($group['middleware']) }}
                     </div>
 
                     <div class="card-footer">

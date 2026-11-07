@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\KategoriController;
+use App\Http\Controllers\api\pesananController;
 use App\Http\Controllers\Api\ProdukController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,5 +19,8 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
 
         // Produk
         Route::get('/produk/{kategori}', [ProdukController::class, 'index'])->name('produk.index');
+
+        // Pesanan
+        Route::get('/pesanan', [pesananController::class, 'index'])->
     });
 });
