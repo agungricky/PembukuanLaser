@@ -18,6 +18,7 @@ class Pesanan extends Model
 
     protected $fillable = [
         'no_pesanan',
+        'platform',
         'tanggal',
         'input_at',
         'no_resi',
@@ -143,5 +144,9 @@ class Pesanan extends Model
     public function pencairans()
     {
         return $this->hasMany(Pencairan::class, 'no_pesanan', 'no_pesanan');
+    }
+
+    public function customer_address(){
+        return $this->hasOne(customer_addresses::class, 'no_pesanan', 'no_pesanan');
     }
 }

@@ -7,6 +7,8 @@ use App\Models\Pesanan;
 class PesananService
 {
     public function index(){
-        return Pesanan::where('platform', 'meta')->get();
+        $data = Pesanan::where('platform', 'meta')->get();
+        
+        dd($data);
     }
 }
