@@ -12,13 +12,11 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    // ================================================== //
-    // =================== CS =========================== //
-    // ================================================== //
+    Route::middleware(['role:cs'])->group(function () {
+        // Kategori
+        Route::get('/kategoris', [KategoriController::class, 'index'])->name('kategori.index');
 
-    // Kategori
-    Route::get('/kategoris', [KategoriController::class, 'index'])->name('kategori.index');
-
-    // Produk
-    Route::get('/produk/{kategori}', [ProdukController::class, 'index'])->name('produk.index');
+        // Produk
+        Route::get('/produk/{kategori}', [ProdukController::class, 'index'])->name('produk.index');
+    });
 });

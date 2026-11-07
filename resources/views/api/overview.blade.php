@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
 
     <title>API Overview - PembukuanLaser</title>
@@ -344,7 +343,7 @@
             </div>
 
             <div class="framework">
-                Laravel 12
+                Laravel Sanctum
             </div>
 
         </div>
@@ -361,11 +360,7 @@
         <div class="grid">
 
             @forelse ($groups as $group)
-
-                <a
-                    href="{{ route('docs.swagger', ['group' => $group['key']]) }}"
-                    class="card"
-                >
+                <a href="{{ route('docs.swagger', ['group' => $group['key']]) }}" class="card">
 
                     <div class="card-top">
 
@@ -406,7 +401,6 @@
                 <div class="empty">
                     Belum ada endpoint API yang ditemukan.
                 </div>
-
             @endforelse
 
         </div>
@@ -414,4 +408,5 @@
     </main>
 
 </body>
+
 </html>
