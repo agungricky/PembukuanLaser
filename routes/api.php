@@ -21,6 +21,6 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
         Route::get('/produk/{kategori}', [ProdukController::class, 'index'])->name('produk.index');
 
         // Pesanan
-        Route::get('/pesanan', [pesananController::class, 'index'])->
+        Route::get('/pesanan', [pesananController::class, 'index'])->name('pesanan.index');
     });
 });
