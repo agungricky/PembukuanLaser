@@ -25,7 +25,7 @@ jobs:
           port: 64000
 
           script: |
-            cd /home/kingplat/PembukuanLaser
+            cd /home/admin/web/dahakreasidigital.my.id/PembukuanLaser
 
             git pull origin master
 

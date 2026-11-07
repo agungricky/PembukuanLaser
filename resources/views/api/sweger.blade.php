@@ -83,6 +83,7 @@
         Scalar.createApiReference('#app', {
             url: @json(url('/docs/api.json')),
             theme: 'default',
+            hideModels: true,
             onBeforeRequest: ({ requestBuilder }) => {
                 requestBuilder.options.disableSecurity = true;
                 requestBuilder.headers.set(

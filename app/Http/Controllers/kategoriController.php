@@ -18,7 +18,7 @@ class kategoriController extends Controller
             $item->produk_aktif = $item->produk->where('status', 'aktif')->count();
             $item->produk_nonaktif = $item->produk->where('status', 'nonaktif')->count();
         }
-
+ 
         return view('master.kategori', compact('kategori'));
     }
 
