@@ -52,6 +52,15 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        User::firstOrCreate(
+            ['name' => 'bambang'],
+            [
+                'role' => 'manager',
+                'email' => 'manager@gmail.com',
+                'password' => Hash::make('123456'),
+            ]
+        );
+
         $this->call([
             // KategorisSeeder::class,
             // EmblemSeeder::class,

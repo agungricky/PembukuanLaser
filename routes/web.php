@@ -215,7 +215,7 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/produk-custom/json', [GudangController::class, 'custom_data'])->name('produk-custom.json');
 
         // Kategori
-        Route::get('/kategori-produk', [GudangController::class, 'kategori'])->name('gudang.kategori');
+        // Route::get('/kategori-produk', [GudangController::class, 'kategori'])->name('gudang.kategori');
 
         // Riwayat Aktifitas
         Route::get('/riwayat-aktivitas/gudang', [GudangController::class, 'riwayataktivitas'])->name('gudang.aktivitas');
