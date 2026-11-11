@@ -8,6 +8,7 @@ class customer_addresses extends Model
 {
     protected $fillable = [
         'no_pesanan',
+        'provinsi',
         'kabupaten_kota',
         'kecamatan',
         'desa',

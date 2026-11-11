@@ -39,4 +39,10 @@ return [
         'path' => env('QPDF_PATH', 'qpdf'),
     ],
 
+    'filegator' => [
+        'url' => env('FILEGATOR_URL'),
+        'username' => env('FILEGATOR_USERNAME'),
+        'password' => env('FILEGATOR_PASSWORD'),
+    ],
+
 ];

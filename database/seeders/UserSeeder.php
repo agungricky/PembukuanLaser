@@ -33,10 +33,10 @@ class UserSeeder extends Seeder
         );
 
         User::firstOrCreate(
-            ['name' => 'rico'],
+            ['name' => 'pras'],
             [
                 'role' => 'editor',
-                'email' => 'rico@gmail.com',
+                'email' => 'pras@gmail.com',
                 'password' => Hash::make('rico2345'),
             ]
         );

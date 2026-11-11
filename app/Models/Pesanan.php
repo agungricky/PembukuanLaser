@@ -7,15 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class Pesanan extends Model
 {
     protected $table = 'pesanan';
-
     protected $primaryKey = 'no_pesanan';
-
     public $incrementing = false;
-
     protected $keyType = 'string';
-
     public $timestamps = false;
-
     protected $fillable = [
         'no_pesanan',
         'platform',
@@ -43,6 +38,7 @@ class Pesanan extends Model
         'total_harga',
         'total_admin',
         'pencairan',
+        'chat_masuk_at',
 
         'notes',
         'tag',
@@ -56,15 +52,11 @@ class Pesanan extends Model
         'tanggal' => 'date',
         'input_at' => 'datetime',
         'tanggal_kirim' => 'datetime',
-
         'resi_printed_at' => 'datetime',
         'resi_last_printed_at' => 'datetime',
         'resi_print_count' => 'integer',
-
         'batas_kirim_at' => 'datetime',
-
         'status_cek' => 'boolean',
-
         'total_hpp' => 'decimal:2',
         'total_harga' => 'decimal:2',
         'total_admin' => 'decimal:2',
@@ -148,5 +140,9 @@ class Pesanan extends Model
 
     public function customer_address(){
         return $this->hasOne(customer_addresses::class, 'no_pesanan', 'no_pesanan');
+    }
+
+    public function bukti_pembayaran(){
+        return $this->hasMany(bukti_pembayaran::class, 'no_pesanan', 'no_pesanan');
     }
 }

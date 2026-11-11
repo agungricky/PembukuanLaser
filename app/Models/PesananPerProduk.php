@@ -19,7 +19,9 @@ class PesananPerProduk extends Model
         'harga',
         'sku',
         'status_pesanan',
-        'mutasi_stok_id'
+        'mutasi_stok_id',
+        'foto_produk',
+        'catatan'
     ];
 
     protected $casts = [
