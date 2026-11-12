@@ -8,14 +8,15 @@ use App\Services\Storage\DriveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Throwable;
+use Dedoc\Scramble\Attributes\Response;
 
 class FileGatorController extends Controller
 {
     /**
      * Membuat Folder
      *
-     * Membuat folder baru pada direktori FileGator berdasarkan
-     * nama folder dan lokasi parent yang ditentukan.
+     * API ini digunakan untuk membuat folder di penyimpanan FileGator.
+     * Folder dapat dibuat di direktori utama atau folder di dalam folder.
      *
      * ### Header Request
      *
@@ -30,7 +31,7 @@ class FileGatorController extends Controller
      * | Parameter | Tipe | Wajib | Keterangan |
      * |-----------|------|-------|------------|
      * | `name` | string | Ya | Nama folder |
-     * | `parent` | string | Tidak | Lokasi folder induk |
+     * | `parent` | string | Tidak | Perent Folder |
      *
      * ### Contoh Request
      *
@@ -40,6 +41,8 @@ class FileGatorController extends Controller
      *
      * ### Contoh Request Body
      *
+     * Membuat folder `REQ_FOTO` di direktori utama FileGator.
+     *
      * ```json
      * {
      *   "name": "REQ_FOTO",
@@ -47,7 +50,22 @@ class FileGatorController extends Controller
      * }
      * ```
      *
-     * ### Contoh Response (201 Created)
+     * Jika ingin membuat folder di dalam folder lain,
+     * gunakan lokasi folder tersebut pada parameter `parent`.
+     *
+     * Contoh membuat folder `PESANAN` di dalam `REQ_FOTO`:
+     *
+     * ```json
+     * {
+     *   "name": "PESANAN",
+     *   "parent": "/REQ_FOTO"
+     * }
+     * ```
+     *
+     * ### Contoh Response (201 Created - Folder Berhasil Dibuat)
+     *
+     * Server berhasil membuat folder baru dan mengembalikan
+     * informasi nama serta lokasi folder.
      *
      * ```json
      * {
@@ -60,7 +78,10 @@ class FileGatorController extends Controller
      * }
      * ```
      *
-     * ### Contoh Response (422 Unprocessable Entity)
+     * ### Contoh Response (422 Unprocessable Entity - Data Tidak Valid)
+     *
+     * Terjadi jika data yang dikirim tidak sesuai ketentuan,
+     * misalnya nama folder kosong atau tidak diisi.
      *
      * ```json
      * {
@@ -73,7 +94,9 @@ class FileGatorController extends Controller
      * }
      * ```
      *
-     * ### Contoh Response (502 Bad Gateway)
+     * ### Contoh Response (502 Bad Gateway - Gagal Membuat Folder)
+     *
+     * Terjadi ketika proses pembuatan folder di FileGator gagal.
      *
      * ```json
      * {
@@ -82,14 +105,19 @@ class FileGatorController extends Controller
      * }
      * ```
      *
-     * ### Keterangan
+     * ### Ketentuan
      *
-     * - `name` wajib diisi dan tidak boleh berupa `.` atau `..`.
-     * - `parent` bersifat opsional dengan nilai default `/`.
-     * - Jika berhasil, folder dibuat melalui ApiFileGatorService.
-     * - Jika gagal pada proses FileGator, API mengembalikan status HTTP 502.
-     * - Path response menggunakan format tanpa escape slash.
+     * - Nama folder wajib diisi, maksimal 100 karakter.
+     * - Nama folder tidak boleh mengandung `/` atau `\`.
+     * - Nama folder tidak boleh berupa `.` atau `..`.
+     * - Lokasi `parent` maksimal 500 karakter.
+     * - Jika `parent` tidak diisi, folder dibuat di direktori utama `/`.
+     * - Gunakan `/` untuk memisahkan nama folder dalam path.
      */
+    #[Response(status: 201, description: 'Folder berhasil dibuat di FileGator')]
+    #[Response(status: 401, description: 'Pengguna belum login atau token tidak valid')]
+    #[Response(status: 422, description: 'Data yang dikirim tidak valid')]
+    #[Response(status: 502, description: 'Gagal membuat folder di FileGator')]
     public function createFolder(
         Request $request,
         ApiFileGatorService $filegator,
@@ -121,9 +149,8 @@ class FileGatorController extends Controller
     /**
      * Upload File
      *
-     * Mengunggah file ke folder yang ditentukan pada FileGator.
-     * Mendukung format JPG, JPEG, PNG, WEBP, dan PDF
-     * dengan ukuran maksimal 10 MB.
+     * Endpoin ini digunakan untuk mengunggah file ke folder tertentu
+     * di FileGator. 
      *
      * ### Header Request
      *
@@ -137,8 +164,8 @@ class FileGatorController extends Controller
      *
      * | Parameter | Tipe | Wajib | Keterangan |
      * |-----------|------|-------|------------|
-     * | `file` | file | Ya | JPG, JPEG, PNG, WEBP, PDF. Maksimal 10 MB |
-     * | `folder` | string | Ya | Path folder tujuan di FileGator, maksimal 500 karakter |
+     * | `file` | file | Ya | File yang akan diunggah |
+     * | `folder` | string | Ya | Lokasi folder tujuan |
      *
      * ### Contoh Request
      *
@@ -148,12 +175,17 @@ class FileGatorController extends Controller
      *
      * ### Contoh Request Body (form-data)
      *
+     * Kirim data menggunakan `multipart/form-data`, bukan JSON.
+     *
      * | Key | Type | Value |
      * |-----|------|-------|
      * | `file` | File | foto_produk.png |
      * | `folder` | Text | /REQ_FOTO |
      *
-     * ### Contoh Response (201 Created)
+     * ### Contoh Response (201 Created - File Berhasil Diupload)
+     *
+     * File berhasil diunggah ke FileGator.
+     * Server mengembalikan nama file dan lokasi penyimpanannya.
      *
      * ```json
      * {
@@ -167,7 +199,23 @@ class FileGatorController extends Controller
      * }
      * ```
      *
-     * ### Contoh Response (422 Unprocessable Entity)
+     * ### Contoh Response (401 Unauthorized - Belum Terautentikasi)
+     *
+     * Terjadi jika token autentikasi tidak dikirim,
+     * tidak valid, atau sudah tidak berlaku.
+     *
+     * ```json
+     * {
+     *   "message": "Unauthenticated."
+     * }
+     * ```
+     *
+     * ### Contoh Response (422 Unprocessable Entity - Data Tidak Valid)
+     *
+     * Terjadi jika file tidak dikirim, ukuran file terlalu besar,
+     * format tidak didukung, atau lokasi folder tidak valid.
+     *
+     * Contoh ketika parameter `file` tidak diisi:
      *
      * ```json
      * {
@@ -182,6 +230,9 @@ class FileGatorController extends Controller
      *
      * ### Contoh Response (422 - Nama File Tidak Valid)
      *
+     * Terjadi jika nama file mengandung karakter yang
+     * tidak diperbolehkan.
+     *
      * ```json
      * {
      *   "success": false,
@@ -189,7 +240,10 @@ class FileGatorController extends Controller
      * }
      * ```
      *
-     * ### Contoh Response (502 Bad Gateway)
+     * ### Contoh Response (502 Bad Gateway - Upload Gagal)
+     *
+     * Terjadi jika proses upload gagal karena terdapat masalah
+     * saat menghubungi atau memproses file di FileGator.
      *
      * ```json
      * {
@@ -198,69 +252,46 @@ class FileGatorController extends Controller
      * }
      * ```
      *
-     * ### Keterangan
+     * ### Ketentuan Upload
      *
-     * - File wajib diunggah menggunakan `multipart/form-data`.
-     * - Ukuran maksimal file adalah 10 MB (10240 KB).
-     * - Format yang diizinkan: JPG, JPEG, PNG, WEBP, PDF.
-     * - `folder` wajib diisi dengan path absolut, contoh `/REQ_FOTO`.
+     * - File wajib dikirim menggunakan `multipart/form-data`.
+     * - Ukuran maksimal file adalah 10 MB.
+     * - Format yang diizinkan adalah JPG, JPEG, PNG, WEBP, dan PDF.
+     * - Parameter `file` dan `folder` wajib diisi.
+     * - Parameter `folder` memiliki panjang maksimal 500 karakter.
+     * - Path folder harus diawali `/`, contoh `/REQ_FOTO`.
      * - Nama file menggunakan nama asli dari file yang diunggah.
-     * - Nama file tidak boleh berupa `.` atau `..` maupun mengandung `/` atau `\`.
-     * - Jika berhasil, API mengembalikan HTTP 201.
-     * - Jika validasi gagal, API mengembalikan HTTP 422.
-     * - Jika proses FileGator gagal, API mengembalikan HTTP 502.
+     * - Nama file tidak boleh berupa `.` atau `..`.
+     * - Nama file tidak boleh mengandung karakter `/` atau `\`.
+     * - Folder tujuan harus tersedia di FileGator.
+     * - File akan disimpan sesuai lokasi folder yang ditentukan.
      */
+
+    #[Response(status: 201, description: 'File berhasil diunggah ke FileGator')]
+    #[Response(status: 401, description: 'Pengguna belum login atau token tidak valid')]
+    #[Response(status: 422, description: 'Data file atau folder tidak valid')]
+    #[Response(status: 502, description: 'Gagal upload file ke FileGator')]
     public function upload(
         Request $request,
-        ApiFileGatorService $filegator
+        ApiFileGatorService $filegator,
+        DriveService $driveService
     ): JsonResponse {
         $data = $request->validate([
-            'file' => [
-                'required',
-                'file',
-                'max:10240',
-                'mimes:jpg,jpeg,png,webp,pdf',
-            ],
-            'folder' => [
-                'required',
-                'string',
-                'max:500',
-                'regex:/^\/(?:[^\/\\\\.][^\/\\\\]*\/?)*$/',
-            ],
+            'file' => ['required', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,pdf'],
+            'folder' => ['required', 'string', 'max:500', 'regex:/^\/(?:[^\/\\\\.][^\/\\\\]*\/?)*$/'],
         ]);
 
-        $file = $data['file'];
-        $folder = $data['folder'];
-        $filename = $file->getClientOriginalName();
-
-        if (
-            in_array($filename, ['.', '..'], true) ||
-            str_contains($filename, '/') ||
-            str_contains($filename, '\\')
-        ) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Nama file tidak valid',
-            ], 422);
-        }
-
         try {
-            $filegator->login();
+            $result = $driveService->uploadFiles($filegator, $data);
 
-            $filegator->upload(
-                $file,
-                $filename,
-                $folder
-            );
+            if (!$result['success']) {
+                return response()->json($result, 422);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => 'File berhasil diupload',
-                'data' => [
-                    'filename' => $filename,
-                    'folder' => $folder,
-                    'path' => rtrim($folder, '/') . '/' . $filename,
-                ],
+                'data' => $result['data'],
             ], 201, [], JSON_UNESCAPED_SLASHES);
         } catch (Throwable $e) {
             report($e);

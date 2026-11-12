@@ -169,6 +169,63 @@
 
         const openApiUrl = @json(url('/docs/api.json'));
 
+        /**
+         * Jadikan daftar endpoint di sidebar sebagai accordion.
+         * Scalar merender sidebar secara dinamis, sehingga event delegation
+         * dipakai agar tetap berjalan setelah komponen selesai di-mount.
+         */
+        let syncingSidebar = false;
+
+        function closeOtherSidebarGroups(activeGroup) {
+            if (syncingSidebar) {
+                return;
+            }
+
+            const expandedGroups = document.querySelectorAll(
+                '#app [data-sidebar-id] button[aria-expanded="true"]'
+            );
+
+            syncingSidebar = true;
+
+            expandedGroups.forEach(toggle => {
+                const group = toggle.closest('[data-sidebar-id]');
+
+                if (
+                    group
+                    && group !== activeGroup
+                    && !group.contains(activeGroup)
+                    && !activeGroup?.contains(group)
+                ) {
+                    toggle.click();
+                }
+            });
+
+            syncingSidebar = false;
+        }
+
+        document.addEventListener('click', event => {
+            if (syncingSidebar) {
+                return;
+            }
+
+            const clickedElement = event.target instanceof Element
+                ? event.target
+                : null;
+
+            const activeGroup = clickedElement?.closest(
+                '#app [data-sidebar-id]'
+            );
+
+            if (!activeGroup) {
+                return;
+            }
+
+            // Tunggu state open/close Scalar berubah terlebih dahulu.
+            window.setTimeout(() => {
+                closeOtherSidebarGroups(activeGroup);
+            }, 0);
+        }, true);
+
         async function loadApiDocumentation() {
             const container = document.getElementById('app');
 
