@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\dashboardController;
 use App\Http\Controllers\Api\FileGatorController;
 use App\Http\Controllers\Api\KategoriController;
 use App\Http\Controllers\api\pesananController;
@@ -16,6 +17,9 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     Route::middleware(['role:cs'])->group(function () {
+        // Dashboard
+        Route::get('/dashboard/cs/{user_id}', [dashboardController::class, 'dashboardCs'])->name('dashboard.cs');
+
         // Kategori
         Route::get('/kategoris', [KategoriController::class, 'index'])->name('kategori.index');
 
@@ -23,7 +27,7 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
         Route::get('/produk/{kategori}', [ProdukController::class, 'index'])->name('produk.index');
 
         // Pesanan
-        Route::get('/pesanan', [pesananController::class, 'index'])->name('pesanan.index');
+        Route::get('/pesanan', [pesananController::class, 'create'])->name('pesanan.index');
         Route::post('/pesanan/store', [pesananController::class, 'store'])->name('pesanan.store');
 
         // Wilayah

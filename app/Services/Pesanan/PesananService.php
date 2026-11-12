@@ -35,7 +35,7 @@ class PesananService
         return $tanggal . $nomorUrut . $random;
     }
 
-    public function index()
+    public function create()
     {
         $noPesananBaru = $this->generateNoPesanan();
         $user = collect(Auth::user())
@@ -123,19 +123,10 @@ class PesananService
             foreach ($request->input('pesanan_perproduk', []) as $index => $value) {
                 $fotoProduk = null;
                 $file = $request->file("pesanan_perproduk.$index.foto_produk");
-
                 if ($file) {
-                    $extension = strtolower(
-                        $file->getClientOriginalExtension()
-                    );
-
+                    $extension = strtolower($file->getClientOriginalExtension());
                     $namaFile = $pesanan->no_pesanan . '_'
-                        . str_pad(
-                            $index + 1,
-                            2,
-                            '0',
-                            STR_PAD_LEFT
-                        )
+                        . str_pad($index + 1, 2, '0', STR_PAD_LEFT)
                         . '.' . $extension;
 
                     $fotoProduk = $fileGatorService->upload(
