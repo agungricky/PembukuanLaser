@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\FileGatorController;
 use App\Http\Controllers\Api\KategoriController;
 use App\Http\Controllers\api\pesananController;
 use App\Http\Controllers\Api\ProdukController;
+use App\Http\Controllers\Api\RingkasanController;
 use App\Http\Controllers\wilayahController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,7 +19,7 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
 
     Route::middleware(['role:cs'])->group(function () {
         // Dashboard
-        Route::get('/dashboard/cs/{user_id}', [dashboardController::class, 'dashboardCs'])->name('dashboard.cs');
+        Route::get('/dashboard/cs', [dashboardController::class, 'dashboardCs'])->name('dashboard.cs');
 
         // Kategori
         Route::get('/kategoris', [KategoriController::class, 'index'])->name('kategori.index');
@@ -26,9 +27,16 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
         // Produk
         Route::get('/produk/{kategori}', [ProdukController::class, 'index'])->name('produk.index');
 
+        // Ringkasan
+        Route::get('/ringkasan/cs', [RingkasanController::class, 'cs'])->name('ringkasan.cs');
+
         // Pesanan
-        Route::get('/pesanan', [pesananController::class, 'create'])->name('pesanan.index');
-        Route::post('/pesanan/store', [pesananController::class, 'store'])->name('pesanan.store');
+        Route::prefix('pesanan')->name('pesanan.')->group(function () {
+            Route::get('/', [pesananController::class, 'index'])->name('index');
+            Route::get('/detail/{no_pesanan}', [pesananController::class, 'detail'])->name('detail');
+            Route::get('/create', [pesananController::class, 'create'])->name('create');
+            Route::post('/store', [pesananController::class, 'store'])->name('store');
+        });
 
         // Wilayah
         Route::prefix('wilayah')->controller(wilayahController::class)->group(function () {

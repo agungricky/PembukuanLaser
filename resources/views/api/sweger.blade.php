@@ -169,6 +169,68 @@
 
         const openApiUrl = @json(url('/docs/api.json'));
 
+        const sidebarCollator = new Intl.Collator('id-ID', {
+            sensitivity: 'base',
+            numeric: true
+        });
+
+        function sortOpenApiForSidebar(spec) {
+            if (Array.isArray(spec.tags)) {
+                spec.tags.sort((left, right) => sidebarCollator.compare(
+                    left['x-displayName'] || left.name || '',
+                    right['x-displayName'] || right.name || ''
+                ));
+            }
+
+            const sortedPaths = {};
+
+            Object.entries(spec.paths || {})
+                .sort(([leftPath], [rightPath]) =>
+                    sidebarCollator.compare(leftPath, rightPath)
+                )
+                .forEach(([path, pathItem]) => {
+                    const sortedPathItem = {};
+
+                    // Metadata tetap dipertahankan sebelum operasi HTTP.
+                    Object.entries(pathItem)
+                        .filter(([key]) => ![
+                            'get', 'post', 'put', 'patch', 'delete',
+                            'head', 'options', 'trace'
+                        ].includes(key.toLowerCase()))
+                        .forEach(([key, value]) => {
+                            sortedPathItem[key] = value;
+                        });
+
+                    Object.entries(pathItem)
+                        .filter(([key]) => [
+                            'get', 'post', 'put', 'patch', 'delete',
+                            'head', 'options', 'trace'
+                        ].includes(key.toLowerCase()))
+                        .sort(([, leftOperation], [, rightOperation]) => {
+                            const leftLabel = leftOperation?.summary
+                                || leftOperation?.operationId
+                                || '';
+                            const rightLabel = rightOperation?.summary
+                                || rightOperation?.operationId
+                                || '';
+
+                            return sidebarCollator.compare(
+                                leftLabel,
+                                rightLabel
+                            );
+                        })
+                        .forEach(([method, operation]) => {
+                            sortedPathItem[method] = operation;
+                        });
+
+                    sortedPaths[path] = sortedPathItem;
+                });
+
+            spec.paths = sortedPaths;
+
+            return spec;
+        }
+
         /**
          * Jadikan daftar endpoint di sidebar sebagai accordion.
          * Scalar merender sidebar secara dinamis, sehingga event delegation
@@ -347,6 +409,9 @@
                     }
                 }
 
+                // Pastikan urutan sidebar Scalar selalu A-Z.
+                sortOpenApiForSidebar(spec);
+
                 /*
                 |--------------------------------------------
                 | VALIDASI HASIL FILTER
@@ -380,6 +445,10 @@
                     theme: 'default',
 
                     hideModels: true,
+
+                    // Urutkan daftar API Tags dan endpoint di sidebar Scalar.
+                    tagsSorter: 'alpha',
+                    operationsSorter: 'alpha',
 
                     onBeforeRequest: ({ requestBuilder }) => {
 

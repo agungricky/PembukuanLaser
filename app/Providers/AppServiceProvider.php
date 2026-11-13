@@ -11,8 +11,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
-        use Dedoc\Scramble\Scramble;
-use Dedoc\Scramble\Support\Generator\OpenApi;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -55,20 +53,5 @@ class AppServiceProvider extends ServiceProvider
         // Gate::define('viewApiDocs', function (?User $user) {
         //     return true;
         // });
-
-        // Merubah Format di dokumentasi dari pesanan ke Pesanan (Tab utama endpoin)
-        // Scramble::configure()
-        //     ->withDocumentTransformers(function (OpenApi $openApi) {
-        //         foreach ($openApi->paths as $path) {
-        //             foreach ($path->operations as $operation) {
-        //                 $operation->tags = array_map(
-        //                     fn($tag) => $tag === 'dashboard'
-        //                         ? 'Dashboard'
-        //                         : $tag,
-        //                     $operation->tags ?? []
-        //                 );
-        //             }
-        //         }
-        //     });
     }
 }

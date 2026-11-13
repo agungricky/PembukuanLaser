@@ -11,6 +11,28 @@ use Dedoc\Scramble\Attributes\Group;
 #[Group('Pesanan')]
 class pesananController extends Controller
 {
+    public function index(PesananService $pesananService, Request $request)
+    {
+        $request->validate([
+            'search' => 'nullable|string|max:255',
+            'status' => 'nullable|in:proses,kirim,selesai,batal,affiliate,pengembalian,pengiriman_gagal',
+        ]);
+        $data = $pesananService->index($request);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
+
+    public function detail(PesananService $pesananService, $no_pesanan){
+        $data = $pesananService->detailpesanan($no_pesanan);
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
+
     /**
      * Create Pesanan
      *
@@ -314,6 +336,7 @@ class pesananController extends Controller
             'total_admin' => 'required|integer|min:0',
             'chat_masuk_at' => 'required|date|before_or_equal:now',
             'resi_print_count' => 'required|int',
+            'notes' => 'nullable|string',
 
             // 02. ALAMAT PENGIRIMAN
             'provinsi' => 'required|string',

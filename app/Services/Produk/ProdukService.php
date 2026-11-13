@@ -20,7 +20,7 @@ class ProdukService
                     'variasi' => $items->map(function ($item) {
                         return [
                             'sku' => $item->sku,
-                            'nama' => $item->variasi,
+                            'variasi' => $item->variasi,
                             'hpp' => (float) $item->hpp,
                         ];
                     })->values(),

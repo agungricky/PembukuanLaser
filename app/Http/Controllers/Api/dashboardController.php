@@ -57,9 +57,9 @@ class dashboardController extends Controller
      *
      * @param int $user_id ID user CS
      */
-    public function dashboardCs(CsService $csService, $user_id)
+    public function dashboardCs(CsService $csService)
     {
-        $data = $csService->cs($user_id);
+        $data = $csService->cs();
 
         return response()->json([
             'success' => true,

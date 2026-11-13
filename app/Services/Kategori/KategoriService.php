@@ -8,6 +8,6 @@ class KategoriService
 {
     public function index()
     {
-        return Kategori::all();
+        return Kategori::select('id', 'nama_kategori')->get();
     }
 }

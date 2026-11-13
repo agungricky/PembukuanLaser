@@ -15,13 +15,51 @@ use Illuminate\Support\Facades\DB;
 
 class PesananService
 {
+    public function index(Request $request)
+    {
+        $pesanan = Pesanan::query()
+            ->where('platform', 'meta')
+            ->where('id_user', Auth::id())
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = $request->input('search');
+
+                $query->where(function ($q) use ($search) {
+                    $q->where('no_pesanan', 'like', "%{$search}%")
+                        ->orWhere('nama_pembeli', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->filled('status'), function ($query) use ($request) {
+                $query->where('status', $request->input('status'));
+            })
+            ->select('no_pesanan','input_at','nama_pembeli', 'total_harga', 'status')
+            ->orderByDesc('input_at')
+            ->get();
+
+        return $pesanan;
+    }
+
+    public function detailpesanan($no_pesanan){
+        $pesanan = Pesanan::with([
+          'pesanan_per_produk', 'customer_address'  
+        ])->where('no_pesanan', $no_pesanan)
+        // ->select([
+        //     'informasiPembeli' => [
+
+        //     ]
+        // ])
+        ->first();
+        
+
+        return $pesanan;
+    }
+
     private function generateNoPesanan(): string
     {
         $tanggal = now()->format('ymd');
         $nomorTerakhir = Pesanan::where('no_pesanan', 'like', $tanggal . '%')
             ->whereRaw(
                 'no_pesanan REGEXP ?',
-                ['^' . $tanggal . '[0-9]{3,}[A-Za-z]$']
+                ['^' . $tanggal . '[0-9]{3,}[A-Z]$']
             )
             ->selectRaw(
                 'MAX(CAST(SUBSTRING(no_pesanan, 7, CHAR_LENGTH(no_pesanan) - 7) AS UNSIGNED)) as nomor'
@@ -30,7 +68,7 @@ class PesananService
 
         $nomorBerikutnya = ($nomorTerakhir ?? 0) + 1;
         $nomorUrut = str_pad($nomorBerikutnya, 3, '0', STR_PAD_LEFT);
-        $random = Str::upper(Str::random(1));
+        $random = chr(random_int(65, 90));
 
         return $tanggal . $nomorUrut . $random;
     }
@@ -74,6 +112,7 @@ class PesananService
                 'total_harga' => $request->total_harga,
                 'total_admin' => $request->total_admin,
                 'pencairan' => null,
+                'notes' => $request->notes,
                 'chat_masuk_at' => $request->filled('chat_masuk_at')
                     ? \Carbon\Carbon::parse($request->chat_masuk_at)
                     ->setTimezone('Asia/Jakarta')

@@ -13,7 +13,7 @@ use Dedoc\Scramble\Attributes\Response;
 class FileGatorController extends Controller
 {
     /**
-     * Membuat Folder
+     * Create Folder
      *
      * API ini digunakan untuk membuat folder di penyimpanan FileGator.
      * Folder dapat dibuat di direktori utama atau folder di dalam folder.
