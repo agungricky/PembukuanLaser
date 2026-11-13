@@ -297,7 +297,7 @@
                                             <div class="financial-payout-date text-dark">
                                                 <i class="bi bi-person me-1"></i>
                                                 {{ ucwords(strtolower($p->user->name)) }} |
-                                                {{ \Carbon\Carbon::parse($p['created_at'])->format('d/m/Y : H.i') }}
+                                                {{ \Carbon\Carbon::parse($p['tanggal'])->format('d/m/Y : H.i') }}
                                             </div>
                                         </td>
 
