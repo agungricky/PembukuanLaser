@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Services\Pesanan\PesananService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Dedoc\Scramble\Attributes\Group;
 
+#[Group('Pesanan')]
 class pesananController extends Controller
 {
     /**

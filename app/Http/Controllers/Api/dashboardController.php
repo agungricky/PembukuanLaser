@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Services\Dashboard\CsService;
-use Illuminate\Http\Request;
+use Dedoc\Scramble\Attributes\Group;
 
+#[Group('Dashboard')]
 class dashboardController extends Controller
 {
     /**
