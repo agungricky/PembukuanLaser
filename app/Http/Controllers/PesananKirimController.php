@@ -108,7 +108,6 @@ class PesananKirimController extends Controller
         $sheet = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
 
         $data = [];
-
         foreach ($sheet as $index => $row) {
             if ($marketplace === 'Shopee' && $index < 19) {
                 continue;
@@ -121,10 +120,12 @@ class PesananKirimController extends Controller
             if ($marketplace === 'Shopee') {
                 $noPesanan = $this->normalizeOrderNumber($row['D'] ?? '');
                 $pencairan = $this->cleanNumber($row['F'] ?? 0);
+                $tanggal = $row['A'];
                 $notes = '';
             } else {
                 $noPesanan = $this->normalizeOrderNumber($row['A'] ?? '');
                 $pencairan = $this->cleanNumber($row['F'] ?? 0);
+                $tanggal = $row['D'];
                 $notes = '';
             }
 
@@ -137,17 +138,19 @@ class PesananKirimController extends Controller
                 continue;
             }
 
-            $text = strtolower(trim($row['B'] ?? ''));
-            if ($pesanan->status !== 'kirim') {
-                if ($pesanan->status !== 'selesai' || $text !== 'penyesuaian') {
-                    continue;
-                }
+            if ($marketplace === 'Shopee') {
+                $text = strtolower(trim($row['B'] ?? ''));
+                if ($pesanan->status !== 'kirim') {
+                    if ($pesanan->status !== 'selesai' || $text !== 'penyesuaian') {
+                        continue;
+                    }
+                } 
             }
 
             $data[] = [
                 'no_pesanan' => $noPesanan,
                 'pencairan' => $pencairan,
-                'tanggal' => $row['A'],
+                'tanggal' => $tanggal,
                 'notes' => $pesanan->status === 'selesai' ? 'Penyesuaian Afiliate' : $notes,
                 'status_db' => $pesanan->status,
                 'ada_di_database' => true,
