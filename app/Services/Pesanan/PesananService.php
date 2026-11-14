@@ -6,6 +6,7 @@ use App\Models\bukti_pembayaran;
 use App\Models\customer_addresses;
 use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
+use App\Models\ReqFoto;
 use App\Services\Api\FileGatorService as ApiFileGatorService;
 use App\Services\Location\WilayahIndo;
 use Carbon\Carbon;
@@ -47,25 +48,49 @@ class PesananService
     public function detailpesanan($no_pesanan)
     {
         $pesanan = Pesanan::with([
-            'pesanan_per_produk',
+            'pesanan_per_produk' => function ($query) {
+                $query->select('id_per_produk', 'no_pesanan', 'jumlah', 'sku', 'catatan');
+            },
+            'pesanan_per_produk.produk' => function ($query) {
+                $query->select('sku', 'nama_produk', 'variasi', 'kategori_id');
+            },
+            'pesanan_per_produk.produk.kategori' => function ($query) {
+                $query->select('id', 'nama_kategori');
+            },
+            'pesanan_per_produk.reqfoto' => function ($query) {
+                $query->select('per_produk_id', 'foto');
+            },
             'customer_address' => function ($query) {
-                $query->select('no_pesanan','provinsi','kabupaten_kota','kecamatan','desa','alamat_lengkap','phone');
+                $query->select('no_pesanan', 'provinsi', 'kabupaten_kota', 'kecamatan', 'desa', 'alamat_lengkap', 'phone');
+            },
+            'bukti_pembayaran' => function ($query) {
+                $query->select('no_pesanan', 'jenis_transaksi', 'cod', 'non_cod', 'dp', 'bukti_bayar');
             }
         ])
             ->where('no_pesanan', $no_pesanan)
-            ->select('no_pesanan', 'nama_pembeli')
+            ->select('no_pesanan', 'nama_pembeli', 'total_harga', 'notes')
             ->first();
 
         $userAdress = $pesanan->customer_address;
-        $kabupaten = $this->wilayahIndo->kabupatenKota($userAdress->provinsi. '.' .$userAdress->kabupaten_kota);
+        $adress = $this->wilayahIndo->alamatLengkap($userAdress->desa);
 
         return (object) [
             'informasiPembeli' => [
                 'namaPembeli' => $pesanan->nama_pembeli,
                 'phone' => $pesanan->customer_address->phone,
-                'address' => [
-                    'kabupatenKota' => $kabupaten
+                'address' => (object) [
+                    'provinsi' => $adress->provinsi->name,
+                    'kabupatenKota' => $adress->kabupaten_kota->name,
+                    'kecamatan' => $adress->kecamatan->name,
+                    'desa' => $adress->desa->name,
+                    'kodePos' => $adress->kode_pos
                 ]
+            ],
+            'informasiProduk' => $pesanan->pesanan_per_produk,
+            'pembayaran' => $pesanan->bukti_pembayaran,
+            'pesanan' => [
+                'totalHarga' => $pesanan->total_harga,
+                'catatanPesanan' => $pesanan->notes
             ]
         ];
     }
@@ -177,22 +202,9 @@ class PesananService
             ]);
 
             foreach ($request->input('pesanan_perproduk', []) as $index => $value) {
-                $fotoProduk = null;
-                $file = $request->file("pesanan_perproduk.$index.foto_produk");
-                if ($file) {
-                    $extension = strtolower($file->getClientOriginalExtension());
-                    $namaFile = $pesanan->no_pesanan . '_'
-                        . str_pad($index + 1, 2, '0', STR_PAD_LEFT)
-                        . '.' . $extension;
 
-                    $fotoProduk = $fileGatorService->upload(
-                        $file,
-                        $namaFile,
-                        '/REQ_FOTO'
-                    );
-                }
-
-                PesananPerProduk::create([
+                // 1. Simpan detail produk terlebih dahulu
+                $perproduk = PesananPerProduk::create([
                     'no_pesanan' => $pesanan->no_pesanan,
                     'nama_produk' => $value['nama_produk'],
                     'variasi' => $value['variasi'] ?? null,
@@ -203,10 +215,46 @@ class PesananService
                     'custom' => $value['custom'] ?? null,
                     'status_pesanan' => $value['status_pesanan'] ?? 0,
                     'mutasi_stok_id' => $value['mutasi_stok_id'] ?? null,
-                    'foto_produk' => $fotoProduk,
                     'catatan' => $value['catatan'] ?? null,
                 ]);
+
+                // 2. Ambil seluruh foto dari produk ini
+                $fotoProduks = $request->file(
+                    "pesanan_perproduk.$index.foto_produk",
+                    []
+                );
+
+                // 3. Upload setiap foto
+                foreach ($fotoProduks as $fotoIndex => $file) {
+
+                    $extension = strtolower(
+                        $file->getClientOriginalExtension()
+                    );
+
+                    // Contoh: 20261114001A_01_01.jpg
+                    // 01 pertama = urutan produk
+                    // 01 kedua = urutan foto
+                    $namaFile = $pesanan->no_pesanan . '_'
+                        . str_pad($index + 1, 2, '0', STR_PAD_LEFT)
+                        . '_'
+                        . str_pad($fotoIndex + 1, 2, '0', STR_PAD_LEFT)
+                        . '.' . $extension;
+
+                    // 4. Upload menggunakan FileGator
+                    $fotoPath = $fileGatorService->upload(
+                        $file,
+                        $namaFile,
+                        '/REQ_FOTO'
+                    );
+
+                    // 5. Simpan ke tabel req_fotos
+                    ReqFoto::create([
+                        'per_produk_id' => $perproduk->id_per_produk,
+                        'foto' => $fotoPath,
+                    ]);
+                }
             }
+
 
             return $pesanan;
         });

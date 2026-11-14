@@ -36,13 +36,8 @@ class Produk extends Model
         return $this->hasMany(PesananPerProduk::class, 'sku', 'sku');
     }
 
-
     public function kategori()
     {
-        return $this->belongsTo(
-            kategori::class,
-            'kategori_id',
-            'id'
-        );
+        return $this->belongsTo(kategori::class, 'kategori_id', 'id');
     }
 }

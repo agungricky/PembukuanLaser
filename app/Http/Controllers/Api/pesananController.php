@@ -25,7 +25,8 @@ class pesananController extends Controller
         ]);
     }
 
-    public function detail(PesananService $pesananService, $no_pesanan){
+    public function detail(PesananService $pesananService, $no_pesanan)
+    {
         $data = $pesananService->detailpesanan($no_pesanan);
         return response()->json([
             'success' => true,
@@ -355,7 +356,6 @@ class pesananController extends Controller
 
             // 04. PESANAN PER PRODUK
             'pesanan_perproduk' => 'required|array|min:1',
-
             'pesanan_perproduk.*.nama_produk' => 'required|string',
             'pesanan_perproduk.*.variasi' => 'required|string',
             'pesanan_perproduk.*.jumlah' => 'required|integer|min:1',
@@ -366,7 +366,11 @@ class pesananController extends Controller
             'pesanan_perproduk.*.status_pesanan' => 'nullable|integer',
             'pesanan_perproduk.*.mutasi_stok_id' => 'nullable|integer',
             'pesanan_perproduk.*.catatan' => 'required|string',
-            'pesanan_perproduk.*.foto_produk' => 'required|file|mimes:jpg,jpeg,png|max:5120',
+
+            // FOTO PRODUK (MAKSIMAL 5 FOTO PER PRODUK)
+            'pesanan_perproduk.*.foto_produk' => 'required|array|min:1|max:5',
+            'pesanan_perproduk.*.foto_produk.*' => 'required|file|mimes:jpg,jpeg,png|max:5120',
+
         ]);
 
         DB::beginTransaction();
