@@ -7,6 +7,7 @@ use App\Models\customer_addresses;
 use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
 use App\Services\Api\FileGatorService as ApiFileGatorService;
+use App\Services\Location\WilayahIndo;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -15,6 +16,10 @@ use Illuminate\Support\Facades\DB;
 
 class PesananService
 {
+    public function __construct(
+        private WilayahIndo $wilayahIndo
+    ) {}
+
     public function index(Request $request)
     {
         $pesanan = Pesanan::query()
@@ -25,32 +30,44 @@ class PesananService
 
                 $query->where(function ($q) use ($search) {
                     $q->where('no_pesanan', 'like', "%{$search}%")
-                        ->orWhere('nama_pembeli', 'like', "%{$search}%");
+                        ->orWhere('nama_pembeli', 'like', "%{$search}%")
+                        ->orWhere('no_resi', 'like', "%{$search}%");
                 });
             })
             ->when($request->filled('status'), function ($query) use ($request) {
                 $query->where('status', $request->input('status'));
             })
-            ->select('no_pesanan','input_at','nama_pembeli', 'total_harga', 'status')
+            ->select('no_pesanan', 'no_resi', 'input_at', 'nama_pembeli', 'total_harga', 'status')
             ->orderByDesc('input_at')
             ->get();
 
         return $pesanan;
     }
 
-    public function detailpesanan($no_pesanan){
+    public function detailpesanan($no_pesanan)
+    {
         $pesanan = Pesanan::with([
-          'pesanan_per_produk', 'customer_address'  
-        ])->where('no_pesanan', $no_pesanan)
-        // ->select([
-        //     'informasiPembeli' => [
+            'pesanan_per_produk',
+            'customer_address' => function ($query) {
+                $query->select('no_pesanan','provinsi','kabupaten_kota','kecamatan','desa','alamat_lengkap','phone');
+            }
+        ])
+            ->where('no_pesanan', $no_pesanan)
+            ->select('no_pesanan', 'nama_pembeli')
+            ->first();
 
-        //     ]
-        // ])
-        ->first();
-        
+        $userAdress = $pesanan->customer_address;
+        $kabupaten = $this->wilayahIndo->kabupatenKota($userAdress->provinsi. '.' .$userAdress->kabupaten_kota);
 
-        return $pesanan;
+        return (object) [
+            'informasiPembeli' => [
+                'namaPembeli' => $pesanan->nama_pembeli,
+                'phone' => $pesanan->customer_address->phone,
+                'address' => [
+                    'kabupatenKota' => $kabupaten
+                ]
+            ]
+        ];
     }
 
     private function generateNoPesanan(): string

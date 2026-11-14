@@ -45,4 +45,7 @@ return [
         'password' => env('FILEGATOR_PASSWORD'),
     ],
 
+    'wilayah' => [
+        'url' => env('WILAYAH_URL'),
+    ],
 ];

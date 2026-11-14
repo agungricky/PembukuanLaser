@@ -216,6 +216,7 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'role' => $user->role,
+                'leader' => $user->leader
             ],
         ], 200);
     }

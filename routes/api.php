@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\KategoriController;
 use App\Http\Controllers\api\pesananController;
 use App\Http\Controllers\Api\ProdukController;
 use App\Http\Controllers\Api\RingkasanController;
+use App\Http\Controllers\Api\WilayahController as ApiWilayahController;
 use App\Http\Controllers\wilayahController;
 use Illuminate\Support\Facades\Route;
 
@@ -31,15 +32,15 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
         Route::get('/ringkasan/cs', [RingkasanController::class, 'cs'])->name('ringkasan.cs');
 
         // Pesanan
-        Route::prefix('pesanan')->name('pesanan.')->group(function () {
-            Route::get('/', [pesananController::class, 'index'])->name('index');
-            Route::get('/detail/{no_pesanan}', [pesananController::class, 'detail'])->name('detail');
-            Route::get('/create', [pesananController::class, 'create'])->name('create');
-            Route::post('/store', [pesananController::class, 'store'])->name('store');
+        Route::prefix('pesanan')->controller(pesananController::class)->name('pesanan.')->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/detail/{no_pesanan}', 'detail')->name('detail');
+            Route::get('/create', 'create')->name('create');
+            Route::post('/store', 'store')->name('store');
         });
 
         // Wilayah
-        Route::prefix('wilayah')->controller(wilayahController::class)->group(function () {
+        Route::prefix('wilayah')->controller(ApiWilayahController::class)->group(function () {
             Route::get('/provinsi', 'provinsi');
             Route::get('/kabupaten/{provinsiId}', 'kabupatenKota');
             Route::get('/kecamatan/{kabupatenId}', 'kecamatan');
@@ -48,9 +49,9 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
         });
 
         // Storage / Drive
-        Route::prefix('filegator')->group(function () {
-            Route::post('/folders', [FileGatorController::class, 'createFolder']);
-            Route::post('/upload', [FileGatorController::class, 'upload']);
+        Route::prefix('filegator')->controller(FileGatorController::class)->group(function () {
+            Route::post('/folders', 'createFolder');
+            Route::post('/upload', 'upload');
         });
     });
 });
