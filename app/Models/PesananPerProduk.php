@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PesananPerProduk extends Model
 {
     protected $table = 'pesanan_per_produk';
     protected $primaryKey = 'id_per_produk';
     public $timestamps = true;
-    
+
     protected $fillable = [
         'no_pesanan',
         'nama_produk',
@@ -20,7 +21,6 @@ class PesananPerProduk extends Model
         'sku',
         'status_pesanan',
         'mutasi_stok_id',
-        'foto_produk',
         'catatan'
     ];
 
@@ -57,15 +57,23 @@ class PesananPerProduk extends Model
         );
     }
 
-    public function mutasi(){
+    public function mutasi()
+    {
         return $this->belongsTo(mutasi_stok::class, 'mutasi_stok_id', 'id');
     }
 
-    public function retur(){
+    public function retur()
+    {
         return $this->hasOne(retur::class, 'per_produk_id', 'id_per_produk');
     }
 
-    public function editorRequest(){
+    public function editorRequest()
+    {
         return $this->hasMany(EditorRequest::class, 'id_per_produk', 'id_per_produk');
+    }
+
+    public function reqfoto(): HasMany
+    {
+        return $this->hasMany(ReqFoto::class, 'per_produk_id', 'id');
     }
 }
