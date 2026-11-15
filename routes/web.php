@@ -28,6 +28,9 @@ use App\Services\Api\DeveloperTrialToken as ApiDeveloperTrialToken;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
+use App\Support\ApiDocsOverview;
+
 
 Route::middleware(['web', 'auth'])->group(function () {
 
@@ -244,29 +247,89 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/pesanan/preview-resi/{token}', [PesananController::class, 'previewResi'])->name('pesanan.preview-resi');
     });
 
+
+
     Route::middleware(['auth', 'role:developer'])->group(function () {
-        Route::get('/docs/panel', function (Request $request) {
+
+        Route::get('/docs/panel', function () {
+
+            $groups = ApiDocsOverview::groups();
+
+            $totalEndpoints = $groups->sum('total');
+            $totalGroups = $groups->count();
+
+            return response()
+                ->view('api.overview', compact(
+                    'groups',
+                    'totalEndpoints',
+                    'totalGroups'
+                ))
+                ->header('Cache-Control', 'no-store, private');
+        })->name('docs.panel');
+
+        Route::get('/docs/swagger', function (Request $request) {
+
+            $groups = ApiDocsOverview::groups();
+
+            $groupKey = $request->query('group');
+
+            // Tanpa group = tampilkan semua endpoint.
+            $selectedGroup = null;
+            $allowedEndpoints = null;
+
+            if ($groupKey !== null) {
+
+                abort_unless(is_string($groupKey), 404);
+
+                $selectedGroup = $groups->firstWhere('key', $groupKey);
+
+                abort_unless($selectedGroup, 404);
+
+                $allowedEndpoints = $selectedGroup['endpoints'];
+            }
+
             $token = $request->session()->get('developer_trial_token');
+
             $tokenId = $request->session()->get('developer_trial_token_id');
-            $environment = app()->environment('local') ? 'local' : 'production';
-            $record = $tokenId ? $request->user()->tokens()->find($tokenId) : null;
+
+            $environment = app()->environment('local')
+                ? 'local'
+                : 'production';
+
+            $record = $tokenId
+                ? $request->user()->tokens()->find($tokenId)
+                : null;
+
             $valid = $token
                 && $record
                 && $record->name === 'docs-trial-' . $environment
-                && (!$record->expires_at || $record->expires_at->isFuture())
-                && $request->session()->get('developer_trial_environment') === $environment;
+                && (
+                    !$record->expires_at
+                    || $record->expires_at->isFuture()
+                )
+                && $request->session()->get(
+                    'developer_trial_environment'
+                ) === $environment;
 
             if (!$valid) {
                 $token = ApiDeveloperTrialToken::issue($request);
             }
 
             return response()
-                ->view('api.sweger', ['token' => $token, 'environment' => $environment])
+                ->view('api.sweger', [
+                    'token' => $token,
+                    'environment' => $environment,
+                    'selectedGroup' => $selectedGroup,
+                    'allowedEndpoints' => $allowedEndpoints,
+                ])
                 ->header('Cache-Control', 'no-store, private');
-        })->name('docs.panel');
+        })->name('docs.swagger');
+
 
         Route::post('/docs/logout', function (Request $request) {
-            $tokenId = $request->session()->get('developer_trial_token_id');
+
+            $tokenId = $request->session()
+                ->get('developer_trial_token_id');
 
             if ($tokenId) {
                 $request->user()
