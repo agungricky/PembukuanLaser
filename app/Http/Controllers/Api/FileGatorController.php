@@ -9,7 +9,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Throwable;
 use Dedoc\Scramble\Attributes\Response;
-use Dedoc\Scramble\Attributes\IgnoreParam;
 
 class FileGatorController extends Controller
 {
@@ -119,8 +118,6 @@ class FileGatorController extends Controller
     #[Response(status: 401, description: 'Pengguna belum login atau token tidak valid')]
     #[Response(status: 422, description: 'Data yang dikirim tidak valid')]
     #[Response(status: 502, description: 'Gagal membuat folder di FileGator')]
-    #[IgnoreParam('name', 'body')]
-    #[IgnoreParam('parent', 'body')]
     public function createFolder(
         Request $request,
         ApiFileGatorService $filegator,
@@ -273,8 +270,6 @@ class FileGatorController extends Controller
     #[Response(status: 401, description: 'Pengguna belum login atau token tidak valid')]
     #[Response(status: 422, description: 'Data file atau folder tidak valid')]
     #[Response(status: 502, description: 'Gagal upload file ke FileGator')]
-    #[IgnoreParam('file', 'body')]
-    #[IgnoreParam('folder', 'body')]
     public function upload(
         Request $request,
         ApiFileGatorService $filegator,

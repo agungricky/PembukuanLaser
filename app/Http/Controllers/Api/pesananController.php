@@ -14,36 +14,72 @@ use Dedoc\Scramble\Attributes\IgnoreParam;
 #[Group('Pesanan')]
 class pesananController extends Controller
 {
+
     /**
      * Daftar Pesanan
      *
-     * Mengambil daftar pesanan dari platform Meta berdasarkan pengguna
-     * yang sedang login. Mendukung pencarian dan filter status pesanan.
-     * Data diurutkan berdasarkan waktu input terbaru.
+     * Menampilkan daftar pesanan dari platform Meta berdasarkan
+     * pengguna yang sedang login.
+     * 
+     * **Fitur**
      *
-     * ### Header Request
+     * - Menampilkan seluruh pesanan milik pengguna.
+     * - Mencari pesanan berdasarkan nomor pesanan, nama pembeli,
+     *   atau nomor resi.
+     * - Memfilter pesanan berdasarkan status.
+     * - Mengurutkan pesanan berdasarkan waktu input terbaru.
+     *
+     * **Header Request**
      *
      * ```http
      * Accept: application/json
      * Authorization: Bearer {token}
      * ```
      *
-     * ### Parameter Request
+     * **Parameter Request**
      *
-     * | Parameter | Tipe | Wajib | Keterangan |
-     * |---|---|---|---|
-     * | search | string | Tidak | Cari berdasarkan nomor pesanan, nama pembeli, atau nomor resi. Maksimal 255 karakter. |
-     * | status | string | Tidak | Filter status: proses, kirim, selesai, batal, affiliate, pengembalian, pengiriman_gagal. |
+     * | Parameter | Tipe | Wajib |
+     * |---|---|---|
+     * | search | string | Tidak |
+     * | status | string | Tidak |
      *
-     * ### Contoh Request
+     * **Pilihan Status**
+     *
+     * ```text
+     * proses
+     * kirim
+     * selesai
+     * batal
+     * affiliate
+     * pengembalian
+     * pengiriman_gagal
+     * ```
+     * **Contoh Request**
      *
      * ```http
      * GET /api/pesanan?search=Yanto&status=proses
      * ```
      *
+     *
+     * **Pilihan Search**
+     *
+     * ```text
+     * no_pesanan    
+     * nama_pembeli 
+     * no_resi   
+     * ```
+     *
+     * **Contoh Penggunaan Search**
+     *
+     * ```http
+     * GET /api/pesanan?search=20261111001A
+     * GET /api/pesanan?search=Yanto
+     * GET /api/pesanan?search=JP123456789
+     * ```
+     *
      * ### Hasil Respon
      *
-     * **200 - Berhasil**
+     * **200 — Berhasil**
      *
      * ```json
      * {
@@ -61,7 +97,7 @@ class pesananController extends Controller
      * }
      * ```
      *
-     * **200 - Data Kosong**
+     * **200 — Data Kosong**
      *
      * ```json
      * {
@@ -70,20 +106,19 @@ class pesananController extends Controller
      * }
      * ```
      *
-     
      * ### Keterangan Error
      *
      * ```text
      * KODE  STATUS                  KETERANGAN
-     * ─────────────────────────────────────────────────────────
-     * 200   OK                      Daftar pesanan berhasil diambil.
+     * ------------------------------------------------------------
+     * 200   OK                      Berhasil mengambil daftar pesanan.
      * 401   Unauthorized            Token tidak tersedia atau tidak valid.
-     * 422   Unprocessable Entity    Parameter search atau status tidak valid.
-     * 500   Internal Server Error   Kesalahan server saat mengambil pesanan.
-     * ─────────────────────────────────────────────────────────
+     * 422   Unprocessable Entity    Parameter tidak sesuai validasi.
+     * 500   Internal Server Error   Kesalahan internal server.
+     * ------------------------------------------------------------
      * ```
      *
-     * **Contoh Error 401**
+     * **401 — Unauthorized**
      *
      * ```json
      * {
@@ -91,7 +126,7 @@ class pesananController extends Controller
      * }
      * ```
      *
-     * **Contoh Error 422**
+     * **422 — Validation Error**
      *
      * ```json
      * {
@@ -104,13 +139,27 @@ class pesananController extends Controller
      * }
      * ```
      *
-     * **Contoh Error 500**
+     * **500 — Internal Server Error**
      *
      * ```json
      * {
      *   "message": "Server Error"
      * }
      * ```
+     *
+     * ### Ketentuan
+     *
+     * 1. Endpoint menggunakan metode GET.
+     * 2. Memerlukan Bearer Token yang valid.
+     * 3. Hanya menampilkan pesanan platform `meta`.
+     * 4. Pesanan dibatasi berdasarkan pengguna yang sedang login.
+     * 5. Parameter `search` dan `status` tidak wajib dikirim.
+     * 6. Parameter `search` maksimal 255 karakter.
+     * 7. Parameter `status` hanya menerima pilihan yang tersedia.
+     * 8. Jika parameter kosong, seluruh pesanan pengguna ditampilkan.
+     * 9. Jika data tidak ditemukan, respons berupa array kosong.
+     * 10. Data diurutkan berdasarkan `input_at` terbaru.
+     * 11. Endpoint tidak menggunakan Body Request.
      */
     #[Response(status: 200, description: 'Daftar pesanan Meta berhasil diambil')]
     #[Response(status: 401, description: 'Token autentikasi tidak tersedia atau tidak valid')]
@@ -130,7 +179,7 @@ class pesananController extends Controller
         ]);
     }
 
-    /**
+    /**`
      * Detail Pesanan
      *
      * Mengambil informasi lengkap pesanan berdasarkan nomor pesanan,
