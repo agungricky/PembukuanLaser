@@ -247,8 +247,6 @@ Route::middleware(['web', 'auth'])->group(function () {
         Route::get('/pesanan/preview-resi/{token}', [PesananController::class, 'previewResi'])->name('pesanan.preview-resi');
     });
 
-
-
     Route::middleware(['auth', 'role:developer'])->group(function () {
 
         Route::get('/docs/panel', function () {

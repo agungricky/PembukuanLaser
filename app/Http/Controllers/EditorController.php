@@ -718,6 +718,7 @@ class EditorController extends Controller
             $jumlahRandom = 0;
             $jumlahDialihkan = 0;
             $jumlahDilewati = 0;
+            $jumlahKirimDilewati = 0;
             $jumlahRequest = 0;
 
             foreach ($groupedRows as $idPerProduk => $rows) {
@@ -736,6 +737,7 @@ class EditorController extends Controller
                             &$jumlahRandom,
                             &$jumlahDialihkan,
                             &$jumlahDilewati,
+                            &$jumlahKirimDilewati,
                             &$jumlahRequest,
                             $partService
                         ) {
@@ -811,6 +813,20 @@ class EditorController extends Controller
                                 EditorRequest::where('id_per_produk', $idPerProduk)
                                     ->whereNull('locked_at')
                                     ->delete();
+
+                                // Pesanan yang sudah dikirim tidak boleh dibuat
+                                // pending lagi di antrian Editor berikutnya.
+                                if ($partItem->item?->pesanan?->status === 'kirim') {
+                                    $partItem->update([
+                                        'status' => 'batal',
+                                        'jumlah_final' => null,
+                                        'processed_at' => now(),
+                                    ]);
+
+                                    $jumlahKirimDilewati++;
+
+                                    return;
+                                }
 
                                 $partItem->update([
                                     'status' => 'skipped',
@@ -913,6 +929,7 @@ class EditorController extends Controller
                     $partService,
                     &$jumlahDialihkan,
                     &$jumlahDilewati,
+                    &$jumlahKirimDilewati,
                     &$sudahDiproses
                 ) {
                     $lockedPart = EditorPart::where('id', $part->id)
@@ -940,6 +957,20 @@ class EditorController extends Controller
                         EditorRequest::where('id_per_produk', $pending->id_per_produk)
                             ->whereNull('locked_at')
                             ->delete();
+
+                        // Pesanan yang sudah dikirim dikeluarkan dari alih
+                        // tanpa mengubah status pesanan utamanya.
+                        if ($pending->item?->pesanan?->status === 'kirim') {
+                            $pending->update([
+                                'status' => 'batal',
+                                'jumlah_final' => null,
+                                'processed_at' => now(),
+                            ]);
+
+                            $jumlahKirimDilewati++;
+
+                            continue;
+                        }
 
                         $pending->update([
                             'status' => 'skipped',
@@ -994,7 +1025,10 @@ class EditorController extends Controller
                 "({$jumlahNormal} normal, {$jumlahRandom} random), ".
                 "{$jumlahRequest} request disimpan, ".
                 "{$jumlahDialihkan} item tanpa request dialihkan ke antrian Editor berikutnya".
-                ($jumlahDilewati > 0 ? ", {$jumlahDilewati} item PLT028C dilewati." : '.');
+                ($jumlahDilewati > 0 ? ", {$jumlahDilewati} item dilewati" : '').
+                ($jumlahKirimDilewati > 0
+                    ? ", {$jumlahKirimDilewati} item berstatus kirim tidak dialihkan."
+                    : '.');
 
             $redirect = redirect()
                 ->route('editor.riwayat.index')
