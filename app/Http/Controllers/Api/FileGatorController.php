@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Throwable;
 use Dedoc\Scramble\Attributes\Response;
+use Dedoc\Scramble\Attributes\IgnoreParam;
 
 class FileGatorController extends Controller
 {
@@ -118,6 +119,8 @@ class FileGatorController extends Controller
     #[Response(status: 401, description: 'Pengguna belum login atau token tidak valid')]
     #[Response(status: 422, description: 'Data yang dikirim tidak valid')]
     #[Response(status: 502, description: 'Gagal membuat folder di FileGator')]
+    #[IgnoreParam('name', 'body')]
+    #[IgnoreParam('parent', 'body')]
     public function createFolder(
         Request $request,
         ApiFileGatorService $filegator,
@@ -177,15 +180,14 @@ class FileGatorController extends Controller
      *
      * Kirim data menggunakan `multipart/form-data`, bukan JSON.
      *
-     * | Key | Type | Value |
-     * |-----|------|-------|
-     * | `file` | File | foto_produk.png |
-     * | `folder` | Text | /REQ_FOTO |
-     *
+     * ```text
+     * file   = foto_produk.png (Upload File)
+     * folder = "/REQ_FOTO"
+     * ```
      * ### Contoh Response (201 Created - File Berhasil Diupload)
      *
      * File berhasil diunggah ke FileGator.
-     * Server mengembalikan nama file dan lokasi penyimpanannya.
+     * Server akan mengembalikan nama file dan lokasi penyimpanannya.
      *
      * ```json
      * {
@@ -271,6 +273,8 @@ class FileGatorController extends Controller
     #[Response(status: 401, description: 'Pengguna belum login atau token tidak valid')]
     #[Response(status: 422, description: 'Data file atau folder tidak valid')]
     #[Response(status: 502, description: 'Gagal upload file ke FileGator')]
+    #[IgnoreParam('file', 'body')]
+    #[IgnoreParam('folder', 'body')]
     public function upload(
         Request $request,
         ApiFileGatorService $filegator,

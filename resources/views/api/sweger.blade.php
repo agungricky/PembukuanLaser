@@ -446,6 +446,41 @@
 
                     hideModels: true,
 
+                    // Padatkan tipografi dokumentasi tanpa mengubah isi OpenAPI.
+                    customCss: `
+                        .scalar-api-reference {
+                            --scalar-font: Arial, sans-serif;
+                            --scalar-line-height: 1.45;
+                        }
+
+                        .scalar-api-reference :where(
+                            p, li, td, th, label, button,
+                            input, select, textarea, summary
+                        ) {
+                            font-size: 0.875rem;
+                        }
+
+                        .scalar-api-reference :where(h1, h2, h3, h4) {
+                            line-height: 1.25;
+                        }
+
+                        .scalar-api-reference h1 {
+                            font-size: 1.5rem;
+                        }
+
+                        .scalar-api-reference h2 {
+                            font-size: 1.25rem;
+                        }
+
+                        .scalar-api-reference h3 {
+                            font-size: 1.0625rem;
+                        }
+
+                        .scalar-api-reference :where(pre, code) {
+                            font-size: 0.75rem;
+                        }
+                    `,
+
                     // Urutkan daftar API Tags dan endpoint di sidebar Scalar.
                     tagsSorter: 'alpha',
                     operationsSorter: 'alpha',

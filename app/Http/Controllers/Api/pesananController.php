@@ -8,12 +8,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\Response;
+use Dedoc\Scramble\Attributes\IgnoreParam;
+
 
 #[Group('Pesanan')]
 class pesananController extends Controller
 {
     /**
-     * Daftar Pesanan Meta
+     * Daftar Pesanan
      *
      * Mengambil daftar pesanan dari platform Meta berdasarkan pengguna
      * yang sedang login. Mendukung pencarian dan filter status pesanan.
@@ -68,14 +70,18 @@ class pesananController extends Controller
      * }
      * ```
      *
+     
      * ### Keterangan Error
      *
-     * | Kode | Status | Keterangan |
-     * |---|---|---|
-     * | 200 | OK | Daftar pesanan berhasil diambil. |
-     * | 401 | Unauthorized | Token tidak tersedia, tidak valid, atau pengguna belum terautentikasi. |
-     * | 422 | Unprocessable Entity | Parameter search atau status tidak sesuai ketentuan validasi. |
-     * | 500 | Internal Server Error | Terjadi kesalahan server saat mengambil data pesanan. |
+     * ```text
+     * KODE  STATUS                  KETERANGAN
+     * ─────────────────────────────────────────────────────────
+     * 200   OK                      Daftar pesanan berhasil diambil.
+     * 401   Unauthorized            Token tidak tersedia atau tidak valid.
+     * 422   Unprocessable Entity    Parameter search atau status tidak valid.
+     * 500   Internal Server Error   Kesalahan server saat mengambil pesanan.
+     * ─────────────────────────────────────────────────────────
+     * ```
      *
      * **Contoh Error 401**
      *
@@ -124,6 +130,156 @@ class pesananController extends Controller
         ]);
     }
 
+    /**
+     * Detail Pesanan
+     *
+     * Mengambil informasi lengkap pesanan berdasarkan nomor pesanan,
+     * meliputi informasi pembeli, alamat, produk, foto produk,
+     * pembayaran, dan catatan pesanan.
+     *
+     * ### Header Request
+     *
+     * ```http
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ### Parameter Request
+     *
+     * | Parameter | Tipe | Wajib | Keterangan |
+     * |---|---|---|---|
+     * | no_pesanan | string | Ya | Nomor pesanan yang akan ditampilkan detailnya. |
+     *
+     * Parameter `no_pesanan` wajib dikirim melalui URL.
+     *
+     * ### Contoh Request
+     *
+     * ```http
+     * GET /api/pesanan/20261111001A
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ### Hasil Respon
+     *
+     * **200 - Berhasil**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": {
+     *     "informasiPembeli": {
+     *       "namaPembeli": "Yanto",
+     *       "phone": "6281276435511",
+     *       "address": {
+     *         "provinsi": "JAWA TIMUR",
+     *         "kabupatenKota": "NGANJUK",
+     *         "kecamatan": "CONTOH KECAMATAN",
+     *         "desa": "CONTOH DESA",
+     *         "kodePos": "64400"
+     *       }
+     *     },
+     *     "informasiProduk": [
+     *       {
+     *         "id_per_produk": 1,
+     *         "no_pesanan": "20261111001A",
+     *         "jumlah": 1,
+     *         "sku": "EMB001",
+     *         "catatan": "Warna gold",
+     *         "produk": {
+     *           "sku": "EMB001",
+     *           "nama_produk": "Emblem Akrilik",
+     *           "variasi": "GOLD",
+     *           "kategori_id": 1,
+     *           "kategori": {
+     *             "id": 1,
+     *             "nama_kategori": "Emblem Akrilik"
+     *           }
+     *         },
+     *         "reqfoto": [
+     *           {
+     *             "per_produk_id": 1,
+     *             "foto": "REQ_FOTO/20261111001A_01.png"
+     *           }
+     *         ]
+     *       }
+     *     ],
+     *     "pembayaran": {
+     *       "no_pesanan": "20261111001A",
+     *       "jenis_transaksi": "non-cod",
+     *       "cod": 0,
+     *       "non_cod": 95000,
+     *       "dp": 0,
+     *       "bukti_bayar": "TF_META/20261111001A.png"
+     *     },
+     *     "pesanan": {
+     *       "totalHarga": 95000,
+     *       "catatanPesanan": "Packing dengan aman"
+     *     }
+     *   }
+     * }
+     * ```
+     *
+     * Contoh nilai di atas hanya ilustrasi.
+     * Struktur relasi pembayaran dan foto mengikuti data yang tersedia.
+     *
+     * ### Keterangan Error
+     *
+     * **200 — OK**
+     *
+     * Detail pesanan berhasil diambil.
+     *
+     * ---
+     *
+     * **401 — Unauthorized**
+     *
+     * Token tidak tersedia, kedaluwarsa, atau tidak valid.
+     *
+     * ---
+     *
+     * **404 — Not Found**
+     *
+     * Nomor pesanan tidak ditemukan (jika penanganan 404 diterapkan).
+     *
+     * ---
+     *
+     * **500 — Internal Server Error**
+     *
+     * Terjadi kesalahan server saat mengambil detail pesanan.
+     * **Contoh Error 401**
+     *
+     * ```json
+     * {
+     *   "message": "Unauthenticated."
+     * }
+     * ```
+     *
+     * **Contoh Error 500**
+     *
+     * ```json
+     * {
+     *   "message": "Server Error"
+     * }
+     * ```
+     *
+     * ### Ketentuan
+     *
+     * 1. Endpoint menggunakan metode GET.
+     * 2. Parameter `no_pesanan` wajib dikirim melalui URL.
+     * 3. Tidak menggunakan JSON Body maupun form-data.
+     * 4. Data pesanan diambil berdasarkan nomor pesanan.
+     * 5. Informasi pembeli mencakup nama, nomor HP, dan wilayah alamat.
+     * 6. Informasi produk mencakup SKU, jumlah, catatan, kategori, dan foto.
+     * 7. Informasi pembayaran mencakup jenis transaksi, nominal COD, NON-COD, DP, dan bukti bayar.
+     * 8. Informasi pesanan mencakup total harga dan catatan pesanan.
+     * 9. Controller saat ini tidak melakukan validasi format nomor pesanan secara eksplisit.
+     * 10. Service saat ini belum membatasi pesanan berdasarkan platform atau pengguna yang login.
+     * 11. Service saat ini belum menangani kondisi pesanan atau alamat yang tidak ditemukan.
+     */
+    #[Response(status: 200, description: 'Detail pesanan berhasil diambil')]
+    #[Response(status: 401, description: 'Token autentikasi tidak tersedia atau tidak valid')]
+    #[Response(status: 404, description: 'Pesanan tidak ditemukan apabila penanganan 404 diterapkan')]
+    #[Response(status: 500, description: 'Terjadi kesalahan saat mengambil detail pesanan')]
     public function detail(PesananService $pesananService, $no_pesanan)
     {
         $data = $pesananService->detailpesanan($no_pesanan);
