@@ -7,10 +7,109 @@ use App\Services\Pesanan\PesananService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\Response;
 
 #[Group('Pesanan')]
 class pesananController extends Controller
 {
+    /**
+     * Daftar Pesanan Meta
+     *
+     * Mengambil daftar pesanan dari platform Meta berdasarkan pengguna
+     * yang sedang login. Mendukung pencarian dan filter status pesanan.
+     * Data diurutkan berdasarkan waktu input terbaru.
+     *
+     * ### Header Request
+     *
+     * ```http
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ### Parameter Request
+     *
+     * | Parameter | Tipe | Wajib | Keterangan |
+     * |---|---|---|---|
+     * | search | string | Tidak | Cari berdasarkan nomor pesanan, nama pembeli, atau nomor resi. Maksimal 255 karakter. |
+     * | status | string | Tidak | Filter status: proses, kirim, selesai, batal, affiliate, pengembalian, pengiriman_gagal. |
+     *
+     * ### Contoh Request
+     *
+     * ```http
+     * GET /api/pesanan?search=Yanto&status=proses
+     * ```
+     *
+     * ### Hasil Respon
+     *
+     * **200 - Berhasil**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": [
+     *     {
+     *       "no_pesanan": "20261111001A",
+     *       "no_resi": null,
+     *       "input_at": "2026-11-11 11:30:00",
+     *       "nama_pembeli": "Yanto",
+     *       "total_harga": 95000,
+     *       "status": "proses"
+     *     }
+     *   ]
+     * }
+     * ```
+     *
+     * **200 - Data Kosong**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": []
+     * }
+     * ```
+     *
+     * ### Keterangan Error
+     *
+     * | Kode | Status | Keterangan |
+     * |---|---|---|
+     * | 200 | OK | Daftar pesanan berhasil diambil. |
+     * | 401 | Unauthorized | Token tidak tersedia, tidak valid, atau pengguna belum terautentikasi. |
+     * | 422 | Unprocessable Entity | Parameter search atau status tidak sesuai ketentuan validasi. |
+     * | 500 | Internal Server Error | Terjadi kesalahan server saat mengambil data pesanan. |
+     *
+     * **Contoh Error 401**
+     *
+     * ```json
+     * {
+     *   "message": "Unauthenticated."
+     * }
+     * ```
+     *
+     * **Contoh Error 422**
+     *
+     * ```json
+     * {
+     *   "message": "The selected status is invalid.",
+     *   "errors": {
+     *     "status": [
+     *       "The selected status is invalid."
+     *     ]
+     *   }
+     * }
+     * ```
+     *
+     * **Contoh Error 500**
+     *
+     * ```json
+     * {
+     *   "message": "Server Error"
+     * }
+     * ```
+     */
+    #[Response(status: 200, description: 'Daftar pesanan Meta berhasil diambil')]
+    #[Response(status: 401, description: 'Token autentikasi tidak tersedia atau tidak valid')]
+    #[Response(status: 422, description: 'Parameter pencarian atau status tidak valid')]
+    #[Response(status: 500, description: 'Terjadi kesalahan server saat mengambil daftar pesanan')]
     public function index(PesananService $pesananService, Request $request)
     {
         $request->validate([

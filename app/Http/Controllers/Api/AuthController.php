@@ -132,7 +132,8 @@ class AuthController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'role' => $user->role,
-                    'leader' => $user->leader
+                    'leader' => $user->leader,
+                    'email' => $user->email,
                 ],
             ], 200);
         } catch (ValidationException $e) {
@@ -216,7 +217,8 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'role' => $user->role,
-                'leader' => $user->leader
+                'leader' => $user->leader,
+                'email' => $user->email,
             ],
         ], 200);
     }

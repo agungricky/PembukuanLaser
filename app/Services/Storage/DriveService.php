@@ -17,7 +17,9 @@ class DriveService
 
         return [
             'name' => $name,
-            'path' => rtrim($parent, '/') . '/' . $name,
+            'path' => trim($parent, '/') === ''
+                ? $name
+                : trim($parent, '/') . '/' . $name,
         ];
     }
 
@@ -46,8 +48,10 @@ class DriveService
             'message' => 'File berhasil diupload',
             'data' => [
                 'filename' => $filename,
-                'folder' => $folder,
-                'path' => rtrim($folder, '/') . '/' . $filename,
+                'folder' => trim($folder, '/'),
+                'path' => trim($folder, '/') === ''
+                    ? $filename
+                    : trim($folder, '/') . '/' . $filename,
             ],
         ];
     }

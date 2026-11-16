@@ -188,7 +188,7 @@ class PesananService
                 $buktiBayar = $fileGatorService->upload(
                     $fileBukti,
                     $namaFile,
-                    '/TF_META'
+                    'TF_META'
                 );
             }
 
@@ -202,8 +202,6 @@ class PesananService
             ]);
 
             foreach ($request->input('pesanan_perproduk', []) as $index => $value) {
-
-                // 1. Simpan detail produk terlebih dahulu
                 $perproduk = PesananPerProduk::create([
                     'no_pesanan' => $pesanan->no_pesanan,
                     'nama_produk' => $value['nama_produk'],
@@ -218,36 +216,29 @@ class PesananService
                     'catatan' => $value['catatan'] ?? null,
                 ]);
 
-                // 2. Ambil seluruh foto dari produk ini
                 $fotoProduks = $request->file(
                     "pesanan_perproduk.$index.foto_produk",
                     []
                 );
 
-                // 3. Upload setiap foto
                 foreach ($fotoProduks as $fotoIndex => $file) {
 
                     $extension = strtolower(
                         $file->getClientOriginalExtension()
                     );
 
-                    // Contoh: 20261114001A_01_01.jpg
-                    // 01 pertama = urutan produk
-                    // 01 kedua = urutan foto
                     $namaFile = $pesanan->no_pesanan . '_'
                         . str_pad($index + 1, 2, '0', STR_PAD_LEFT)
                         . '_'
                         . str_pad($fotoIndex + 1, 2, '0', STR_PAD_LEFT)
                         . '.' . $extension;
 
-                    // 4. Upload menggunakan FileGator
                     $fotoPath = $fileGatorService->upload(
                         $file,
                         $namaFile,
-                        '/REQ_FOTO'
+                        'REQ_FOTO'
                     );
 
-                    // 5. Simpan ke tabel req_fotos
                     ReqFoto::create([
                         'per_produk_id' => $perproduk->id_per_produk,
                         'foto' => $fotoPath,
