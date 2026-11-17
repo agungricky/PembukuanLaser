@@ -14,7 +14,6 @@ use Dedoc\Scramble\Attributes\IgnoreParam;
 #[Group('Pesanan')]
 class pesananController extends Controller
 {
-
     /**
      * Daftar Pesanan
      *
@@ -161,10 +160,6 @@ class pesananController extends Controller
      * 10. Data diurutkan berdasarkan `input_at` terbaru.
      * 11. Endpoint tidak menggunakan Body Request.
      */
-    #[Response(status: 200, description: 'Daftar pesanan Meta berhasil diambil')]
-    #[Response(status: 401, description: 'Token autentikasi tidak tersedia atau tidak valid')]
-    #[Response(status: 422, description: 'Parameter pencarian atau status tidak valid')]
-    #[Response(status: 500, description: 'Terjadi kesalahan server saat mengambil daftar pesanan')]
     public function index(PesananService $pesananService, Request $request)
     {
         $request->validate([
@@ -178,7 +173,6 @@ class pesananController extends Controller
             'data' => $data
         ]);
     }
-
 
     /**
      * Detail Pesanan
@@ -333,7 +327,6 @@ class pesananController extends Controller
             'data' => $data
         ], 200, [], JSON_UNESCAPED_SLASHES);
     }
-
 
     /**
      * Create Pesanan

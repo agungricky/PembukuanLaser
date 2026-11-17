@@ -174,12 +174,9 @@ class FileGatorService
         }
     }
 
-
     public function downloadFile(string $path): array
     {
         $path = ltrim($path, '/');
-
-        // Validasi path
         if (
             $path === '' ||
             str_contains($path, '\\') ||
@@ -191,13 +188,10 @@ class FileGatorService
             );
         }
 
-        // Login jika sesi belum tersedia
         if (!isset($this->csrf)) {
             $this->login();
         }
 
-        // PENTING:
-        // Kirim r dan path bersamaan dalam query parameter.
         $response = Http::withOptions([
             'cookies' => $this->cookies,
             'allow_redirects' => false,
@@ -211,7 +205,6 @@ class FileGatorService
                 'path' => base64_encode($path),
             ]);
 
-        // Periksa status HTTP
         if ($response->status() === 404) {
             abort(404, 'File tidak ditemukan');
         }
@@ -223,7 +216,6 @@ class FileGatorService
             );
         }
 
-        // Periksa Content-Type
         $mime = strtolower(trim(explode(
             ';',
             $response->header(
@@ -232,7 +224,6 @@ class FileGatorService
             )
         )[0]));
 
-        // Pastikan respons bukan halaman FileGator
         if (in_array($mime, [
             'text/html',
             'application/json',

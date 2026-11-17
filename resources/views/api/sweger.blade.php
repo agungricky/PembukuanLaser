@@ -121,6 +121,10 @@
         .request-body[aria-label="Request Body"] {
             display: none !important;
         }
+
+        .t-doc__sidebar {
+            padding-bottom: 55px !important;
+        }
     </style>
 </head>
 
