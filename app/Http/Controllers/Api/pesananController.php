@@ -179,12 +179,28 @@ class pesananController extends Controller
         ]);
     }
 
-    /**`
+
+    /**
      * Detail Pesanan
      *
-     * Mengambil informasi lengkap pesanan berdasarkan nomor pesanan,
-     * meliputi informasi pembeli, alamat, produk, foto produk,
-     * pembayaran, dan catatan pesanan.
+     * Mengambil informasi detail pesanan berdasarkan nomor pesanan.
+     * 
+     * ### Fitur
+     *
+     * Informasi yang ditampilkan meliputi:
+     *
+     * - Identitas pembeli berupa nama dan nomor telepon.
+     * - Alamat pembeli berdasarkan provinsi, kabupaten/kota,
+     *   kecamatan, desa, dan kode pos.
+     * - Daftar produk pesanan beserta SKU, variasi, jumlah,
+     *   kategori, dan catatan produk.
+     * - Foto permintaan customer untuk setiap produk.
+     * - Informasi pembayaran COD, NON-COD, dan DP.
+     * - Bukti pembayaran apabila tersedia.
+     * - Total harga dan catatan umum pesanan.
+     *
+     * Foto produk dan bukti pembayaran dikembalikan sebagai
+     * URL lengkap API Laravel yang terhubung dengan FileGator.
      *
      * ### Header Request
      *
@@ -195,148 +211,129 @@ class pesananController extends Controller
      *
      * ### Parameter Request
      *
+     * Parameter dikirim melalui URL.
+     *
      * | Parameter | Tipe | Wajib | Keterangan |
      * |---|---|---|---|
-     * | no_pesanan | string | Ya | Nomor pesanan yang akan ditampilkan detailnya. |
+     * | no_pesanan | string | Ya | Nomor unik pesanan yang akan ditampilkan. |
      *
-     * Parameter `no_pesanan` wajib dikirim melalui URL.
+     * **Ketentuan parameter:**
+     *
+     * - `no_pesanan` wajib dikirim sebagai path parameter.
+     * - Nomor pesanan harus tersedia pada database.
+     * - Tidak ada validasi format eksplisit pada controller.
+     * - Endpoint tidak menerima JSON Body atau form-data.
      *
      * ### Contoh Request
      *
+     * **Endpoint:**
+     *
      * ```http
-     * GET /api/pesanan/20261111001A
-     * Accept: application/json
-     * Authorization: Bearer {token}
+     * GET /api/pesanan/detail/{no_pesanan}
      * ```
      *
-     * ### Hasil Respon
+     * **Contoh URL:**
      *
-     * **200 - Berhasil**
+     * ```text
+     * https://pembukuan.test/api/pesanan/detail/20261114001A
+     * ```
+     *
+     * **Contoh Response JSON:**
      *
      * ```json
      * {
      *   "success": true,
      *   "data": {
      *     "informasiPembeli": {
-     *       "namaPembeli": "Yanto",
-     *       "phone": "6281276435511",
+     *       "namaPembeli": "Pembeli Uji",
+     *       "phone": "6281234567890",
      *       "address": {
-     *         "provinsi": "JAWA TIMUR",
-     *         "kabupatenKota": "NGANJUK",
-     *         "kecamatan": "CONTOH KECAMATAN",
-     *         "desa": "CONTOH DESA",
-     *         "kodePos": "64400"
+     *         "provinsi": "Jawa Timur",
+     *         "kabupatenKota": "Kabupaten Nganjuk",
+     *         "kecamatan": "Prambon",
+     *         "desa": "Tanjungtani",
+     *         "kodePos": "64484"
      *       }
      *     },
      *     "informasiProduk": [
      *       {
-     *         "id_per_produk": 1,
-     *         "no_pesanan": "20261111001A",
+     *         "id_per_produk": 259654,
+     *         "no_pesanan": "20261114001A",
      *         "jumlah": 1,
-     *         "sku": "EMB001",
-     *         "catatan": "Warna gold",
+     *         "sku": "EMB0001",
+     *         "catatan": "Contoh catatan produk",
      *         "produk": {
-     *           "sku": "EMB001",
-     *           "nama_produk": "Emblem Akrilik",
-     *           "variasi": "GOLD",
+     *           "sku": "EMB0001",
+     *           "nama_produk": "LOGO ONE PIECE",
+     *           "variasi": "SILVER GOLD MERAH",
      *           "kategori_id": 1,
      *           "kategori": {
      *             "id": 1,
-     *             "nama_kategori": "Emblem Akrilik"
+     *             "nama_kategori": "EMBLEM AKRILIK"
      *           }
      *         },
      *         "reqfoto": [
      *           {
-     *             "per_produk_id": 1,
-     *             "foto": "REQ_FOTO/20261111001A_01.png"
+     *             "per_produk_id": 259654,
+     *             "foto": "https://pembukuan.test/api/filegator/file?path=REQ_FOTO%2F20261114001A_01_01.jpg"
+     *           },
+     *           {
+     *             "per_produk_id": 259654,
+     *             "foto": "https://pembukuan.test/api/filegator/file?path=REQ_FOTO%2F20261114001A_01_02.jpg"
      *           }
      *         ]
      *       }
      *     ],
-     *     "pembayaran": {
-     *       "no_pesanan": "20261111001A",
-     *       "jenis_transaksi": "non-cod",
-     *       "cod": 0,
-     *       "non_cod": 95000,
-     *       "dp": 0,
-     *       "bukti_bayar": "TF_META/20261111001A.png"
-     *     },
+     *     "pembayaran": [
+     *       {
+     *         "no_pesanan": "20261114001A",
+     *         "jenis_transaksi": "cod",
+     *         "cod": "95000.00",
+     *         "non_cod": "0.00",
+     *         "dp": "0.00",
+     *         "bukti_bayar": "https://pembukuan.test/api/filegator/file?path=TF_META%2F20261114001A.jpg"
+     *       }
+     *     ],
      *     "pesanan": {
-     *       "totalHarga": 95000,
-     *       "catatanPesanan": "Packing dengan aman"
+     *       "totalHarga": "95000.00",
+     *       "catatanPesanan": "Pengujian API multipart"
      *     }
      *   }
      * }
      * ```
      *
-     * Contoh nilai di atas hanya ilustrasi.
-     * Struktur relasi pembayaran dan foto mengikuti data yang tersedia.
-     *
      * ### Keterangan Error
      *
-     * **200 — OK**
+     * **Status Response**
      *
-     * Detail pesanan berhasil diambil.
+     * | Kode | Status | Keterangan |
+     * |---|---|---|
+     * | 200 | OK | Detail pesanan berhasil diambil. |
+     * | 401 | Unauthorized | Token autentikasi tidak tersedia atau tidak valid. |
+     * | 403 | Forbidden | Pengguna tidak memiliki izin mengakses endpoint jika dibatasi middleware otorisasi. |
+     * | 404 | Not Found | Nomor pesanan tidak ditemukan. |
+     * | 500 | Internal Server Error | Terjadi kesalahan server saat mengambil detail pesanan atau data wilayah. |
      *
-     * ---
-     *
-     * **401 — Unauthorized**
-     *
-     * Token tidak tersedia, kedaluwarsa, atau tidak valid.
-     *
-     * ---
-     *
-     * **404 — Not Found**
-     *
-     * Nomor pesanan tidak ditemukan (jika penanganan 404 diterapkan).
-     *
-     * ---
-     *
-     * **500 — Internal Server Error**
-     *
-     * Terjadi kesalahan server saat mengambil detail pesanan.
-     * **Contoh Error 401**
-     *
-     * ```json
-     * {
-     *   "message": "Unauthenticated."
-     * }
-     * ```
-     *
-     * **Contoh Error 500**
-     *
-     * ```json
-     * {
-     *   "message": "Server Error"
-     * }
-     * ```
+     * Contoh pesan error dapat berbeda sesuai konfigurasi
+     * exception handler dan middleware Laravel.
      *
      * ### Ketentuan
      *
      * 1. Endpoint menggunakan metode GET.
-     * 2. Parameter `no_pesanan` wajib dikirim melalui URL.
-     * 3. Tidak menggunakan JSON Body maupun form-data.
-     * 4. Data pesanan diambil berdasarkan nomor pesanan.
-     * 5. Informasi pembeli mencakup nama, nomor HP, dan wilayah alamat.
-     * 6. Informasi produk mencakup SKU, jumlah, catatan, kategori, dan foto.
-     * 7. Informasi pembayaran mencakup jenis transaksi, nominal COD, NON-COD, DP, dan bukti bayar.
-     * 8. Informasi pesanan mencakup total harga dan catatan pesanan.
-     * 9. Controller saat ini tidak melakukan validasi format nomor pesanan secara eksplisit.
-     * 10. Service saat ini belum membatasi pesanan berdasarkan platform atau pengguna yang login.
-     * 11. Service saat ini belum menangani kondisi pesanan atau alamat yang tidak ditemukan.
+     * 2. Nomor pesanan dikirim melalui path parameter.
+     * 3. Endpoint tidak membutuhkan request body.
+     * 4. Pesanan dicari berdasarkan kolom no_pesanan.
      */
-    #[Response(status: 200, description: 'Detail pesanan berhasil diambil')]
-    #[Response(status: 401, description: 'Token autentikasi tidak tersedia atau tidak valid')]
-    #[Response(status: 404, description: 'Pesanan tidak ditemukan apabila penanganan 404 diterapkan')]
-    #[Response(status: 500, description: 'Terjadi kesalahan saat mengambil detail pesanan')]
     public function detail(PesananService $pesananService, $no_pesanan)
     {
         $data = $pesananService->detailpesanan($no_pesanan);
+
         return response()->json([
             'success' => true,
             'data' => $data
-        ]);
+        ], 200, [], JSON_UNESCAPED_SLASHES);
     }
+
 
     /**
      * Create Pesanan

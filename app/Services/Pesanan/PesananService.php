@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 
 class PesananService
 {
@@ -49,35 +50,93 @@ class PesananService
     {
         $pesanan = Pesanan::with([
             'pesanan_per_produk' => function ($query) {
-                $query->select('id_per_produk', 'no_pesanan', 'jumlah', 'sku', 'catatan');
+                $query->select(
+                    'id_per_produk',
+                    'no_pesanan',
+                    'jumlah',
+                    'sku',
+                    'catatan'
+                );
             },
             'pesanan_per_produk.produk' => function ($query) {
-                $query->select('sku', 'nama_produk', 'variasi', 'kategori_id');
+                $query->select(
+                    'sku',
+                    'nama_produk',
+                    'variasi',
+                    'kategori_id'
+                );
             },
             'pesanan_per_produk.produk.kategori' => function ($query) {
-                $query->select('id', 'nama_kategori');
+                $query->select(
+                    'id',
+                    'nama_kategori'
+                );
             },
             'pesanan_per_produk.reqfoto' => function ($query) {
-                $query->select('per_produk_id', 'foto');
+                $query->select(
+                    'per_produk_id',
+                    'foto'
+                );
             },
             'customer_address' => function ($query) {
-                $query->select('no_pesanan', 'provinsi', 'kabupaten_kota', 'kecamatan', 'desa', 'alamat_lengkap', 'phone');
+                $query->select(
+                    'no_pesanan',
+                    'provinsi',
+                    'kabupaten_kota',
+                    'kecamatan',
+                    'desa',
+                    'alamat_lengkap',
+                    'phone'
+                );
             },
             'bukti_pembayaran' => function ($query) {
-                $query->select('no_pesanan', 'jenis_transaksi', 'cod', 'non_cod', 'dp', 'bukti_bayar');
+                $query->select(
+                    'no_pesanan',
+                    'jenis_transaksi',
+                    'cod',
+                    'non_cod',
+                    'dp',
+                    'bukti_bayar'
+                );
             }
         ])
             ->where('no_pesanan', $no_pesanan)
-            ->select('no_pesanan', 'nama_pembeli', 'total_harga', 'notes')
-            ->first();
+            ->select(
+                'no_pesanan',
+                'nama_pembeli',
+                'total_harga',
+                'notes'
+            )
+            ->firstOrFail();
+
+        $pesanan->pesanan_per_produk->each(function ($item) {
+            $item->reqfoto->each(function ($foto) {
+                if (!empty($foto->foto)) {
+                    $foto->foto = route('api.filegator.file', [
+                        'path' => $foto->foto
+                    ]);
+                }
+            });
+        });
+
+        $pesanan->bukti_pembayaran->each(function ($bayar) {
+            if (!empty($bayar->bukti_bayar)) {
+                $bayar->bukti_bayar = route('api.filegator.file', [
+                    'path' => $bayar->bukti_bayar
+                ]);
+            }
+        });
 
         $userAdress = $pesanan->customer_address;
-        $adress = $this->wilayahIndo->alamatLengkap($userAdress->desa);
+
+        $adress = $this->wilayahIndo->alamatLengkap(
+            $userAdress->desa
+        );
 
         return (object) [
             'informasiPembeli' => [
                 'namaPembeli' => $pesanan->nama_pembeli,
-                'phone' => $pesanan->customer_address->phone,
+                'phone' => $userAdress->phone,
                 'address' => (object) [
                     'provinsi' => $adress->provinsi->name,
                     'kabupatenKota' => $adress->kabupaten_kota->name,

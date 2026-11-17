@@ -49,9 +49,12 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
         });
 
         // Storage / Drive
-        Route::prefix('filegator')->controller(FileGatorController::class)->group(function () {
-            Route::post('/folders', 'createFolder');
-            Route::post('/upload', 'upload');
-        });
+        Route::prefix('filegator')->name('filegator.')
+            ->controller(FileGatorController::class)
+            ->group(function () {
+                Route::post('/folders', 'createFolder');
+                Route::post('/upload', 'upload');
+                Route::get('/file', 'show')->name('file');
+            });
     });
 });

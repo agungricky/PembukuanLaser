@@ -9,6 +9,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Throwable;
 use Dedoc\Scramble\Attributes\Response;
+use App\Services\Api\FileGatorService;
+use App\Models\ReqFoto;
+use Illuminate\Support\Facades\DB;
 
 class FileGatorController extends Controller
 {
@@ -300,5 +303,48 @@ class FileGatorController extends Controller
                 'message' => 'Gagal upload file ke FileGator',
             ], 502);
         }
+    }
+
+    public function show(
+        Request $request,
+        FileGatorService $fileGatorService
+    ) {
+        $validated = $request->validate([
+            'path' => ['required', 'string', 'max:1024'],
+        ]);
+
+        $path = $validated['path'];
+        $isReqFoto = ReqFoto::where('foto', $path)->exists();
+        $isBuktiBayar = DB::table('bukti_pembayarans')
+            ->where('bukti_bayar', $path)
+            ->exists();
+
+        abort_unless(
+            $isReqFoto || $isBuktiBayar,
+            404,
+            'File tidak ditemukan'
+        );
+
+        $file = $fileGatorService->downloadFile($path);
+        $inlineTypes = [
+            'image/jpeg',
+            'image/png',
+            'image/gif',
+            'image/webp',
+            'application/pdf',
+        ];
+
+        $disposition = in_array(
+            $file['mime'],
+            $inlineTypes,
+            true
+        ) ? 'inline' : 'attachment';
+
+        return response($file['content'], 200, [
+            'Content-Type' => $file['mime'],
+            'Content-Disposition' => $disposition,
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 }
