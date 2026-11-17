@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\RingkasanController;
 use App\Http\Controllers\Api\WilayahController as ApiWilayahController;
 use App\Http\Controllers\wilayahController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\ChatKlarifikasiPackingController;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
@@ -17,6 +18,47 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
     // Auth
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    Route::prefix('chat-klarifikasi-packing')
+        ->name('chat-klarifikasi-packing.')
+        ->group(function () {
+
+            // Daftar percakapan
+            Route::get('/', [
+                ChatKlarifikasiPackingController::class,
+                'index'
+            ])->name('index');
+
+            // Packing membuat percakapan baru
+            Route::post('/', [
+                ChatKlarifikasiPackingController::class,
+                'store'
+            ])->name('store');
+
+            // Detail percakapan dan pesan
+            Route::get('/{chatId}', [
+                ChatKlarifikasiPackingController::class,
+                'show'
+            ])->whereNumber('chatId')->name('show');
+
+            // Packing atau CS mengirim pesan
+            Route::post('/{chatId}/pesan', [
+                ChatKlarifikasiPackingController::class,
+                'send'
+            ])->whereNumber('chatId')->name('send');
+
+            // Menandai pesan yang sudah dibaca oleh CS atau Packing
+            Route::post('/{chatId}/dibaca', [
+                ChatKlarifikasiPackingController::class,
+                'markRead'
+            ])->whereNumber('chatId')->name('mark-read');
+
+            // Packing menyelesaikan klarifikasi
+            Route::post('/{chatId}/selesai', [
+                ChatKlarifikasiPackingController::class,
+                'finish'
+            ])->whereNumber('chatId')->name('finish');
+        });
 
     Route::middleware(['role:cs'])->group(function () {
         // Dashboard
