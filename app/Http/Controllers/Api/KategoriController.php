@@ -54,10 +54,6 @@ class KategoriController extends Controller
      * }
      * ```
      */
-
-    #[Response(status: 200, description: 'Daftar kategori berhasil diambil')]
-    #[Response(status: 401, description: 'Pengguna belum login atau token tidak valid')]
-    #[Response(status: 500, description: 'Terjadi kesalahan pada server saat mengambil data kategori')]
     public function index(KategoriService $kategoriService)
     {
         $kategori = $kategoriService->index();

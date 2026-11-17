@@ -16,6 +16,6 @@ class ReqFoto extends Model
 
     public function pesananPerProduk(): BelongsTo
     {
-        return $this->belongsTo(PesananPerProduk::class, 'per_produk_id', 'id');
+        return $this->belongsTo(PesananPerProduk::class, 'per_produk_id', 'id_per_produk');
     }
 }

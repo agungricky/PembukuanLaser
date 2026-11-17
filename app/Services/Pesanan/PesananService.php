@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 
 class PesananService
 {
@@ -49,35 +50,93 @@ class PesananService
     {
         $pesanan = Pesanan::with([
             'pesanan_per_produk' => function ($query) {
-                $query->select('id_per_produk', 'no_pesanan', 'jumlah', 'sku', 'catatan');
+                $query->select(
+                    'id_per_produk',
+                    'no_pesanan',
+                    'jumlah',
+                    'sku',
+                    'catatan'
+                );
             },
             'pesanan_per_produk.produk' => function ($query) {
-                $query->select('sku', 'nama_produk', 'variasi', 'kategori_id');
+                $query->select(
+                    'sku',
+                    'nama_produk',
+                    'variasi',
+                    'kategori_id'
+                );
             },
             'pesanan_per_produk.produk.kategori' => function ($query) {
-                $query->select('id', 'nama_kategori');
+                $query->select(
+                    'id',
+                    'nama_kategori'
+                );
             },
             'pesanan_per_produk.reqfoto' => function ($query) {
-                $query->select('per_produk_id', 'foto');
+                $query->select(
+                    'per_produk_id',
+                    'foto'
+                );
             },
             'customer_address' => function ($query) {
-                $query->select('no_pesanan', 'provinsi', 'kabupaten_kota', 'kecamatan', 'desa', 'alamat_lengkap', 'phone');
+                $query->select(
+                    'no_pesanan',
+                    'provinsi',
+                    'kabupaten_kota',
+                    'kecamatan',
+                    'desa',
+                    'alamat_lengkap',
+                    'phone'
+                );
             },
             'bukti_pembayaran' => function ($query) {
-                $query->select('no_pesanan', 'jenis_transaksi', 'cod', 'non_cod', 'dp', 'bukti_bayar');
+                $query->select(
+                    'no_pesanan',
+                    'jenis_transaksi',
+                    'cod',
+                    'non_cod',
+                    'dp',
+                    'bukti_bayar'
+                );
             }
         ])
             ->where('no_pesanan', $no_pesanan)
-            ->select('no_pesanan', 'nama_pembeli', 'total_harga', 'notes')
-            ->first();
+            ->select(
+                'no_pesanan',
+                'nama_pembeli',
+                'total_harga',
+                'notes'
+            )
+            ->firstOrFail();
+
+        $pesanan->pesanan_per_produk->each(function ($item) {
+            $item->reqfoto->each(function ($foto) {
+                if (!empty($foto->foto)) {
+                    $foto->foto = route('api.filegator.file', [
+                        'path' => $foto->foto
+                    ]);
+                }
+            });
+        });
+
+        $pesanan->bukti_pembayaran->each(function ($bayar) {
+            if (!empty($bayar->bukti_bayar)) {
+                $bayar->bukti_bayar = route('api.filegator.file', [
+                    'path' => $bayar->bukti_bayar
+                ]);
+            }
+        });
 
         $userAdress = $pesanan->customer_address;
-        $adress = $this->wilayahIndo->alamatLengkap($userAdress->desa);
+
+        $adress = $this->wilayahIndo->alamatLengkap(
+            $userAdress->desa
+        );
 
         return (object) [
             'informasiPembeli' => [
                 'namaPembeli' => $pesanan->nama_pembeli,
-                'phone' => $pesanan->customer_address->phone,
+                'phone' => $userAdress->phone,
                 'address' => (object) [
                     'provinsi' => $adress->provinsi->name,
                     'kabupatenKota' => $adress->kabupaten_kota->name,
@@ -188,7 +247,7 @@ class PesananService
                 $buktiBayar = $fileGatorService->upload(
                     $fileBukti,
                     $namaFile,
-                    '/TF_META'
+                    'TF_META'
                 );
             }
 
@@ -202,8 +261,6 @@ class PesananService
             ]);
 
             foreach ($request->input('pesanan_perproduk', []) as $index => $value) {
-
-                // 1. Simpan detail produk terlebih dahulu
                 $perproduk = PesananPerProduk::create([
                     'no_pesanan' => $pesanan->no_pesanan,
                     'nama_produk' => $value['nama_produk'],
@@ -218,36 +275,29 @@ class PesananService
                     'catatan' => $value['catatan'] ?? null,
                 ]);
 
-                // 2. Ambil seluruh foto dari produk ini
                 $fotoProduks = $request->file(
                     "pesanan_perproduk.$index.foto_produk",
                     []
                 );
 
-                // 3. Upload setiap foto
                 foreach ($fotoProduks as $fotoIndex => $file) {
 
                     $extension = strtolower(
                         $file->getClientOriginalExtension()
                     );
 
-                    // Contoh: 20261114001A_01_01.jpg
-                    // 01 pertama = urutan produk
-                    // 01 kedua = urutan foto
                     $namaFile = $pesanan->no_pesanan . '_'
                         . str_pad($index + 1, 2, '0', STR_PAD_LEFT)
                         . '_'
                         . str_pad($fotoIndex + 1, 2, '0', STR_PAD_LEFT)
                         . '.' . $extension;
 
-                    // 4. Upload menggunakan FileGator
                     $fotoPath = $fileGatorService->upload(
                         $file,
                         $namaFile,
-                        '/REQ_FOTO'
+                        'REQ_FOTO'
                     );
 
-                    // 5. Simpan ke tabel req_fotos
                     ReqFoto::create([
                         'per_produk_id' => $perproduk->id_per_produk,
                         'foto' => $fotoPath,

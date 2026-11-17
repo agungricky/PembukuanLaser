@@ -114,7 +114,6 @@ class FileGatorService
         }
     }
 
-
     public function upload(
         UploadedFile $file,
         string $filename,
@@ -173,5 +172,82 @@ class FileGatorService
         } finally {
             fclose($stream);
         }
+    }
+
+
+    public function downloadFile(string $path): array
+    {
+        $path = ltrim($path, '/');
+
+        // Validasi path
+        if (
+            $path === '' ||
+            str_contains($path, '\\') ||
+            preg_match('~(^|/)\.\.?(/|$)~', $path) ||
+            preg_match('/[\x00-\x1F\x7F]/', $path)
+        ) {
+            throw new RuntimeException(
+                'Path file tidak valid'
+            );
+        }
+
+        // Login jika sesi belum tersedia
+        if (!isset($this->csrf)) {
+            $this->login();
+        }
+
+        // PENTING:
+        // Kirim r dan path bersamaan dalam query parameter.
+        $response = Http::withOptions([
+            'cookies' => $this->cookies,
+            'allow_redirects' => false,
+        ])
+            ->timeout(60)
+            ->withHeaders([
+                'Accept' => '*/*',
+            ])
+            ->get($this->baseUrl . '/', [
+                'r' => '/download',
+                'path' => base64_encode($path),
+            ]);
+
+        // Periksa status HTTP
+        if ($response->status() === 404) {
+            abort(404, 'File tidak ditemukan');
+        }
+
+        if (!$response->successful()) {
+            throw new RuntimeException(
+                'Download FileGator gagal: HTTP ' .
+                    $response->status()
+            );
+        }
+
+        // Periksa Content-Type
+        $mime = strtolower(trim(explode(
+            ';',
+            $response->header(
+                'Content-Type',
+                'application/octet-stream'
+            )
+        )[0]));
+
+        // Pastikan respons bukan halaman FileGator
+        if (in_array($mime, [
+            'text/html',
+            'application/json',
+        ], true)) {
+            throw new RuntimeException(
+                'FileGator tidak mengembalikan file. ' .
+                    'HTTP: ' . $response->status() .
+                    ', Content-Type: ' . $mime
+            );
+        }
+
+        return [
+            'content' => $response->body(),
+            'mime' => $mime,
+            'filename' => basename($path),
+        ];
     }
 }

@@ -1,6 +1,6 @@
-
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -115,6 +115,12 @@
                 height: calc(100vh - 100px);
             }
         }
+
+
+        /* Sembunyikan seluruh Request Body otomatis */
+        .request-body[aria-label="Request Body"] {
+            display: none !important;
+        }
     </style>
 </head>
 
@@ -207,12 +213,12 @@
                             'head', 'options', 'trace'
                         ].includes(key.toLowerCase()))
                         .sort(([, leftOperation], [, rightOperation]) => {
-                            const leftLabel = leftOperation?.summary
-                                || leftOperation?.operationId
-                                || '';
-                            const rightLabel = rightOperation?.summary
-                                || rightOperation?.operationId
-                                || '';
+                            const leftLabel = leftOperation?.summary ||
+                                leftOperation?.operationId ||
+                                '';
+                            const rightLabel = rightOperation?.summary ||
+                                rightOperation?.operationId ||
+                                '';
 
                             return sidebarCollator.compare(
                                 leftLabel,
@@ -253,10 +259,10 @@
                 const group = toggle.closest('[data-sidebar-id]');
 
                 if (
-                    group
-                    && group !== activeGroup
-                    && !group.contains(activeGroup)
-                    && !activeGroup?.contains(group)
+                    group &&
+                    group !== activeGroup &&
+                    !group.contains(activeGroup) &&
+                    !activeGroup?.contains(group)
                 ) {
                     toggle.click();
                 }
@@ -270,9 +276,9 @@
                 return;
             }
 
-            const clickedElement = event.target instanceof Element
-                ? event.target
-                : null;
+            const clickedElement = event.target instanceof Element ?
+                event.target :
+                null;
 
             const activeGroup = clickedElement?.closest(
                 '#app [data-sidebar-id]'
@@ -324,9 +330,9 @@
 
                     const allowed = new Set(
                         allowedEndpoints.map(endpoint =>
-                            endpoint.method.toLowerCase()
-                            + ' '
-                            + endpoint.path.replace(/\/+$/, '')
+                            endpoint.method.toLowerCase() +
+                            ' ' +
+                            endpoint.path.replace(/\/+$/, '')
                         )
                     );
 
@@ -357,9 +363,9 @@
 
                             const matches = [
                                 normalizedPath,
-                                normalizedPath.startsWith('/api/')
-                                    ? normalizedPath
-                                    : '/api' + normalizedPath
+                                normalizedPath.startsWith('/api/') ?
+                                normalizedPath :
+                                '/api' + normalizedPath
                             ];
 
                             const exists = matches.some(candidate =>
@@ -394,9 +400,9 @@
                         Object.values(spec.paths).forEach(pathItem => {
                             Object.values(pathItem).forEach(operation => {
                                 if (
-                                    operation
-                                    && typeof operation === 'object'
-                                    && Array.isArray(operation.tags)
+                                    operation &&
+                                    typeof operation === 'object' &&
+                                    Array.isArray(operation.tags)
                                 ) {
                                     operation.tags.forEach(tag => usedTags.add(tag));
                                 }
@@ -446,11 +452,48 @@
 
                     hideModels: true,
 
+                    // Padatkan tipografi dokumentasi tanpa mengubah isi OpenAPI.
+                    customCss: `
+                        .scalar-api-reference {
+                            --scalar-font: Arial, sans-serif;
+                            --scalar-line-height: 1.45;
+                        }
+
+                        .scalar-api-reference :where(
+                            p, li, td, th, label, button,
+                            input, select, textarea, summary
+                        ) {
+                            font-size: 0.875rem;
+                        }
+
+                        .scalar-api-reference :where(h1, h2, h3, h4) {
+                            line-height: 1.25;
+                        }
+
+                        .scalar-api-reference h1 {
+                            font-size: 1.5rem;
+                        }
+
+                        .scalar-api-reference h2 {
+                            font-size: 1.25rem;
+                        }
+
+                        .scalar-api-reference h3 {
+                            font-size: 1.0625rem;
+                        }
+
+                        .scalar-api-reference :where(pre, code) {
+                            font-size: 0.75rem;
+                        }
+                    `,
+
                     // Urutkan daftar API Tags dan endpoint di sidebar Scalar.
                     tagsSorter: 'alpha',
                     operationsSorter: 'alpha',
 
-                    onBeforeRequest: ({ requestBuilder }) => {
+                    onBeforeRequest: ({
+                        requestBuilder
+                    }) => {
 
                         requestBuilder.options.disableSecurity = true;
 
@@ -484,4 +527,5 @@
     </script>
 
 </body>
+
 </html>

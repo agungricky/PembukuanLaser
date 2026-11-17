@@ -74,6 +74,6 @@ class PesananPerProduk extends Model
 
     public function reqfoto(): HasMany
     {
-        return $this->hasMany(ReqFoto::class, 'per_produk_id', 'id');
+        return $this->hasMany(ReqFoto::class, 'per_produk_id', 'id_per_produk');
     }
 }
