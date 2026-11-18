@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\WilayahController as ApiWilayahController;
 use Illuminate\Support\Facades\Route;
 use App\Services\GoogleSheetsService;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Api\ChatKlarifikasiPackingController;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/file', [FileGatorController::class, 'show'])
@@ -151,6 +152,46 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
     })->middleware('auth:sanctum')
         ->name('google-sheets.test');
 
+    Route::prefix('chat-klarifikasi-packing')
+        ->name('chat-klarifikasi-packing.')
+        ->group(function () {
+
+            // Daftar percakapan
+            Route::get('/', [
+                ChatKlarifikasiPackingController::class,
+                'index'
+            ])->name('index');
+
+            // Packing membuat percakapan baru
+            Route::post('/', [
+                ChatKlarifikasiPackingController::class,
+                'store'
+            ])->name('store');
+
+            // Detail percakapan dan pesan
+            Route::get('/{chatId}', [
+                ChatKlarifikasiPackingController::class,
+                'show'
+            ])->whereNumber('chatId')->name('show');
+
+            // Packing atau CS mengirim pesan
+            Route::post('/{chatId}/pesan', [
+                ChatKlarifikasiPackingController::class,
+                'send'
+            ])->whereNumber('chatId')->name('send');
+
+            // Menandai pesan yang sudah dibaca oleh CS atau Packing
+            Route::post('/{chatId}/dibaca', [
+                ChatKlarifikasiPackingController::class,
+                'markRead'
+            ])->whereNumber('chatId')->name('mark-read');
+
+            // Packing menyelesaikan klarifikasi
+            Route::post('/{chatId}/selesai', [
+                ChatKlarifikasiPackingController::class,
+                'finish'
+            ])->whereNumber('chatId')->name('finish');
+        });
 
     Route::middleware(['role:cs'])->group(function () {
         // Dashboard
