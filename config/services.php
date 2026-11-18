@@ -48,4 +48,11 @@ return [
     'wilayah' => [
         'url' => env('WILAYAH_URL'),
     ],
+
+    'google_sheets' => [
+    'webhook_url' => env('GOOGLE_SHEETS_WEBHOOK_URL'),
+    'secret' => env('GOOGLE_SHEETS_SECRET'),
+    'spreadsheet_url' => env('GOOGLE_SHEETS_URL'),
+    'tab' => env('GOOGLE_SHEETS_TAB', 'Sheet1'),
+],
 ];

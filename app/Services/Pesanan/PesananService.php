@@ -112,23 +112,28 @@ class PesananService
         $pesanan->pesanan_per_produk->each(function ($item) {
             $item->reqfoto->each(function ($foto) {
                 if (!empty($foto->foto)) {
-                    $foto->foto = route('api.filegator.file', [
-                        'path' => $foto->foto
-                    ]);
+                    $foto->foto = URL::signedRoute(
+                        'file',
+                        [
+                            'path' => $foto->foto,
+                        ]
+                    );
                 }
             });
         });
 
         $pesanan->bukti_pembayaran->each(function ($bayar) {
             if (!empty($bayar->bukti_bayar)) {
-                $bayar->bukti_bayar = route('api.filegator.file', [
-                    'path' => $bayar->bukti_bayar
-                ]);
+                $bayar->bukti_bayar = URL::signedRoute(
+                    'file',
+                    [
+                        'path' => $bayar->bukti_bayar,
+                    ]
+                );
             }
         });
 
         $userAdress = $pesanan->customer_address;
-
         $adress = $this->wilayahIndo->alamatLengkap(
             $userAdress->desa
         );
