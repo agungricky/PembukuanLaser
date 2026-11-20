@@ -185,7 +185,111 @@ class dashboardController extends Controller
         ]);
     }
 
-    public function dashboardPacking(PackingService $packingService){
+    /**
+     * Dashboard Packing
+     *
+     * Menampilkan ringkasan jumlah pesanan berdasarkan proses
+     * packing dan pengiriman. Data disesuaikan secara otomatis
+     * dengan platform pengguna yang sedang login.
+     *
+     * ## Fitur
+     *
+     * Menampilkan empat informasi:
+     *
+     * - totalMenunggu: Jumlah pesanan yang masih menunggu.
+     * - siapDikirim: Jumlah pesanan yang siap dikirim.
+     * - dikirim: Jumlah pesanan berstatus kirim.
+     * - terlambat: Jumlah pesanan yang melewati batas kirim.
+     *
+     * ### Platform Marketplace
+     *
+     * - totalMenunggu:
+     *   Pesanan berstatus proses, batas kirim
+     *   H+2 atau setelahnya, dan semua item perproduk berstatus 1 / sudah dikerjakan.
+     *
+     * - siapDikirim:
+     *   Pesanan berstatus proses, batas kirim
+     *   hari ini, dan semua item produk berstatus 1 / sudah di kerjakan.
+     *
+     * - dikirim:
+     *   Pesanan berstatus kirim, memiliki batas kirim,
+     *   dan masuk pada bulan berjalan (bulan ini).
+     *
+     * - terlambat:
+     *   Pesanan berstatus proses, melewati batas kirim,
+     *   dan masuk pada bulan berjalan.
+     *
+     * ### Platform Meta
+     *
+     * - totalMenunggu:
+     *   Status proses, belum memiliki resi dan foto.
+     *
+     * - siapDikirim:
+     *   Status proses, sudah memiliki resi dan foto.
+     *
+     * - dikirim:
+     *   Status kirim, sudah memiliki resi dan foto.
+     *
+     * - terlambat:
+     *   Status proses dan melewati batas kirim.
+     *
+     * Seluruh perhitungan Meta berdasarkan pesanan
+     * yang masuk pada bulan berjalan.
+     *
+     * ## Header Request
+     *
+     * ```http
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ## Parameter Request
+     *
+     * Tidak memerlukan parameter maupun request body.
+     * Platform diambil otomatis dari userLogin()=>platform.
+     *
+     * ## Contoh Request
+     *
+     * ```http
+     * GET /api/packing/dashboard
+     * ```
+     *
+     * ## Hasil Respon
+     *
+     * **HTTP 200 - Berhasil**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": {
+     *     "totalMenunggu": 42,
+     *     "siapDikirim": 18,
+     *     "dikirim": 95,
+     *     "terlambat": 7
+     *   }
+     * }
+     * ```
+     *
+     * ## Keterangan Error
+     *
+     * | Kode | Status | Keterangan |
+     * |------|--------|------------|
+     * | 200 | OK | Data berhasil diambil |
+     * | 401 | Unauthorized | Pengguna belum login |
+     * | 403 | Forbidden | Tidak memiliki izin akses |
+     * | 500 | Server Error | Kesalahan pada server |
+     *
+     * ## Ketentuan
+     *
+     * 1. Platform ditentukan otomatis dari pengguna login.
+     * 2. Pengguna tidak perlu mengirim parameter platform.
+     * 3. Data Meta dan Marketplace dibatasi bulan berjalan.
+     * 4. Terlambat dihitung jika batas kirim sebelum hari ini.
+     * 5. Pesanan tanpa batas kirim tidak dihitung terlambat.
+     * 6. Jika tidak ada data, jumlah dikembalikan 0.
+     */
+    public function dashboardPacking(PackingService $packingService)
+    {
         $data = $packingService->packing();
 
         return response()->json([

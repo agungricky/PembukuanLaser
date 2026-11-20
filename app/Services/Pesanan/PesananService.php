@@ -297,7 +297,6 @@ class PesananService
     {
         $pesanan = Pesanan::query()
             ->where('platform', 'meta')
-            ->where('id_user', userLogin()?->id)
             ->where('status', 'proses')
             ->where('foto_at', null)
             ->where('input_at', '>=', now()->subMonths(3))

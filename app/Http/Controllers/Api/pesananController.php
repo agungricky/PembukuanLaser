@@ -744,6 +744,121 @@ class pesananController extends Controller
         );
     }
 
+    /**
+     * Antrian Pesanan Meta
+     *
+     * Menampilkan daftar pesanan Khusus Meta yang masih menunggu
+     * proses foto barang yang sudah jadi.
+     *
+     * ## Fitur
+     *
+     * - Menampilkan pesanan Meta berstatus proses.
+     * - Menampilkan pesanan yang belum memiliki foto.
+     * - Pesanan yang sudah memiliki foto tidak akan ditampilkan
+     * - Data dibatasi berdasarkan input 3 bulan terakhir.
+     * - Mendukung pencarian nomor pesanan, nomor resi,
+     *   dan nama pembeli.
+     * - Mendukung filter tanggal batas kirim.
+     * - Mengurutkan pesanan berdasarkan batas kirim terdekat.
+     *
+     * ## Header Request
+     *
+     * ```http
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ## Parameter Request
+     *
+     * | Parameter | Wajib | Tipe | Keterangan |
+     * |-----------|-------|------|------------|
+     * | search | Tidak | string | Cari nomor pesanan, nomor resi, atau nama pembeli |
+     * | batas_kirim | Tidak | date | Filter tanggal batas kirim (YYYY-MM-DD) |
+     *
+     * ## Contoh Request
+     *
+     * Tanpa filter:
+     *
+     * ```http
+     * GET /api/pesanan/antrian
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * Dengan pencarian dan filter tanggal:
+     *
+     * ```http
+     * GET /api/pesanan/antrian?search=20261119062B&batas_kirim=2026-11-22
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ## Hasil Respon
+     *
+     * **HTTP 200 - Berhasil**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": [
+     *     {
+     *       "no_pesanan": "20261119062B",
+     *       "no_resi": null,
+     *       "input_at": "2026-11-19T01:30:00.000000Z",
+     *       "nama_pembeli": "Siti Aminah",
+     *       "status": "proses",
+     *       "batas_kirim_at": "2026-11-22T01:30:00.000000Z",
+     *       "foto_at": 0
+     *     }
+     *   ]
+     * }
+     * ```
+     *
+     * Keterangan field:
+     *
+     * - no_pesanan: Nomor unik pesanan.
+     * - no_resi: Nomor resi pesanan, dapat bernilai null.
+     * - input_at: Tanggal dan waktu pesanan masuk.
+     * - nama_pembeli: Nama pelanggan.
+     * - status: Status pesanan, yaitu proses.
+     * - batas_kirim_at: Tanggal dan waktu batas pengiriman.
+     * - foto_at: Status foto dalam bentuk angka.
+     *
+     * Status foto:
+     *
+     * - 0: Belum memiliki foto.
+     * - 1: Sudah memiliki foto.
+     *
+     * Pada endpoint ini, foto_at selalu bernilai 0
+     * karena hanya mengambil pesanan tanpa foto.
+     *
+     * Jika tidak ada pesanan, data dikembalikan sebagai [].
+     *
+     * ## Keterangan Error
+     *
+     * | Kode | Status | Keterangan |
+     * |------|--------|------------|
+     * | 200 | OK | Data antrian berhasil diambil |
+     * | 401 | Unauthorized | Pengguna belum login atau token tidak valid |
+     * | 403 | Forbidden | Pengguna tidak memiliki izin akses |
+     * | 422 | Validation Error | Parameter request tidak valid jika divalidasi |
+     * | 500 | Server Error | Terjadi kesalahan pada server |
+     *
+     * ## Ketentuan
+     *
+     * 1. Hanya pesanan dengan platform meta.
+     * 3. Status pesanan harus proses.
+     * 4. Pesanan belum memiliki foto (foto_at = null).
+     * 5. Pesanan diambil dari 3 bulan terakhir berdasarkan input_at.
+     * 6. Pencarian berlaku pada no_pesanan, no_resi,
+     *    dan nama_pembeli.
+     * 7. Filter batas_kirim menggunakan tanggal saja.
+     * 8. Jika filter tidak dikirim, seluruh antrian
+     *    yang memenuhi ketentuan ditampilkan.
+     * 9. Data diurutkan berdasarkan batas_kirim_at
+     *    dari yang paling awal.
+     * 10. Response berisi daftar pesanan dalam bentuk array.
+     */
     public function antrian(PesananService $pesananService, Request $request)
     {
         $request->validate([
@@ -759,6 +874,121 @@ class pesananController extends Controller
         ]);
     }
 
+    /**
+     * Pesanan Siap Dikirim
+     *
+     * Menampilkan daftar pesanan yang siap dikirim berdasarkan
+     * platform pengguna yang sedang login.
+     *
+     * ## Fitur
+     *
+     * - Menampilkan daftar pesanan siap dikirim.
+     * - Data dipisahkan berdasarkan platform Meta dan Marketplace.
+     * - Mengurutkan pesanan berdasarkan batas kirim paling awal.
+     * - Menampilkan nomor pesanan, resi, nama pembeli,
+     *   platform, marketplace, dan batas kirim.
+     *
+     * ### Platform Meta
+     *
+     * - Platform pesanan harus meta.
+     * - Status pesanan harus proses.
+     * - Foto pesanan sudah tersedia (foto_at tidak null).
+     * - Nomor resi sudah tersedia.
+     * - Tidak ada batasan tanggal pada query.
+     *
+     * ### Platform Marketplace
+     *
+     * - Platform pesanan harus marketplace.
+     * - Status pesanan harus proses.
+     * - Batas kirim wajib tersedia.
+     * - Batas kirim hari ini atau tanggal sebelumnya.
+     * - Pesanan dengan batas kirim besok tidak ditampilkan.
+     *
+     * ## Header Request
+     *
+     * ```http
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ## Parameter Request
+     *
+     * Tidak memerlukan parameter request maupun request body.
+     *
+     * Platform ditentukan otomatis berdasarkan pengguna login.
+     *
+     * ## Contoh Request
+     *
+     * ```http
+     * GET /api/pesanan/ready
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ## Hasil Respon
+     *
+     * **HTTP 200 - Berhasil**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": [
+     *     {
+     *       "noPesanan": "20261120001A",
+     *       "platform": "meta",
+     *       "noResi": "JNE123456789",
+     *       "pembeli": "Siti Aminah",
+     *       "marketplace": null,
+     *       "batasKirim": "2026-11-20T12:00:00.000000Z"
+     *     }
+     *   ]
+     * }
+     * ```
+     *
+     * Keterangan field:
+     *
+     * | Field | Tipe | Keterangan |
+     * |-------|------|------------|
+     * | noPesanan | string | Nomor unik pesanan |
+     * | platform | string | meta atau marketplace |
+     * | noResi | string/null | Nomor resi pengiriman |
+     * | pembeli | string | Nama pembeli |
+     * | marketplace | string/null | Nama marketplace dari toko |
+     * | batasKirim | datetime/null | Batas waktu pengiriman |
+     *
+     * Jika tidak ada pesanan:
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": []
+     * }
+     * ```
+     *
+     * ## Keterangan Error
+     *
+     * | Kode | Status | Keterangan |
+     * |------|--------|------------|
+     * | 200 | OK | Data berhasil diambil |
+     * | 401 | Unauthorized | Token tidak valid atau belum login |
+     * | 403 | Forbidden | Tidak memiliki izin akses |
+     * | 500 | Server Error | Kesalahan pada server |
+     *
+     * ## Ketentuan
+     *
+     * 1. Platform diambil otomatis dari userLogin()->platform.
+     * 2. Pengguna platform meta hanya menerima pesanan Meta.
+     * 3. Pengguna selain platform meta masuk ke query Marketplace.
+     * 4. Meta wajib memiliki foto_at dan no_resi.
+     * 5. Marketplace wajib memiliki batas_kirim_at.
+     * 6. Marketplace hanya menampilkan batas kirim hari ini
+     *    atau tanggal sebelumnya.
+     * 7. Status semua pesanan harus proses.
+     * 8. Data diurutkan berdasarkan batas_kirim_at ASC.
+     * 9. Relasi toko digunakan untuk mengambil marketplace.
+     * 10. Jika toko tidak ditemukan, marketplace bernilai null.
+     * 11. Response berupa array berisi object pesanan.
+     */
     public function ready(PesananService $pesananService)
     {
         $data = $pesananService->ready();
