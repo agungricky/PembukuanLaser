@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Pesanan extends Model
 {
@@ -44,6 +46,7 @@ class Pesanan extends Model
         'tag',
 
         'batas_kirim_at',
+        'foto_at',
         'batas_kirim_source',
         'batas_kirim_raw',
     ];
@@ -138,11 +141,18 @@ class Pesanan extends Model
         return $this->hasMany(Pencairan::class, 'no_pesanan', 'no_pesanan');
     }
 
-    public function customer_address(){
+    public function customer_address()
+    {
         return $this->hasOne(customer_addresses::class, 'no_pesanan', 'no_pesanan');
     }
 
-    public function bukti_pembayaran(){
+    public function bukti_pembayaran()
+    {
         return $this->hasMany(bukti_pembayaran::class, 'no_pesanan', 'no_pesanan');
+    }
+
+    public function fotoMeta(): HasOne
+    {
+        return $this->hasOne(FotoMeta::class, 'no_pesanan','no_pesanan');
     }
 }

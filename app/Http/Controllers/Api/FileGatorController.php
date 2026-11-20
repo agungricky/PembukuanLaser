@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\FotoMeta;
 use App\Services\Api\FileGatorService as ApiFileGatorService;
 use App\Services\Storage\DriveService;
 use Illuminate\Http\JsonResponse;
@@ -12,6 +13,7 @@ use Dedoc\Scramble\Attributes\Response;
 use App\Services\Api\FileGatorService;
 use App\Models\ReqFoto;
 use Illuminate\Support\Facades\DB;
+use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
 class FileGatorController extends Controller
 {
@@ -305,98 +307,7 @@ class FileGatorController extends Controller
         }
     }
 
-    /**
-     * Show File
-     *     
-     * 
-     * Mengambil dan menampilkan file dari FileGator melalui API Laravel.
-     *
-     *  ### Fitur
-     *
-     * - Menampilkan foto permintaan customer (REQ_FOTO).
-     * - Menampilkan bukti pembayaran (TF_META).
-     * - Memeriksa keberadaan path file pada database.
-     * - Menampilkan gambar dan PDF secara langsung.
-     * - Mengunduh format file lainnya.
-     *
-     * ### Header Request
-     *
-     * ```http
-     * Accept: image/jpeg, image/png, image/gif, image/webp, application/pdf
-     * Authorization: Bearer {token}
-     * ```
-     *
-     * ### Parameter Request
-     *
-     * | Parameter | Tipe | Wajib | Batasan |
-     * |---|---|---|---|
-     * | path | string | Ya | Max 1024 karakter|
-     *
-     * Contoh:
-     *
-     * - `REQ_FOTO/20261114001A_01_05.jpg`
-     * - `TF_META/20261114001A.jpg`
-     *
-     * ### Contoh Request
-     *
-     * **Endpoint:**
-     *
-     * ```http
-     * GET /api/filegator/file?path=REQ_FOTO%2F20261114001A_01_05.jpg
-     * ```
-     *
-     * ### Hasil Respon
-     *
-     * **Contoh Response Gambar:**
-     *
-     * ```http
-     * HTTP/1.1 200 OK
-     * Content-Type: image/jpeg
-     * Content-Disposition: inline
-     * X-Content-Type-Options: nosniff
-     * Cache-Control: private, no-store
-     * ```
-     *
-     * **Contoh Response PDF:**
-     *
-     * ```http
-     * HTTP/1.1 200 OK
-     * Content-Type: application/pdf
-     * Content-Disposition: inline
-     * ```
-     *
-     * **Contoh Response File Unduhan:**
-     *
-     * ```http
-     * HTTP/1.1 200 OK
-     * Content-Type: application/zip
-     * Content-Disposition: attachment
-     * ```
-     *
-     * **Jenis File:**
-     *
-     * | Format | Hasil |
-     * |---|---|
-     * | JPG / JPEG | Ditampilkan langsung |
-     * | PNG | Ditampilkan langsung |
-     * | GIF | Ditampilkan langsung |
-     * | WEBP | Ditampilkan langsung |
-     * | PDF | Ditampilkan langsung |
-     * | Format lainnya | Diunduh |
-     *
-     * ### Ketentuan
-     *
-     * 1. Request menggunakan metode GET.
-     * 2. Parameter path wajib diisi, maksimal 1024 karakter.
-     * 3. Path harus terdaftar sebagai foto pesanan atau bukti pembayaran.
-     * 4. Tidak memerlukan JSON Body atau form-data.
-     * 5. Bearer Token wajib jika route menggunakan auth:sanctum.
-     * 6. JPG, JPEG, PNG, GIF, WEBP, dan PDF dapat ditampilkan langsung.
-     * 7. Format lainnya dikirim sebagai file unduhan.
-     * 8. Tidak ada batas ukuran file yang ditetapkan secara eksplisit.
-     * 9. Timeout pengambilan file dari FileGator adalah 60 detik.
-     * 10. File yang tidak ditemukan menghasilkan HTTP 404.
-     */
+    #[ExcludeRouteFromDocs]
     public function show(
         Request $request,
         FileGatorService $fileGatorService
@@ -406,18 +317,17 @@ class FileGatorController extends Controller
         ]);
 
         $path = $validated['path'];
-        $isReqFoto = ReqFoto::where('foto', $path)->exists();
-        $isBuktiBayar = DB::table('bukti_pembayarans')
-            ->where('bukti_bayar', $path)
-            ->exists();
-
-        abort_unless(
-            $isReqFoto || $isBuktiBayar,
-            404,
-            'File tidak ditemukan'
+        abort_if(
+            str_contains($path, '..') ||
+                str_starts_with($path, '/') ||
+                str_contains($path, '\\') ||
+                str_contains($path, "\0"),
+            400,
+            'Path file tidak valid.'
         );
 
         $file = $fileGatorService->downloadFile($path);
+
         $inlineTypes = [
             'image/jpeg',
             'image/png',

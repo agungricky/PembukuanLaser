@@ -76,4 +76,8 @@ class PesananPerProduk extends Model
     {
         return $this->hasMany(ReqFoto::class, 'per_produk_id', 'id_per_produk');
     }
+
+    public function fotoMeta(){
+        return $this->hasOne(FotoMeta::class, 'perproduk_id', 'id_per_produk');
+    }
 }

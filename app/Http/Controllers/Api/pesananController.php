@@ -3,13 +3,21 @@
 namespace App\Http\Controllers\api;
 
 use App\Http\Controllers\Controller;
+use App\Models\FotoMeta;
+use App\Models\Pesanan;
+use App\Models\PesananPerProduk;
+use App\Models\Produk;
+use App\Models\User;
 use App\Services\Pesanan\PesananService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Dedoc\Scramble\Attributes\Group;
-use Dedoc\Scramble\Attributes\Response;
-use Dedoc\Scramble\Attributes\IgnoreParam;
-
+use App\Services\GoogleSheetsService;
+use App\Services\Pesanan\FotoPesananService;
+use Dotenv\Validator;
+use Illuminate\Support\Facades\Auth;
+use App\Services\Api\FileGatorService as ApiFileGatorService;
+use App\Services\Pesanan\ScanPesananService;
 
 #[Group('Pesanan')]
 class pesananController extends Controller
@@ -637,7 +645,7 @@ class pesananController extends Controller
             'provinsi' => 'required|string',
             'kabupaten_kota' => 'required|string',
             'kecamatan' => 'required|string',
-            'desa' => 'required|string',
+            'desa' => 'nullable|string',
             'alamat_lengkap' => 'required|string|max:1000',
             'phone' => ['required', 'regex:/^628[0-9]{7,12}$/'],
 
@@ -662,21 +670,22 @@ class pesananController extends Controller
             'pesanan_perproduk.*.catatan' => 'required|string',
 
             // FOTO PRODUK (MAKSIMAL 5 FOTO PER PRODUK)
-            'pesanan_perproduk.*.foto_produk' => 'required|array|min:1|max:5',
-            'pesanan_perproduk.*.foto_produk.*' => 'required|file|mimes:jpg,jpeg,png|max:5120',
-
+            'pesanan_perproduk.*.foto_produk' => 'nullable|array|min:1|max:5',
+            'pesanan_perproduk.*.foto_produk.*' => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
         ]);
 
         DB::beginTransaction();
 
         try {
-            $pesanan = $pesananService->store($request);
+            $data = $pesananService->store($request);
+            // $sheed = $this->googleSheet($request, app(GoogleSheetsService::class));
+
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Pesanan berhasil dibuat',
-                'data' => $pesanan
+                'data' => $data,
             ], 201);
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -687,5 +696,197 @@ class pesananController extends Controller
                 'error' => config('app.debug') ? $th->getMessage() : null
             ], 500);
         }
+    }
+
+    public function googleSheet(Request $request, GoogleSheetsService $googleSheets)
+    {
+        $data = $request->validate([
+            // INFORMASI PESANAN
+            'no_pesanan' => ['required', 'string', 'max:100'],
+            'tanggal_order' => ['required', 'date'],
+            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'nama_pembeli' => ['required', 'string', 'max:150'],
+            'phone' => ['required', 'string', 'max:30'],
+
+            // FORMAT BANYAK PRODUK
+            'pesanan_perproduk' => ['sometimes', 'array', 'min:1', 'max:100'],
+            'pesanan_perproduk.*.sku' => ['required', 'string', 'max:100'],
+            'pesanan_perproduk.*.catatan' => ['required', 'string'],
+            'pesanan_perproduk.*.jumlah' => ['required', 'integer'],
+
+            // FOTO PER PRODUK
+            'pesanan_perproduk.*.reqfoto' => ['sometimes', 'array', 'max:20'],
+            'pesanan_perproduk.*.reqfoto.*.foto' => ['required', 'url', 'max:2048'],
+        ]);
+
+        $user = User::findOrFail($data['user_id']);
+        $skuList = collect($data['pesanan_perproduk'])
+            ->pluck('sku')
+            ->unique();
+
+        $produkList = Produk::with('kategori')->whereIn('sku', $skuList)
+            ->get()
+            ->keyBy('sku');
+        $data['nama_cs'] = $user->name;
+
+        foreach ($data['pesanan_perproduk'] as &$item) {
+            $produk = $produkList->get($item['sku']);
+            $item['kategori'] = $produk->kategori->nama_kategori;
+            $item['kategori'] = $produk->kategori->nama_kategori;
+        }
+
+        unset($item);
+
+        dd($data);
+
+        return response()->json(
+            $googleSheets->simpanPesanan($data)
+        );
+    }
+
+    public function antrian(PesananService $pesananService, Request $request)
+    {
+        $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'batas_kirim' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+
+        $data = $pesananService->antrian($request);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
+
+    public function ready(PesananService $pesananService)
+    {
+        $data = $pesananService->ready();
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
+
+    public function showDetail(PesananService $pesananService, $no_pesanan)
+    {
+        $data = $pesananService->detailpesanan($no_pesanan);
+
+        if ($data && isset($data->pesanan)) {
+            $pesanan = &$data->pesanan;
+
+            if (empty($pesanan['noResi']) && empty($pesanan['foto_at'])) {
+                $pesanan['keterangan'] = 'Menunggu Foto dan Resi';
+            } elseif (empty($pesanan['noResi'])) {
+                $pesanan['keterangan'] = 'Menunggu Resi';
+            } elseif (empty($pesanan['foto_at'])) {
+                $pesanan['keterangan'] = 'Menunggu Foto';
+            } else {
+                $pesanan['keterangan'] = 'Siap Dikirim';
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ], 200, [], JSON_UNESCAPED_SLASHES);
+    }
+
+    public function uploadFoto(
+        ApiFileGatorService $fileGatorService,
+        FotoPesananService $fotoPesananService,
+        Request $request
+    ) {
+        $request->validate([
+            'no_pesanan' => ['required', 'string', 'exists:pesanan,no_pesanan'],
+            'foto' => ['required', 'array', 'min:1', 'max:5'],
+            'foto.*' => ['required', 'file', 'mimes:jpg,jpeg,png', 'max:5120'],
+        ]);
+
+        try {
+            $data = $fotoPesananService->fotoPesananJadi($fileGatorService, $request);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Foto pesanan berhasil diupload.',
+                'data' => $data,
+            ], 200, [], JSON_UNESCAPED_SLASHES);
+        } catch (\Throwable $th) {
+            report($th);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupload foto.',
+                'error' => config('app.debug')
+                    ? $th->getMessage()
+                    : null,
+            ], 500);
+        }
+    }
+
+    public function scanPesanan(
+        ScanPesananService $scanPesanan,
+        $no_resi
+    ) {
+        $data = $scanPesanan->scan($no_resi);
+
+        if (!$data) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pesanan dengan nomor resi tersebut tidak ditemukan.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => (object) [
+                'noPesanan' => $data->no_pesanan,
+                'noResi' => $data->no_resi,
+                'platform' => $data->platform,
+                'pembeli' => $data->nama_pembeli,
+                'kurir' => $data->kurir,
+                'marketplace' => $data->toko->marketplace ?? null,
+            ],
+        ], 200);
+    }
+
+    public function scanUpdate(ScanPesananService $scanPesananService, $no_pesanan)
+    {
+        $data = $scanPesananService->scanUpdate($no_pesanan);
+
+        return response()->json([
+            'success' => true,
+            'data' => (object) [
+                'no_pesanan' => $data->no_pesanan,
+                'status' => $data->status,
+            ]
+        ]);
+    }
+
+    public function riwayat(ScanPesananService $scanPesananService, Request $request)
+    {
+        $request->validate([
+            'search' => 'nullable|string|max:255',
+            'tanggal' => 'nullable|date_format:Y-m-d',
+            'marketplace' => 'nullable|in:Shopee,TikTok',
+        ]);
+
+        $data = $scanPesananService->riwayat($request);
+
+        return response()->json([
+            'success' => true,
+            'dikirim' => $data->count(),
+            'data' => $data->map(function ($item) {
+                return (object) [
+                    'noPesanan' => $item->no_pesanan,
+                    'noResi' => $item->no_resi,
+                    'platform' => $item->platform,
+                    'pembeli' => $item->nama_pembeli,
+                    'kurir' => $item->kurir,
+                    'marketplace' => $item->toko?->marketplace,
+                ];
+            }),
+        ], 200);
     }
 }

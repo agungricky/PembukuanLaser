@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\Dashboard\CsService;
+use App\Services\Dashboard\PackingService;
 use Dedoc\Scramble\Attributes\Group;
 
 #[Group('Dashboard')]
@@ -177,6 +178,15 @@ class dashboardController extends Controller
     public function dashboardCs(CsService $csService)
     {
         $data = $csService->cs();
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
+
+    public function dashboardPacking(PackingService $packingService){
+        $data = $packingService->packing();
 
         return response()->json([
             'success' => true,

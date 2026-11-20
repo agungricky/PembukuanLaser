@@ -34,6 +34,9 @@ class FileGatorService
         return Http::withOptions([
             'cookies' => $this->cookies,
             'allow_redirects' => false,
+            'curl' => [
+                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+            ],
         ])->timeout(60)->acceptJson();
     }
 

@@ -11,7 +11,6 @@ use App\Services\Api\FileGatorService as ApiFileGatorService;
 use App\Services\Location\WilayahIndo;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
@@ -50,63 +49,29 @@ class PesananService
     {
         $pesanan = Pesanan::with([
             'pesanan_per_produk' => function ($query) {
-                $query->select(
-                    'id_per_produk',
-                    'no_pesanan',
-                    'jumlah',
-                    'sku',
-                    'catatan'
-                );
+                $query->select('id_per_produk', 'no_pesanan', 'jumlah', 'sku', 'catatan');
             },
             'pesanan_per_produk.produk' => function ($query) {
-                $query->select(
-                    'sku',
-                    'nama_produk',
-                    'variasi',
-                    'kategori_id'
-                );
+                $query->select('sku', 'nama_produk', 'variasi', 'kategori_id');
             },
             'pesanan_per_produk.produk.kategori' => function ($query) {
-                $query->select(
-                    'id',
-                    'nama_kategori'
-                );
+                $query->select('id', 'nama_kategori');
             },
             'pesanan_per_produk.reqfoto' => function ($query) {
-                $query->select(
-                    'per_produk_id',
-                    'foto'
-                );
+                $query->select('per_produk_id', 'foto');
+            },
+            'pesanan_per_produk.fotoMeta' => function ($query) {
+                $query->select('id', 'perproduk_id', 'foto');
             },
             'customer_address' => function ($query) {
-                $query->select(
-                    'no_pesanan',
-                    'provinsi',
-                    'kabupaten_kota',
-                    'kecamatan',
-                    'desa',
-                    'alamat_lengkap',
-                    'phone'
-                );
+                $query->select('no_pesanan', 'provinsi', 'kabupaten_kota', 'kecamatan', 'desa', 'alamat_lengkap', 'phone');
             },
             'bukti_pembayaran' => function ($query) {
-                $query->select(
-                    'no_pesanan',
-                    'jenis_transaksi',
-                    'cod',
-                    'non_cod',
-                    'dp',
-                    'bukti_bayar'
-                );
+                $query->select('no_pesanan', 'jenis_transaksi', 'cod', 'non_cod', 'dp', 'bukti_bayar');
             }
         ])
             ->where('no_pesanan', $no_pesanan)
-            ->select(
-                'no_pesanan',
-                'nama_pembeli',
-                'total_harga',
-                'notes'
-            )
+            ->select('no_pesanan', 'nama_pembeli', 'total_harga', 'notes', 'input_at', 'no_resi', 'platform', 'foto_at')
             ->firstOrFail();
 
         $pesanan->pesanan_per_produk->each(function ($item) {
@@ -120,6 +85,15 @@ class PesananService
                     );
                 }
             });
+
+            if ($item->fotoMeta && !empty($item->fotoMeta->foto)) {
+                $item->fotoMeta->foto = URL::signedRoute(
+                    'file',
+                    [
+                        'path' => $item->fotoMeta->foto,
+                    ]
+                );
+            }
         });
 
         $pesanan->bukti_pembayaran->each(function ($bayar) {
@@ -147,12 +121,18 @@ class PesananService
                     'kabupatenKota' => $adress->kabupaten_kota->name,
                     'kecamatan' => $adress->kecamatan->name,
                     'desa' => $adress->desa->name,
+                    'alamatLengkap' => $userAdress->alamat_lengkap,
                     'kodePos' => $adress->kode_pos
                 ]
             ],
             'informasiProduk' => $pesanan->pesanan_per_produk,
             'pembayaran' => $pesanan->bukti_pembayaran,
             'pesanan' => [
+                'noPesanan' => $pesanan->no_pesanan,
+                'noResi' => $pesanan->no_resi,
+                'foto_at' => $pesanan->foto_at,
+                'platform' => $pesanan->platform,
+                'tanggalInput' => $pesanan->input_at,
                 'totalHarga' => $pesanan->total_harga,
                 'catatanPesanan' => $pesanan->notes
             ]
@@ -227,7 +207,7 @@ class PesananService
                 'batas_kirim_at' => Carbon::parse($request->tanggal_order)->addDays(3),
             ]);
 
-            customer_addresses::create([
+            $customerAddress = customer_addresses::create([
                 'no_pesanan' => $pesanan->no_pesanan,
                 'provinsi' => $request->provinsi,
                 'kabupaten_kota' => $request->kabupaten_kota,
@@ -246,17 +226,11 @@ class PesananService
                 $extension = strtolower(
                     $fileBukti->getClientOriginalExtension()
                 );
-
                 $namaFile = $pesanan->no_pesanan . '.' . $extension;
-
-                $buktiBayar = $fileGatorService->upload(
-                    $fileBukti,
-                    $namaFile,
-                    'TF_META'
-                );
+                $buktiBayar = $fileGatorService->upload($fileBukti, $namaFile, 'TF_META');
             }
 
-            bukti_pembayaran::create([
+            $buktiBayar = bukti_pembayaran::create([
                 'no_pesanan' => $pesanan->no_pesanan,
                 'jenis_transaksi' => $request->jenis_transaksi,
                 'cod' => $request->cod,
@@ -311,7 +285,77 @@ class PesananService
             }
 
 
-            return $pesanan;
+            return [
+                'pesanan' => $pesanan,
+                'customerAddress' => $customerAddress,
+                'buktiBayar' => $customerAddress
+            ];
+        });
+    }
+
+    public function antrian($request)
+    {
+        $pesanan = Pesanan::query()
+            ->where('platform', 'meta')
+            ->where('id_user', userLogin()?->id)
+            ->where('status', 'proses')
+            ->where('foto_at', null)
+            ->where('input_at', '>=', now()->subMonths(3))
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = $request->input('search');
+
+                $query->where(function ($q) use ($search) {
+                    $q->where('no_pesanan', 'like', "%{$search}%")
+                        ->orWhere('nama_pembeli', 'like', "%{$search}%")
+                        ->orWhere('no_resi', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->filled('batas_kirim'), function ($query) use ($request) {
+                $query->whereDate('batas_kirim_at', $request->input('batas_kirim'));
+            })
+            ->select('no_pesanan', 'no_resi', 'input_at', 'nama_pembeli', 'status', 'batas_kirim_at', 'foto_at')
+            ->orderBy('batas_kirim_at', 'asc')
+            ->get()
+            ->map(function ($item) {
+                $item->foto_at = $item->foto_at === null ? 0 : 1;
+
+                return $item;
+            });;
+
+        return (object) $pesanan;
+    }
+
+    public function ready()
+    {
+        if (userLogin()?->platform === 'meta') {
+            $pesanan = Pesanan::query()
+                ->with('toko')
+                ->where('platform', 'meta')
+                ->where('status', 'proses')
+                ->whereNotNull('foto_at')
+                ->whereNotNull('no_resi')
+                ->orderBy('batas_kirim_at', 'asc')
+                ->get();
+        } else {
+            $pesanan = Pesanan::query()
+                ->with('toko')
+                ->where('platform', 'marketplace')
+                ->where('status', 'proses')
+                ->whereNotNull('batas_kirim_at')
+                ->whereDate('batas_kirim_at', '<=', today())
+                ->orderBy('batas_kirim_at', 'asc')
+                ->get();
+        }
+
+        return $pesanan->map(function ($item) {
+            return (object) [
+                'noPesanan' => $item->no_pesanan,
+                'platform' => $item->platform,
+                'noResi' => $item->no_resi,
+                'pembeli' => $item->nama_pembeli,
+                'marketplace' => $item->toko?->marketplace,
+                'batasKirim' => $item->batas_kirim_at,
+            ];
         });
     }
 }
