@@ -999,6 +999,147 @@ class pesananController extends Controller
         ]);
     }
 
+    /**
+     * Detail Pesanan
+     *
+     * Menampilkan informasi lengkap pesanan berdasarkan nomor
+     * pesanan, termasuk data pembeli, produk, pembayaran,
+     * foto produk, dan status kesiapan pengiriman.
+     *
+     * ## Fitur
+     *
+     * - Menampilkan informasi pembeli dan alamat lengkap.
+     * - Menampilkan daftar produk beserta variasinya.
+     * - Menampilkan foto request dan foto pesanan jadi.
+     * - Menampilkan informasi pembayaran.
+     * - Menampilkan nomor resi dan batas informasi pesanan.
+     * - Menentukan keterangan kesiapan pengiriman otomatis.
+     *
+     * ## Header Request
+     *
+     * ```http
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ## Parameter Request
+     *
+     * | Parameter | Wajib | Tipe | Keterangan |
+     * |-----------|-------|------|------------|
+     * | no_pesanan | Ya | string | Nomor unik pesanan yang ingin ditampilkan |
+     *
+     * Parameter dikirim melalui URL (path parameter).
+     *
+     * ## Contoh Request
+     *
+     * ```http
+     * GET /api/pesanan/detail/20261119062B
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ## Hasil Respon
+     *
+     * **HTTP 200 - Berhasil**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": {
+     *     "informasiPembeli": {
+     *       "namaPembeli": "Siti Aminah",
+     *       "phone": "6281200000062",
+     *       "address": {
+     *         "provinsi": "Jawa Timur",
+     *         "kabupatenKota": "Kabupaten Nganjuk",
+     *         "kecamatan": "Prambon",
+     *         "desa": "Tanjungtani",
+     *         "alamatLengkap": "Jl. Mawar No. 12",
+     *         "kodePos": "64484"
+     *       }
+     *     },
+     *     "informasiProduk": [
+     *       {
+     *         "id_per_produk": 262184,
+     *         "no_pesanan": "20261119062B",
+     *         "jumlah": 3,
+     *         "sku": "GKA0886C",
+     *         "catatan": "Tiga nama berbeda",
+     *         "produk": {
+     *           "sku": "GKA0886C",
+     *           "nama_produk": "CUSTOM WAJAH KARAKTER",
+     *           "variasi": "BOYS",
+     *           "kategori_id": 5,
+     *           "kategori": {
+     *             "id": 5,
+     *             "nama_kategori": "GANTUNGAN KUNCI AKRILIK UV"
+     *           }
+     *         },
+     *         "reqfoto": [],
+     *         "foto_meta": null
+     *       }
+     *     ],
+     *     "pembayaran": [
+     *       {
+     *         "no_pesanan": "20261119062B",
+     *         "jenis_transaksi": "non-cod",
+     *         "cod": "0.00",
+     *         "non_cod": "90000.00",
+     *         "dp": "0.00",
+     *         "bukti_bayar": null
+     *       }
+     *     ],
+     *     "pesanan": {
+     *       "noPesanan": "20261119062B",
+     *       "noResi": null,
+     *       "foto_at": null,
+     *       "platform": "meta",
+     *       "tanggalInput": "2026-11-19T01:30:00.000000Z",
+     *       "totalHarga": "90000.00",
+     *       "catatanPesanan": "Gantungan kunci nama custom",
+     *       "keterangan": "Menunggu Foto dan Resi"
+     *     }
+     *   }
+     * }
+     * ```
+     *
+     * ## Keterangan Status Pesanan
+     *
+     * | Keterangan | Kondisi |
+     * |------------|---------|
+     * | Menunggu Foto dan Resi | Foto dan nomor resi belum tersedia |
+     * | Menunggu Resi | Foto tersedia, nomor resi belum tersedia |
+     * | Menunggu Foto | Nomor resi tersedia, foto belum tersedia |
+     * | Siap Dikirim | Foto dan nomor resi sudah tersedia |
+     *
+     * Keterangan dibuat berdasarkan nilai foto_at dan noResi.
+     * Status siap dikirim tidak otomatis mengubah status database.
+     *
+     * ## Keterangan Error
+     *
+     * | Kode | Status | Keterangan |
+     * |------|--------|------------|
+     * | 200 | OK | Detail pesanan berhasil diambil |
+     * | 401 | Unauthorized | Pengguna belum login |
+     * | 403 | Forbidden | Tidak memiliki izin akses |
+     * | 404 | Not Found | Nomor pesanan tidak ditemukan |
+     * | 500 | Server Error | Terjadi kesalahan pada server |
+     *
+     * ## Ketentuan
+     *
+     * 1. Nomor pesanan wajib dikirim melalui URL.
+     * 2. Data pesanan diambil berdasarkan no_pesanan.
+     * 3. Informasi produk dapat berisi lebih dari satu item.
+     * 4. reqfoto berupa array foto request produk.
+     * 5. foto_meta berupa object atau null jika relasi hasOne.
+     * 6. URL foto menggunakan signed URL jika tersedia.
+     * 7. Informasi pembayaran dapat berisi beberapa transaksi.
+     * 8. Bukti pembayaran dapat bernilai null.
+     * 9. Keterangan ditentukan otomatis berdasarkan foto_at
+     *    dan noResi.
+     * 10. Keterangan hanya ditambahkan ke response API,
+     *     bukan disimpan ke database.
+     */
     public function showDetail(PesananService $pesananService, $no_pesanan)
     {
         $data = $pesananService->detailpesanan($no_pesanan);
@@ -1023,6 +1164,147 @@ class pesananController extends Controller
         ], 200, [], JSON_UNESCAPED_SLASHES);
     }
 
+    /**
+     * Upload Foto Pesanan Jadi
+     *
+     * Mengunggah foto hasil produksi yang telahjadi untuk setiap perproduk
+     * dalam satu pesanan Meta sebelum proses pengiriman.
+     *
+     * ## Fitur
+     *
+     * - Mendukung upload beberapa foto untuk beberapa produk dalam 1 pesanan.
+     * - Setiap perproduk wajib menyertakan satu foto.
+     * - Memastikan Idperproduk ada dalam pesanan.
+     * - Menyimpan foto ke FileGator folder FOTO_META.
+     * - Menyimpan informasi foto pada tabel foto_metas.
+     * - Menghasilkan signed URL untuk setiap foto.
+     * - Memperbarui foto_at setelah seluruh foto berhasil diproses.
+     *
+     * ## Header Request
+     *
+     * ```http
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * Content-Type: multipart/form-data
+     * ```
+     *
+     * ## Parameter Request
+     *
+     * | Parameter | Wajib | Tipe | Keterangan |
+     * |-----------|-------|------|------------|
+     * | no_pesanan | Ya | string | Nomor pesanan dengan platform meta |
+     * | foto | Ya | array | Kumpulan foto berdasarkan ID per produk |
+     * | foto[idPerproduk] | Ya | file | Satu foto untuk setiap ID per produk |
+     *
+     * ID pada foto harus sesuai dengan id_per_produk
+     * yang dimiliki pesanan.
+     *
+     * ## Contoh Request
+     *
+     * ```http
+     * POST /api/pesanan/foto-jadi
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * Content-Type: multipart/form-data
+     * ```
+     *
+     * Contoh Body (form-data):
+     *
+     * | Key | Type | Value |
+     * |-----|------|-------|
+     * | no_pesanan | Text | 20261120001A |
+     * | foto[262184] | File | produk_1.jpg |
+     * | foto[262185] | File | produk_2.jpg |
+     * | foto[262186] | File | produk_3.png |
+     *
+     * ## Hasil Respon
+     *
+     * **HTTP 200 - Berhasil**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": [
+     *     {
+     *       "id": 1,
+     *       "perproduk_id": 262184,
+     *       "foto": "https://domain.com/file?path=FOTO_META%2Ffoto1.jpg&signature=...",
+     *       "user_id": 33
+     *     },
+     *     {
+     *       "id": 2,
+     *       "perproduk_id": 262185,
+     *       "foto": "https://domain.com/file?path=FOTO_META%2Ffoto2.jpg&signature=...",
+     *       "user_id": 33
+     *     },
+     *     {
+     *       "id": 3,
+     *       "perproduk_id": 262186,
+     *       "foto": "https://domain.com/file?path=FOTO_META%2Ffoto3.png&signature=...",
+     *       "user_id": 33
+     *     }
+     *   ]
+     * }
+     * ```
+     *
+     * URL foto merupakan signed URL yang digunakan
+     * untuk mengakses file hasil upload.
+     *
+     * **HTTP 422 - ID Produk Tidak Valid**
+     *
+     * ```json
+     * {
+     *   "message": "ID per produk 999999 tidak ditemukan dalam pesanan ini.",
+     *   "errors": {
+     *     "foto.999999": [
+     *       "ID per produk 999999 tidak ditemukan dalam pesanan ini."
+     *     ]
+     *   }
+     * }
+     * ```
+     *
+     * **HTTP 422 - Jumlah Foto Tidak Sesuai**
+     *
+     * ```json
+     * {
+     *   "message": "Setiap per produk wajib memiliki satu foto.",
+     *   "errors": {
+     *     "foto": [
+     *       "Setiap per produk wajib memiliki satu foto."
+     *     ]
+     *   }
+     * }
+     * ```
+     *
+     * ## Keterangan Error
+     *
+     * | Kode | Status | Keterangan |
+     * |------|--------|------------|
+     * | 200 | OK | Foto berhasil diunggah |
+     * | 401 | Unauthorized | Token tidak valid atau belum login |
+     * | 403 | Forbidden | Tidak memiliki izin akses |
+     * | 404 | Not Found | Pesanan Meta tidak ditemukan |
+     * | 422 | Validation Error | ID produk salah atau jumlah foto tidak sesuai |
+     * | 500 | Server Error | Upload FileGator atau proses server gagal |
+     *
+     * ## Ketentuan
+     *
+     * 1. Pesanan wajib menggunakan platform meta.
+     * 2. Nomor pesanan harus terdaftar di database.
+     * 3. Setiap id_per_produk wajib memiliki satu foto.
+     * 4. ID produk harus termasuk dalam nomor pesanan.
+     * 5. Jumlah foto harus sama dengan jumlah produk
+     *    pada pesanan.
+     * 6. Nama file dibentuk dari no_pesanan,
+     *    id_per_produk, dan ekstensi file.
+     * 7. File disimpan dalam folder FOTO_META.
+     * 8. Informasi foto disimpan pada tabel foto_metas.
+     * 9. user_id diambil dari pengguna login.
+     * 10. Response foto menggunakan signed URL.
+     * 11. foto_at diperbarui setelah seluruh foto diproses.
+     * 12. Database menggunakan transaksi dan penguncian
+     *     pesanan untuk mencegah perubahan bersamaan.
+     */
     public function uploadFoto(
         ApiFileGatorService $fileGatorService,
         FotoPesananService $fotoPesananService,
@@ -1055,6 +1337,105 @@ class pesananController extends Controller
         }
     }
 
+    /**
+     * Scan Nomor Resi Pesanan
+     *
+     * Menampilkan informasi pesanan berdasarkan nomor resi
+     * yang dipindai atau dimasukkan oleh pengguna.
+     *
+     * ## Fitur
+     *
+     * - Mencari pesanan berdasarkan nomor resi.
+     * - Menampilkan informasi pesanan yang ditemukan.
+     * - Mengambil informasi toko melalui relasi toko.
+     * - Mendukung pencarian untuk semua platform pesanan.
+     *
+     * ## Catatan:
+     *
+     * Jika aplikasi mobile membutuhkan notifikasi suara MP3
+     * saat proses scan, file audio dapat disimpan secara lokal
+     * di sisi aplikasi mobile.
+     *
+     * Pemutaran suara dilakukan langsung oleh aplikasi mobile
+     * berdasarkan hasil response API, sehingga server tidak
+     * perlu menyediakan atau mengirimkan file MP3.
+     *
+     * ## Header Request
+     *
+     * ```http
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ## Parameter Request
+     *
+     * | Parameter | Wajib | Tipe | Keterangan |
+     * |-----------|-------|------|------------|
+     * | no_resi | Ya | string | Nomor resi pesanan yang akan dicari |
+     *
+     * Parameter no_resi dikirim melalui URL.
+     *
+     * ## Contoh Request
+     *
+     * ```http
+     * GET /api/pesanan/scan/JNE123456789
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ## Hasil Respon
+     *
+     * **HTTP 200 - Berhasil**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": {
+     *     "no_pesanan": "20261120001A",
+     *     "no_resi": "JNE123456789",
+     *     "nama_pembeli": "Siti Aminah",
+     *     "platform": "marketplace",
+     *     "status": "proses",
+     *     "batas_kirim_at": "2026-11-22 12:00:00",
+     *     "toko": {
+     *       "marketplace": "Shopee"
+     *     }
+     *   }
+     * }
+     * ```
+     *
+     * Contoh di atas merupakan ilustrasi field response.
+     * Field sebenarnya mengikuti model Pesanan dan relasi toko.
+     *
+     * **HTTP 200 - Pesanan Tidak Ditemukan**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": null
+     * }
+     * ```
+     *
+     * ## Keterangan Error
+     *
+     * | Kode | Status | Keterangan |
+     * |------|--------|------------|
+     * | 200 | OK | Proses pencarian berhasil |
+     * | 401 | Unauthorized | Pengguna belum login atau token tidak valid |
+     * | 403 | Forbidden | Tidak memiliki izin akses |
+     * | 500 | Server Error | Terjadi kesalahan pada server |
+     *
+     * ## Ketentuan
+     *
+     * 1. Nomor resi wajib dikirim melalui URL.
+     * 2. Pencarian menggunakan kolom no_resi.
+     * 3. Pencarian tidak dibatasi berdasarkan platform.
+     * 4. Pencarian tidak dibatasi berdasarkan status pesanan.
+     * 5. Relasi toko diambil menggunakan eager loading.
+     * 6. Hanya satu pesanan pertama yang dikembalikan.
+     * 7. Jika pesanan tidak ditemukan, hasil query bernilai null.
+     * 8. Method ini hanya mengambil data tanpa mengubah status.
+     */
     public function scanPesanan(
         ScanPesananService $scanPesanan,
         $no_resi
@@ -1081,6 +1462,90 @@ class pesananController extends Controller
         ], 200);
     }
 
+    /**
+     * Update Status Pesanan Setelah Scan
+     *
+     * Mengubah status pesanan menjadi dikirim berdasarkan
+     * nomor pesanan serta mencatat riwayat pengiriman.
+     *
+     * ## Fitur
+     *
+     * - Mencari pesanan berdasarkan nomor pesanan.
+     * - Mengubah status pesanan menjadi kirim.
+     * - Mencatat pengguna yang melakukan pengiriman pesanan (orang yangmelakukan scan).
+     * - Menambahkan riwayat progres pesanan berguna untuk melakukantracking pesanan.
+     *
+     * ## Header Request
+     *
+     * ```http
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ## Parameter Request
+     *
+     * | Parameter | Wajib | Tipe | Keterangan |
+     * |-----------|-------|------|------------|
+     * | no_pesanan | Ya | string | Nomor unik pesanan yang akan diperbarui |
+     *
+     * Parameter no_pesanan dikirim melalui URL.
+     *
+     * ## Contoh Request
+     *
+     * ```http
+     * PATCH /api/pesanan/scan/20261120001A
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * Request tidak memerlukan body.
+     *
+     * ## Hasil Respon
+     *
+     * **HTTP 200 - Berhasil**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "data": {
+     *     "no_pesanan": "20261120001A",
+     *     "status": "kirim",
+     *   }
+     * }
+     * ```
+     *
+     * Contoh response hanya menampilkan sebagian field.
+     * Data sebenarnya mengikuti atribut model Pesanan
+     * yang dikembalikan controller.
+     *
+     * ## Keterangan Error
+     *
+     * | Kode | Status | Keterangan |
+     * |------|--------|------------|
+     * | 200 | OK | Status pesanan berhasil diperbarui |
+     * | 401 | Unauthorized | Pengguna belum login atau token tidak valid |
+     * | 403 | Forbidden | Tidak memiliki izin akses |
+     * | 404 | Not Found | Nomor pesanan tidak ditemukan |
+     * | 500 | Server Error | Terjadi kesalahan pada server |
+     *
+     * ## Ketentuan
+     *
+     * 1. Nomor pesanan wajib dikirim melalui URL.
+     * 2. Pesanan harus terdaftar dalam database.
+     * 3. Status pesanan diperbarui menjadi kirim.
+     * 4. id_user_kirim diambil dari pengguna login.
+     * 5. Sistem membuat riwayat pada tabel progres_pesanans.
+     * 6. Pesanan dikunci selama proses perubahan berlangsung.
+     *
+     * **Catatan Mobile:**
+     *
+     * Aplikasi mobile dapat memutar suara MP3 berdasarkan
+     * response API sebagai indikator keberhasilan atau
+     * kegagalan scan.
+     *
+     * File MP3 dapat disimpan secara lokal di aplikasi mobile
+     * sehingga tidak perlu dikirim melalui API.
+     */
     public function scanUpdate(ScanPesananService $scanPesananService, $no_pesanan)
     {
         $data = $scanPesananService->scanUpdate($no_pesanan);
@@ -1094,6 +1559,171 @@ class pesananController extends Controller
         ]);
     }
 
+    /**
+     * Riwayat Pesanan Dikirim
+     *
+     * Menampilkan riwayat pesanan yang telah dikirim
+     * berdasarkan pengguna yang sedang login.
+     *
+     * ## Fitur
+     *
+     * - Menampilkan daftar riwayat pesanan dikirim.
+     * - Menampilkan jumlah pesanan pada field dikirim.
+     * - Mendukung pencarian pesanan.
+     * - Mendukung filter tanggal.
+     * - Mendukung filter marketplace Shopee dan TikTok.
+     * - Menampilkan nomor pesanan, nomor resi, platform,
+     *   nama pembeli, kurir, dan marketplace.
+     *
+     * ## Header Request
+     *
+     * ```http
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ## Parameter Request
+     *
+     * | Parameter | Wajib | Tipe | Batasan | Keterangan |
+     * |-----------|-------|------|---------|------------|
+     * | search | Tidak | string | Maks. 255 karakter | Pencarian nomor pesanan, resi, atau pembeli |
+     * | tanggal | Tidak | date | YYYY-MM-DD | Filter berdasarkan tanggal |
+     * | marketplace | Tidak | string | Shopee, TikTok | Filter berdasarkan marketplace |
+     *
+     * Semua parameter dikirim melalui query string.
+     *
+     * Jika parameter tidak diisi, filter tersebut tidak diterapkan.
+     *
+     * ## Contoh Request
+     *
+     * Tanpa filter:
+     *
+     * ```http
+     * GET /api/pesanan/riwayat
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * Dengan pencarian:
+     *
+     * ```http
+     * GET /api/pesanan/riwayat?search=JNE123456789
+     * ```
+     *
+     * Dengan filter tanggal:
+     *
+     * ```http
+     * GET /api/pesanan/riwayat?tanggal=2026-11-20
+     * ```
+     *
+     * Dengan filter marketplace:
+     *
+     * ```http
+     * GET /api/pesanan/riwayat?marketplace=Shopee
+     * ```
+     *
+     * Dengan semua filter:
+     *
+     * ```http
+     * GET /api/pesanan/riwayat?search=JNE123456789&tanggal=2026-11-20&marketplace=Shopee
+     * ```
+     *
+     * ## Hasil Respon
+     *
+     * **HTTP 200 - Berhasil**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "dikirim": 2,
+     *   "data": [
+     *     {
+     *       "noPesanan": "20261120001A",
+     *       "noResi": "JNE123456789",
+     *       "platform": "marketplace",
+     *       "pembeli": "Siti Aminah",
+     *       "kurir": "JNE",
+     *       "marketplace": "Shopee"
+     *     },
+     *     {
+     *       "noPesanan": "20261120002A",
+     *       "noResi": "SPX987654321",
+     *       "platform": "marketplace",
+     *       "pembeli": "Budi Santoso",
+     *       "kurir": "SPX",
+     *       "marketplace": "Shopee"
+     *     }
+     *   ]
+     * }
+     * ```
+     *
+     * Keterangan field:
+     *
+     * | Field | Tipe | Keterangan |
+     * |-------|------|------------|
+     * | success | boolean | Status keberhasilan request |
+     * | dikirim | integer | Jumlah pesanan yang ditemukan |
+     * | data | array | Daftar riwayat pesanan |
+     * | noPesanan | string | Nomor unik pesanan |
+     * | noResi | string/null | Nomor resi pengiriman |
+     * | platform | string | Platform pesanan |
+     * | pembeli | string | Nama pembeli |
+     * | kurir | string/null | Nama kurir pengiriman |
+     * | marketplace | string/null | Nama marketplace dari relasi toko |
+     *
+     * **HTTP 200 - Data Kosong**
+     *
+     * ```json
+     * {
+     *   "success": true,
+     *   "dikirim": 0,
+     *   "data": []
+     * }
+     * ```
+     *
+     * **HTTP 422 - Parameter Tidak Valid**
+     *
+     * ```json
+     * {
+     *   "message": "The selected marketplace is invalid.",
+     *   "errors": {
+     *     "marketplace": [
+     *       "The selected marketplace is invalid."
+     *     ]
+     *   }
+     * }
+     * ```
+     *
+     * ## Keterangan Error
+     *
+     * | Kode | Status | Keterangan |
+     * |------|--------|------------|
+     * | 200 | OK | Riwayat berhasil diambil |
+     * | 401 | Unauthorized | Token tidak valid atau belum login |
+     * | 403 | Forbidden | Tidak memiliki izin akses |
+     * | 422 | Validation Error | Parameter pencarian atau filter tidak valid |
+     * | 500 | Server Error | Terjadi kesalahan pada server |
+     *
+     * ## Ketentuan
+     *
+     * 1. Parameter search bersifat opsional.
+     * 2. Panjang search maksimal 255 karakter.
+     * 3. Parameter tanggal wajib menggunakan YYYY-MM-DD
+     *    jika dikirim.
+     * 4. Marketplace hanya menerima Shopee atau TikTok.
+     * 5. Untuk menampilkan semua marketplace, parameter
+     *    marketplace tidak perlu dikirim.
+     * 6. Nilai marketplace=null sebagai teks tidak valid.
+     * 7. Filter dapat digunakan secara bersamaan.
+     * 8. Field dikirim dihitung berdasarkan jumlah data
+     *    yang dikembalikan oleh service.
+     * 9. Nama marketplace diambil melalui relasi toko.
+     * 10. Jika relasi toko kosong, marketplace bernilai null.
+     * 11. Jika tidak ada data, dikirim bernilai 0
+     *     dan data berupa array kosong.
+     * 12. Endpoint hanya menampilkan riwayat,
+     *     tidak melakukan perubahan status pesanan.
+     */
     public function riwayat(ScanPesananService $scanPesananService, Request $request)
     {
         $request->validate([

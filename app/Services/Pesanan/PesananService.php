@@ -108,21 +108,25 @@ class PesananService
         });
 
         $userAdress = $pesanan->customer_address;
-        $adress = $this->wilayahIndo->alamatLengkap(
-            $userAdress->desa
-        );
+
+        $adress = null;
+        if (!empty($userAdress?->desa)) {
+            $adress = $this->wilayahIndo->alamatLengkap(
+                $userAdress->desa
+            );
+        }
 
         return (object) [
             'informasiPembeli' => [
                 'namaPembeli' => $pesanan->nama_pembeli,
-                'phone' => $userAdress->phone,
+                'phone' => $userAdress?->phone,
                 'address' => (object) [
-                    'provinsi' => $adress->provinsi->name,
-                    'kabupatenKota' => $adress->kabupaten_kota->name,
-                    'kecamatan' => $adress->kecamatan->name,
-                    'desa' => $adress->desa->name,
-                    'alamatLengkap' => $userAdress->alamat_lengkap,
-                    'kodePos' => $adress->kode_pos
+                    'provinsi' => $adress?->provinsi?->name,
+                    'kabupatenKota' => $adress?->kabupaten_kota?->name,
+                    'kecamatan' => $adress?->kecamatan?->name,
+                    'desa' => $adress?->desa?->name,
+                    'alamatLengkap' => $userAdress?->alamat_lengkap,
+                    'kodePos' => $adress?->kode_pos,
                 ]
             ],
             'informasiProduk' => $pesanan->pesanan_per_produk,
