@@ -18,6 +18,7 @@
             font-family: Arial, sans-serif;
             background: #0b1120;
             color: white;
+            overflow: hidden;
         }
 
         .header {
@@ -78,8 +79,19 @@
 
         #app {
             height: calc(100vh - 65px);
+            min-width: 0;
+            max-width: 100vw;
             overflow: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
             background: white;
+        }
+
+        #app::-webkit-scrollbar,
+        #app *::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            display: none;
         }
 
         .loading,
@@ -118,7 +130,10 @@
 
 
         /* Sembunyikan seluruh Request Body otomatis */
-        .request-body[aria-label="Request Body"] {
+        .request-body,
+        [data-testid*="request-body" i],
+        [aria-label="Request Body"],
+        [aria-label="Request body"] {
             display: none !important;
         }
 
@@ -458,6 +473,31 @@
 
                     // Padatkan tipografi dokumentasi tanpa mengubah isi OpenAPI.
                     customCss: `
+                        .scalar-api-reference,
+                        .scalar-api-reference * {
+                            scrollbar-width: none;
+                            -ms-overflow-style: none;
+                        }
+
+                        .scalar-api-reference::-webkit-scrollbar,
+                        .scalar-api-reference *::-webkit-scrollbar {
+                            width: 0;
+                            height: 0;
+                            display: none;
+                        }
+
+                        .scalar-api-reference {
+                            min-width: 0;
+                            max-width: 100%;
+                        }
+
+                        .scalar-api-reference .request-body,
+                        .scalar-api-reference [data-testid*="request-body" i],
+                        .scalar-api-reference [aria-label="Request Body"],
+                        .scalar-api-reference [aria-label="Request body"] {
+                            display: none !important;
+                        }
+
                         .scalar-api-reference {
                             --scalar-font: Arial, sans-serif;
                             --scalar-line-height: 1.45;
