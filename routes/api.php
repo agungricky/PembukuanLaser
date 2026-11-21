@@ -4,7 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\dashboardController;
 use App\Http\Controllers\Api\FileGatorController;
 use App\Http\Controllers\Api\KategoriController;
-use App\Http\Controllers\api\pesananController;
+use App\Http\Controllers\Api\pesananController;
 use App\Http\Controllers\Api\ProdukController;
 use App\Http\Controllers\Api\RingkasanController;
 use App\Http\Controllers\Api\WilayahController as ApiWilayahController;
