@@ -148,6 +148,21 @@ class ChatKlarifikasiPackingController extends Controller
                         && (int) $existing->packing_user_id !== (int) $user->id) {
                         return ['state' => 'forbidden'];
                     }
+                    // Retry POST yang sama: kembalikan pesan pertama yang sudah
+                    // tersimpan. Jangan membuat maupun mengirim pesan kedua.
+                    if ($uuid !== null && $existing->client_request_id === $uuid) {
+                        $firstMessage = $existing->pesan()->orderBy('id')->first();
+                        if ($firstMessage
+                            && (int) $firstMessage->pengirim_user_id === (int) $user->id
+                            && $firstMessage->pesan === $isiPesan) {
+                            return [
+                                'state' => 'retry',
+                                'chat' => $existing,
+                                'message' => $firstMessage,
+                            ];
+                        }
+                        return ['state' => 'request_conflict'];
+                    }
                     return ['state' => 'existing', 'chat' => $existing];
                 }
 
@@ -194,7 +209,7 @@ class ChatKlarifikasiPackingController extends Controller
             'owner_invalid' => [422, 'CS pemilik bukan akun CS Meta.'],
             'product_invalid' => [422, 'Produk tidak termasuk pesanan.'],
             'forbidden' => [403, 'Tidak mempunyai akses ke pesanan atau chat ini.'],
-            'request_conflict' => [409, 'client_request_id sudah digunakan untuk pesanan lain.'],
+            'request_conflict' => [409, 'client_request_id sudah dipakai untuk pesan berbeda.'],
         ];
         if (isset($rejected[$result['state']])) {
             [$status, $message] = $rejected[$result['state']];
@@ -209,7 +224,8 @@ class ChatKlarifikasiPackingController extends Controller
         return response()->json([
             'success' => true,
             'message' => $result['state'] === 'existing'
-                ? 'Percakapan sudah tersedia.' : 'Chat klarifikasi berhasil dibuat.',
+                ? 'Percakapan sudah tersedia.'
+                : ($result['state'] === 'retry' ? 'Pesan pertama sudah tercatat.' : 'Chat klarifikasi berhasil dibuat.'),
             'data' => $chat,
             'pesan_pertama' => $result['message'] ?? null,
         ], $result['state'] === 'created' ? 201 : 200);
