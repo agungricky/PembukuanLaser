@@ -37,3 +37,8 @@ Broadcast::channel(
     },
     ['guards' => ['sanctum']]
 );
+Broadcast::channel('chat-inbox-user.{userId}', function ($user, $userId) {
+    return (int) $user->id === (int) $userId
+        && $user->platform === 'meta'
+        && in_array($user->role, ['cs', 'packing'], true);
+});

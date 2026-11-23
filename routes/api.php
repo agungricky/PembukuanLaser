@@ -34,6 +34,12 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
             // Packing membuat percakapan baru
             Route::post('/', [ChatKlarifikasiPackingController::class, 'store'])->name('store');
 
+            // Cari Chat berdasarkan nomor pesanan Meta
+            Route::get('/pesanan/{noPesanan}', [
+                ChatKlarifikasiPackingController::class,
+                'findByOrder'
+            ])->name('find-by-order');
+
             // Detail percakapan dan pesan
             Route::get('/{chatId}', [ChatKlarifikasiPackingController::class, 'show'])
                 ->whereNumber('chatId')->name('show');

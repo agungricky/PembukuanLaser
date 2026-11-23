@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Events\ChatKlarifikasiPesanDibaca;
+use App\Events\ChatKlarifikasiInboxBerubah;
 use App\Events\ChatKlarifikasiPesanDikirim;
 use App\Http\Controllers\Controller;
 use App\Models\ChatKlarifikasiPacking;
@@ -18,16 +19,11 @@ use Throwable;
 
 class ChatKlarifikasiPackingController extends Controller
 {
-    /**
-     * Daftar percakapan milik CS yang login atau Packing pembuat chat.
-     */
+    /** Kotak masuk untuk peserta CS Meta dan Packing Meta. */
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-
-        if (! $this->isParticipantRole($user)) {
-            return $this->forbidden();
-        }
+        if (! $this->isParticipantRole($user)) return $this->forbidden();
 
         $validated = $request->validate([
             'status' => ['nullable', Rule::in(['menunggu_jawaban', 'dibalas', 'selesai'])],
@@ -36,44 +32,37 @@ class ChatKlarifikasiPackingController extends Controller
             'belum_dibaca_saja' => ['nullable', 'boolean'],
         ]);
 
+        $scope = function ($q) use ($user) {
+            if ($user->role === 'cs') {
+                $q->where('cs_user_id', $user->id);
+            } else {
+                // Packing Meta melihat chat miliknya serta antrean yang belum ditangani.
+                $q->where(function ($inner) use ($user) {
+                    $inner->where('packing_user_id', $user->id)
+                        ->orWhereNull('packing_user_id');
+                });
+            }
+            $q->whereHas('pesanan', fn ($order) => $order->where('platform', 'meta'));
+        };
+
         $query = ChatKlarifikasiPacking::query()
             ->with(['packing:id,name', 'cs:id,name'])
             ->withCount(['pesan as jumlah_belum_dibaca' => function ($q) use ($user) {
-                $q->where('pengirim_user_id', '<>', $user->id)
-                    ->whereNull('dibaca_at');
+                $q->where('pengirim_user_id', '<>', $user->id)->whereNull('dibaca_at');
             }]);
+        $scope($query);
 
-        if ($user->role === 'cs') {
-            $query->where('cs_user_id', $user->id);
-        } else {
-            $query->where('packing_user_id', $user->id);
-        }
-
-        // Total unread dihitung dari semua chat milik peserta (tidak terpengaruh
-        // filter pencarian/status/paginasi), cocok untuk badge pada Flutter.
         $jumlahBelumDibacaTotal = PesanChatKlarifikasiPacking::query()
             ->where('pengirim_user_id', '<>', $user->id)
             ->whereNull('dibaca_at')
-            ->whereHas('chat', function ($q) use ($user) {
-                if ($user->role === 'cs') {
-                    $q->where('cs_user_id', $user->id);
-                } else {
-                    $q->where('packing_user_id', $user->id);
-                }
-            })->count();
+            ->whereHas('chat', $scope)
+            ->count();
 
-        // Opsional: hanya chat yang memiliki pesan masuk belum dibaca.
         if ($request->boolean('belum_dibaca_saja')) {
-            $query->whereHas('pesan', function ($q) use ($user) {
-                $q->where('pengirim_user_id', '<>', $user->id)
-                    ->whereNull('dibaca_at');
-            });
+            $query->whereHas('pesan', fn ($q) => $q
+                ->where('pengirim_user_id', '<>', $user->id)->whereNull('dibaca_at'));
         }
-
-        if (! empty($validated['status'])) {
-            $query->where('status', $validated['status']);
-        }
-
+        if (! empty($validated['status'])) $query->where('status', $validated['status']);
         if (! empty($validated['search'])) {
             $search = $validated['search'];
             $query->where(function ($q) use ($search) {
@@ -83,180 +72,147 @@ class ChatKlarifikasiPackingController extends Controller
         }
 
         $result = $query->orderByRaw('COALESCE(pesan_terakhir_at, created_at) DESC')
-            ->orderByDesc('id')
-            ->paginate((int) ($validated['per_page'] ?? 20));
+            ->orderByDesc('id')->paginate((int) ($validated['per_page'] ?? 20));
 
         return response()->json([
-            'success' => true,
-            'data' => $result,
+            'success' => true, 'data' => $result,
             'jumlah_belum_dibaca_total' => (int) $jumlahBelumDibacaTotal,
         ]);
     }
 
-    /**
-     * Packing memulai percakapan baru untuk pesanan Meta.
-     * client_request_id opsional: retry dengan UUID yang sama mengembalikan chat lama.
-     */
+    /** Cari percakapan secara tepat dari nomor pesanan (tanpa membuatnya). */
+    public function findByOrder(Request $request, string $noPesanan): JsonResponse
+    {
+        $user = $request->user();
+        if (! $this->isParticipantRole($user)) return $this->forbidden();
+
+        $order = Pesanan::query()->where('no_pesanan', $noPesanan)
+            ->where('platform', 'meta')->first();
+        if (! $order) {
+            return response()->json(['success' => false, 'message' => 'Pesanan Meta tidak ditemukan.'], 404);
+        }
+        if ($user->role === 'cs' && (int) $order->id_user !== (int) $user->id) {
+            return $this->forbidden('Pesanan bukan milik CS yang login.');
+        }
+
+        $chat = ChatKlarifikasiPacking::query()->where('no_pesanan', $noPesanan)
+            ->with(['packing:id,name', 'cs:id,name'])->first();
+        if ($chat && ! $this->canAccess($request, $chat)) return $this->forbidden();
+
+        // HTTP 200 juga saat belum ada supaya Flutter dapat membuka form dengan aman.
+        return response()->json(['success' => true, 'exists' => $chat !== null, 'data' => $chat]);
+    }
+
+    /** CS atau Packing Meta membuat satu percakapan per nomor pesanan. */
     public function store(Request $request): JsonResponse
     {
         $user = $request->user();
-
-        if (! $user || $user->role !== 'packing') {
-            return $this->forbidden('Hanya Packing yang dapat membuat chat.');
-        }
+        if (! $this->isParticipantRole($user)) return $this->forbidden();
 
         $validated = $request->validate([
             'no_pesanan' => ['required', 'string', 'max:50'],
             'id_per_produk' => ['nullable', 'integer', 'min:1'],
-            'topik' => ['required', 'string', 'max:255'],
+            'topik' => ['sometimes', 'nullable', 'string', 'max:255'],
             'pesan' => ['required', 'string', 'min:1', 'max:10000'],
             'client_request_id' => ['sometimes', 'nullable', 'uuid'],
         ]);
-
         $noPesanan = trim($validated['no_pesanan']);
-        $topik = trim($validated['topik']);
+        $topik = trim($validated['topik'] ?? '') ?: 'Klarifikasi Pesanan';
         $isiPesan = trim($validated['pesan']);
-        $idPerProduk = isset($validated['id_per_produk'])
-            ? (int) $validated['id_per_produk'] : null;
+        $idPerProduk = isset($validated['id_per_produk']) ? (int) $validated['id_per_produk'] : null;
         $uuid = $validated['client_request_id'] ?? null;
-
-        if ($noPesanan === '' || $topik === '' || $isiPesan === '') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Nomor pesanan, topik dan pesan tidak boleh kosong.',
-            ], 422);
+        if ($noPesanan === '' || $isiPesan === '') {
+            return response()->json(['success' => false, 'message' => 'Nomor pesanan dan pesan wajib diisi.'], 422);
         }
 
         try {
-            // Kunci akun Packing agar dua request simultan dengan UUID sama
-            // tidak membuat dua chat (unique index tetap menjadi pengaman DB).
-            $result = DB::transaction(function () use (
-                $user, $noPesanan, $topik, $isiPesan, $idPerProduk, $uuid
-            ) {
-                \App\Models\User::query()
-                    ->whereKey($user->id)
-                    ->lockForUpdate()
-                    ->firstOrFail();
-
-                if ($uuid !== null) {
-                    $existing = ChatKlarifikasiPacking::query()
-                        ->where('packing_user_id', $user->id)
-                        ->where('client_request_id', $uuid)
-                        ->first();
-
-                    if ($existing) {
-                        $firstMessage = $existing->pesan()
-                            ->reorder('id', 'asc')
-                            ->first();
-
-                        $samePayload = $existing->no_pesanan === $noPesanan
-                            && (int) ($existing->id_per_produk ?? 0) === (int) ($idPerProduk ?? 0)
-                            && $existing->topik === $topik
-                            && $firstMessage !== null
-                            && (int) $firstMessage->pengirim_user_id === (int) $user->id
-                            && $firstMessage->pesan === $isiPesan;
-
-                        if (! $samePayload) {
-                            return ['state' => 'conflict'];
-                        }
-
-                        return [
-                            'state' => 'duplicate',
-                            'chat' => $existing,
-                            'message' => $firstMessage,
-                        ];
-                    }
-                }
-
-                $pesanan = Pesanan::query()
-                    ->where('no_pesanan', $noPesanan)
-                    ->first();
-
-                if (! $pesanan || $pesanan->platform !== 'meta') {
-                    return ['state' => 'order_not_found'];
-                }
-
-                if (! $pesanan->id_user) {
-                    return ['state' => 'owner_missing'];
-                }
-
-                $cs = \App\Models\User::query()->find($pesanan->id_user);
-                if (! $cs || $cs->role !== 'cs') {
+            $result = DB::transaction(function () use ($user, $noPesanan, $topik, $isiPesan, $idPerProduk, $uuid) {
+                // Lock baris pesanan: request simultan untuk nomor yang sama diserialkan.
+                $order = Pesanan::query()->where('no_pesanan', $noPesanan)
+                    ->lockForUpdate()->first();
+                if (! $order || $order->platform !== 'meta') return ['state' => 'order_not_found'];
+                if (! $order->id_user) return ['state' => 'owner_missing'];
+                $cs = \App\Models\User::query()->find($order->id_user);
+                if (! $cs || $cs->role !== 'cs' || $cs->platform !== 'meta') {
                     return ['state' => 'owner_invalid'];
+                }
+                if ($user->role === 'cs' && (int) $order->id_user !== (int) $user->id) {
+                    return ['state' => 'forbidden'];
+                }
+
+                // Jika chat sudah ada, cukup buka kembali. Pesan pertama tidak dikirim ulang.
+                $existing = ChatKlarifikasiPacking::query()
+                    ->where('no_pesanan', $noPesanan)->first();
+                if ($existing) {
+                    if ($user->role === 'packing' && $existing->packing_user_id !== null
+                        && (int) $existing->packing_user_id !== (int) $user->id) {
+                        return ['state' => 'forbidden'];
+                    }
+                    return ['state' => 'existing', 'chat' => $existing];
                 }
 
                 if ($idPerProduk !== null && ! PesananPerProduk::query()
                     ->where('id_per_produk', $idPerProduk)
-                    ->where('no_pesanan', $noPesanan)
-                    ->exists()) {
+                    ->where('no_pesanan', $noPesanan)->exists()) {
                     return ['state' => 'product_invalid'];
                 }
 
-                // TODO: validasi penugasan Packing jika mekanismenya tersedia.
-                // Gunakan assignment langsung agar tidak tergantung $fillable model.
+                // Pertahankan kontrak UUID idempoten untuk Packing versi lama.
+                if ($uuid !== null && $user->role === 'packing'
+                    && ChatKlarifikasiPacking::query()
+                        ->where('packing_user_id', $user->id)
+                        ->where('client_request_id', $uuid)->exists()) {
+                    return ['state' => 'request_conflict'];
+                }
+
                 $chat = new ChatKlarifikasiPacking();
                 $chat->no_pesanan = $noPesanan;
                 $chat->id_per_produk = $idPerProduk;
-                $chat->packing_user_id = $user->id;
+                $chat->packing_user_id = $user->role === 'packing' ? $user->id : null;
                 $chat->cs_user_id = $cs->id;
                 $chat->client_request_id = $uuid;
                 $chat->topik = $topik;
-                $chat->status = 'menunggu_jawaban';
+                $chat->status = $user->role === 'cs' ? 'dibalas' : 'menunggu_jawaban';
                 $chat->save();
 
                 $message = $chat->pesan()->create([
-                    'pengirim_user_id' => $user->id,
-                    'pesan' => $isiPesan,
+                    'pengirim_user_id' => $user->id, 'pesan' => $isiPesan,
                 ]);
-
                 $chat->update(['pesan_terakhir_at' => $message->created_at]);
-
-                return [
-                    'state' => 'created',
-                    'chat' => $chat,
-                    'message' => $message,
-                ];
+                return ['state' => 'created', 'chat' => $chat, 'message' => $message];
             });
         } catch (Throwable $e) {
-            Log::error('Gagal membuat chat klarifikasi', ['exception' => $e]);
-
+            Log::error('Gagal membuat chat klarifikasi Meta', ['exception' => $e]);
             return response()->json([
-                'success' => false,
-                'message' => 'Gagal membuat percakapan.',
+                'success' => false, 'message' => 'Gagal membuat percakapan.',
             ], 500);
         }
 
         $rejected = [
-            'conflict' => [409, 'client_request_id sudah digunakan untuk chat dengan data berbeda.'],
             'order_not_found' => [404, 'Pesanan Meta tidak ditemukan.'],
             'owner_missing' => [422, 'Pesanan belum memiliki CS pemilik.'],
-            'owner_invalid' => [422, 'CS pemilik pesanan tidak valid.'],
-            'product_invalid' => [422, 'Produk tidak termasuk dalam pesanan tersebut.'],
+            'owner_invalid' => [422, 'CS pemilik bukan akun CS Meta.'],
+            'product_invalid' => [422, 'Produk tidak termasuk pesanan.'],
+            'forbidden' => [403, 'Tidak mempunyai akses ke pesanan atau chat ini.'],
+            'request_conflict' => [409, 'client_request_id sudah digunakan untuk pesanan lain.'],
         ];
-
         if (isset($rejected[$result['state']])) {
             [$status, $message] = $rejected[$result['state']];
-            return response()->json([
-                'success' => false,
-                'message' => $message,
-            ], $status);
+            return response()->json(['success' => false, 'message' => $message], $status);
         }
 
-        $chat = $result['chat'];
-        $firstMessage = $result['message'];
-
-        // Retry tidak boleh mengirim event kedua.
         if ($result['state'] === 'created') {
-            $this->broadcastSafely($firstMessage);
+            $this->broadcastSafely($result['message']);
+            $this->broadcastInboxSafely($result['chat']);
         }
-
-        // Struktur respons dipertahankan untuk kompatibilitas DDK Mobile.
+        $chat = $result['chat']->fresh(['packing:id,name', 'cs:id,name']);
         return response()->json([
             'success' => true,
-            'message' => 'Chat klarifikasi berhasil dibuat.',
-            'data' => $chat->fresh(['packing:id,name', 'cs:id,name']),
-            'pesan_pertama' => $firstMessage->load('pengirim:id,name'),
-        ], 201);
+            'message' => $result['state'] === 'existing'
+                ? 'Percakapan sudah tersedia.' : 'Chat klarifikasi berhasil dibuat.',
+            'data' => $chat,
+            'pesan_pertama' => $result['message'] ?? null,
+        ], $result['state'] === 'created' ? 201 : 200);
     }
 
     /**
@@ -362,6 +318,16 @@ class ChatKlarifikasiPackingController extends Controller
                 if ($lockedChat->status === 'selesai') {
                     return ['state' => 'closed'];
                 }
+                if ($request->user()->role === 'packing') {
+                    if ($lockedChat->packing_user_id !== null
+                        && (int) $lockedChat->packing_user_id !== $userId) {
+                        return ['state' => 'forbidden'];
+                    }
+                    if ($lockedChat->packing_user_id === null) {
+                        $lockedChat->packing_user_id = $userId;
+                        $lockedChat->save();
+                    }
+                }
 
                 // Assignment langsung tidak membutuhkan perubahan $fillable model.
                 $message = $lockedChat->pesan()->make([
@@ -397,6 +363,9 @@ class ChatKlarifikasiPackingController extends Controller
             ], 409);
         }
 
+        if ($result['state'] === 'forbidden') {
+            return $this->forbidden('Chat sudah ditangani Packing lain.');
+        }
         if ($result['state'] === 'closed') {
             return response()->json([
                 'success' => false,
@@ -409,6 +378,7 @@ class ChatKlarifikasiPackingController extends Controller
         // Pesan lama tidak boleh di-broadcast ulang saat request retry.
         if ($result['state'] === 'created') {
             $this->broadcastSafely($message);
+            $this->broadcastInboxSafely($message->chat);
         }
 
         // Struktur respons lama dipertahankan untuk kompatibilitas Flutter.
@@ -458,13 +428,26 @@ class ChatKlarifikasiPackingController extends Controller
         }
 
         try {
-            $jumlahDitandai = DB::transaction(function () use ($chat, $userId, $lastMessageId) {
-                return $chat->pesan()
+            $jumlahDitandai = DB::transaction(function () use ($chat, $userId, $lastMessageId, $request) {
+                $locked = ChatKlarifikasiPacking::whereKey($chat->id)->lockForUpdate()->firstOrFail();
+                if ($request->user()->role === 'packing') {
+                    if ($locked->packing_user_id !== null && (int) $locked->packing_user_id !== $userId) {
+                        return null;
+                    }
+                    if ($locked->packing_user_id === null) {
+                        $locked->packing_user_id = $userId;
+                        $locked->save();
+                    }
+                }
+                return $locked->pesan()
                     ->where('id', '<=', $lastMessageId)
                     ->where('pengirim_user_id', '<>', $userId)
                     ->whereNull('dibaca_at')
                     ->update(['dibaca_at' => now()]);
             });
+            if ($jumlahDitandai === null) {
+                return $this->forbidden('Chat sudah ditangani Packing lain.');
+            }
         } catch (Throwable $e) {
             Log::error('Gagal memperbarui status baca chat', [
                 'chat_id' => $chatId,
@@ -501,6 +484,9 @@ class ChatKlarifikasiPackingController extends Controller
             }
         }
 
+        // Perbarui inbox pihak lain dan hapus antrean dari Packing lain setelah klaim.
+        $this->broadcastInboxSafely($chat->fresh());
+
         return response()->json([
             'success' => true,
             'message' => 'Status baca pesan diperbarui.',
@@ -524,7 +510,7 @@ class ChatKlarifikasiPackingController extends Controller
             return response()->json(['success' => false, 'message' => 'Chat tidak ditemukan.'], 404);
         }
 
-        if (! $request->user()
+        if (! $this->isParticipantRole($request->user())
             || $request->user()->role !== 'packing'
             || (int) $chat->packing_user_id !== (int) $request->user()->id) {
             return $this->forbidden('Hanya Packing pembuat chat yang dapat menyelesaikannya.');
@@ -564,6 +550,8 @@ class ChatKlarifikasiPackingController extends Controller
             return $this->forbidden('Hanya Packing pembuat chat yang dapat menyelesaikannya.');
         }
 
+        $this->broadcastInboxSafely($chat);
+
         return response()->json([
             'success' => true,
             'message' => 'Klarifikasi selesai.',
@@ -573,7 +561,8 @@ class ChatKlarifikasiPackingController extends Controller
 
     private function isParticipantRole($user): bool
     {
-        return $user && in_array($user->role, ['packing', 'cs'], true);
+        return $user && $user->platform === 'meta'
+            && in_array($user->role, ['packing', 'cs'], true);
     }
 
     private function canAccess(Request $request, ChatKlarifikasiPacking $chat): bool
@@ -584,8 +573,9 @@ class ChatKlarifikasiPackingController extends Controller
             return false;
         }
 
+        if ($chat->pesanan?->platform !== 'meta') return false;
         return $user->role === 'packing'
-            ? (int) $chat->packing_user_id === (int) $user->id
+            ? ($chat->packing_user_id === null || (int) $chat->packing_user_id === (int) $user->id)
             : (int) $chat->cs_user_id === (int) $user->id;
     }
 
@@ -601,6 +591,30 @@ class ChatKlarifikasiPackingController extends Controller
      * Respons API tetap berhasil ketika broadcaster sementara tidak tersedia.
      * Pesan sudah tersimpan; klien dapat mengambilnya ulang melalui GET detail.
      */
+    /**
+     * Beri sinyal inbox berubah, tanpa membocorkan isi pesan lewat event.
+     * Setiap Packing Meta menerima sinyal agar antrean yang sudah diklaim
+     * Packing lain segera hilang dari inbox mereka. Akses data tetap
+     * dikendalikan oleh endpoint index Laravel.
+     */
+    private function broadcastInboxSafely(ChatKlarifikasiPacking $chat): void
+    {
+        try {
+            $packingIds = \App\Models\User::query()
+                ->where('role', 'packing')
+                ->where('platform', 'meta')
+                ->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $recipients = array_values(array_unique(array_merge(
+                [(int) $chat->cs_user_id], $packingIds
+            )));
+            event(new ChatKlarifikasiInboxBerubah((int) $chat->id, $recipients));
+        } catch (Throwable $e) {
+            Log::warning('Chat tersimpan tetapi sinyal inbox Reverb gagal', [
+                'chat_id' => $chat->id, 'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     private function broadcastSafely(PesanChatKlarifikasiPacking $message): void
     {
         try {
