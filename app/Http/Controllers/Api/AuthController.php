@@ -8,6 +8,7 @@ use App\Services\Api\DeveloperTrialToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AuthController extends Controller
 {
@@ -87,6 +88,7 @@ class AuthController extends Controller
      * Token tidak diperlukan saat melakukan login.
      */
 
+
     public function login(Request $request)
     {
         try {
@@ -100,9 +102,31 @@ class AuthController extends Controller
                 'password' => 'required|string',
             ], $message);
 
-            $user = User::where('name', $request->name)->first();
+            $name = $request->input('name');
+            $password = $request->input('password');
 
-            if (!$user || !Hash::check($request->password, $user->password)) {
+            $throttleKey = mb_strtolower($name) . '|' . $request->ip();
+            if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+                throw ValidationException::withMessages([
+                    'name' => 'Terlalu banyak percobaan login. Silakan coba beberapa saat lagi.',
+                ]);
+            }
+
+            $users = User::where('name', $name)
+                ->orderBy('id')
+                ->get();
+
+            $userLogin = null;
+            foreach ($users as $user) {
+                if (Hash::check($password, $user->password)) {
+                    $userLogin = $user;
+                    break;
+                }
+            }
+
+            if (!$userLogin) {
+                RateLimiter::hit($throttleKey, 60);
+
                 /**
                  * @description Gagal Login
                  */
@@ -112,9 +136,10 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            $token = $user->role === 'developer'
-                ? DeveloperTrialToken::issueForApi($user)
-                : $user->createToken(
+            RateLimiter::clear($throttleKey);
+            $token = $userLogin->role === 'developer'
+                ? DeveloperTrialToken::issueForApi($userLogin)
+                : $userLogin->createToken(
                     'authToken',
                     ['*'],
                     now()->addDays(30)
@@ -129,12 +154,12 @@ class AuthController extends Controller
                 'token' => $token,
                 'token_type' => 'Bearer',
                 'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'role' => $user->role,
-                    'leader' => $user->leader,
-                    'platform' => $user->platform,
-                    'email' => $user->email,
+                    'id' => $userLogin->id,
+                    'name' => $userLogin->name,
+                    'role' => $userLogin->role,
+                    'leader' => $userLogin->leader,
+                    'platform' => $userLogin->platform,
+                    'email' => $userLogin->email,
                 ],
             ], 200);
         } catch (ValidationException $e) {
@@ -145,6 +170,7 @@ class AuthController extends Controller
             ], 422);
         }
     }
+
 
     /**
      * Cek Token
