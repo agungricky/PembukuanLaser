@@ -58,23 +58,22 @@ class TransaksiService
                 'pesanan_per_produk.produk.kategori',
                 'toko',
             ])
+            ->where('platform', 'marketplace')
             ->where('status', 'proses')
             ->whereHas('pesanan_per_produk', function ($query) {
-                $query
-                    ->where('status_pesanan', '0')
-                    ->whereNull('mutasi_stok_id');
+                $query->where('status_pesanan', '0')
+                      ->whereNull('mutasi_stok_id');
             })
             ->whereDoesntHave('pesanan_per_produk', function ($query) {
                 $query->where('custom', 1);
             })
-
             ->whereBetween('tanggal', [
                 $tanggalAwal,
                 $tanggalAkhir,
             ])
-
             ->orderByRaw('batas_kirim_at IS NULL ASC')
             ->orderBy('batas_kirim_at', 'ASC');
+
 
         // FILTER MARKETPLACE
         $marketplace = request('marketplace');
@@ -350,7 +349,7 @@ class TransaksiService
                 'pesanan_per_produk.mutasi.admin_penjualan',
                 'toko',
             ])
-
+            ->where('platform', 'marketplace')
             ->whereIn('no_pesanan', function ($query) {
                 $query->select('no_pesanan')
                     ->from('pesanan_per_produk')

@@ -34,6 +34,7 @@ class CustomService
                 'pesanan_per_produk.produk.kategori',
                 'toko',
             ])
+            ->where('platform', 'marketplace')
             ->where('status', 'proses')
             ->whereHas('pesanan_per_produk', function ($query) {
                 $query

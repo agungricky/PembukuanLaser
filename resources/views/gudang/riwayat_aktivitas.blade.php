@@ -289,16 +289,16 @@
                             }
 
                             return `
-                            <span class="badge ${badge} mb-1">
-                                ${icon} STOK ${row.jenis_mutasi
-                                    ? row.jenis_mutasi.toUpperCase()
-                                    : '-'}
-                            </span>
+                                <span class="badge ${badge} mb-1">
+                                    ${icon} STOK ${row.jenis_mutasi
+                                        ? row.jenis_mutasi.toUpperCase()
+                                        : '-'}
+                                </span>
 
-                            <div class="text-muted" style="font-size: 11px;">
-                                ${row.keterangan ?? '-'}
-                            </div>
-                        `;
+                                <div class="text-muted" style="font-size: 11px;">
+                                    ${row.keterangan ?? '-'}
+                                </div>
+                            `;
                         }
                     }
                 ],

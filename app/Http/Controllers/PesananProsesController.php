@@ -22,27 +22,21 @@ class PesananProsesController extends Controller
             'produk',
             'toko:id_toko,nama_toko',
         ])
+            ->where('platform', 'marketplace')
             ->where('status', 'proses')
-
             ->when($request->filled('no_pesanan'), function ($q) use ($request) {
                 $keyword = $request->input('no_pesanan');
-
                 $q->where(function ($sub) use ($keyword) {
                     $sub->where('no_pesanan', 'like', "%{$keyword}%")
                         ->orWhere('no_resi', 'like', "%{$keyword}%");
                 });
             })
-
             ->when($request->filled('id_toko'), function ($q) use ($request) {
                 $q->where('id_toko', (int) $request->input('id_toko'));
             })
-
             ->orderByDesc('tanggal');
-
         if ($request->filled('tanggal')) {
-
             $raw = trim((string) $request->input('tanggal'));
-
             if (str_contains($raw, ' s.d ')) {
                 [$startRaw, $endRaw] = explode(' s.d ', $raw, 2);
                 $start = Carbon::parse($startRaw)->startOfDay();
@@ -51,26 +45,21 @@ class PesananProsesController extends Controller
                 $start = Carbon::parse($raw)->startOfDay();
                 $end = Carbon::parse($raw)->endOfDay();
             }
-
             if ($end->lt($start)) {
                 [$start, $end] = [
                     $end->copy()->startOfDay(),
                     $start->copy()->endOfDay(),
                 ];
             }
-
             $query->whereBetween('tanggal', [$start, $end]);
         }
 
         $pesanan = $query->paginate($perPage)->withQueryString();
-
         foreach ($pesanan as $p) {
             $p->total = (int) $p->produk->sum('jumlah');
         }
-
         $total = (int) $pesanan->sum('total');
         $jumlahPesanan = $pesanan->total();
-
         $daftarToko = Toko::select('id_toko', 'nama_toko', 'marketplace')
             ->orderBy('nama_toko')
             ->get();
@@ -160,6 +149,7 @@ class PesananProsesController extends Controller
                         now()->endOfDay(),
                     ]);
             })
+            ->where('platform', 'marketplace')
             ->where('status', 'proses')
             ->orderByRaw('batas_kirim_at IS NULL DESC')
             ->orderBy('batas_kirim_at', 'asc')

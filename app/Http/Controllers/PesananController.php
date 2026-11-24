@@ -45,21 +45,14 @@ class PesananController extends Controller
 
         // Jika user memilih tanggal
         if ($range !== '') {
-
             try {
-
                 if (str_contains($range, ' s.d ')) {
-
                     [$s, $e] = array_map('trim', explode(' s.d ', $range, 2));
-
                     $start = Carbon::createFromFormat('Y-m-d', $s);
                     $end = Carbon::createFromFormat('Y-m-d', $e);
-
                 } else {
-
                     $start = Carbon::createFromFormat('Y-m-d', $range);
                     $end = Carbon::createFromFormat('Y-m-d', $range);
-
                 }
 
                 if ($end->lt($start)) {
@@ -68,11 +61,9 @@ class PesananController extends Controller
 
                 $startStr = $start->toDateString();
                 $endStr = $end->toDateString();
-
             } catch (\Throwable $e) {
                 // gunakan default bulan berjalan
             }
-
         }
 
         $pesanan = Pesanan::select([
@@ -84,39 +75,19 @@ class PesananController extends Controller
             'status_cek',
             'no_resi',
             'total_harga',
-        ])
-            ->with([
-                'produk' => function ($q) {
-                    $q->select(
-                        'no_pesanan',
-                        'nama_produk',
-                        'variasi',
-                        'jumlah',
-                        'harga',
-                        'hpp',
-                        'sku'
-                    );
-                },
-            ])
-
-            ->when($keyword !== '', function ($q) use ($keyword) {
-
-                $q->where(function ($sub) use ($keyword) {
-
-                    $sub->where('no_pesanan', 'like', "%{$keyword}%")
-                        ->orWhere('no_resi', 'like', "%{$keyword}%");
-
-                });
-
-            })
-
-            // Hanya gunakan filter tanggal jika tidak sedang mencari keyword
-            ->when($keyword === '', function ($q) use ($startStr, $endStr) {
-
+        ])->with([
+            'produk' => function ($q) {
+                $q->select('no_pesanan', 'nama_produk', 'variasi', 'jumlah', 'harga', 'hpp', 'sku');
+            },
+        ])->where('platform', 'marketplace')
+        ->when($keyword !== '', function ($q) use ($keyword) {
+            $q->where(function ($sub) use ($keyword) {
+                $sub->where('no_pesanan', 'like', "%{$keyword}%")
+                    ->orWhere('no_resi', 'like', "%{$keyword}%");
+            });
+        })->when($keyword === '', function ($q) use ($startStr, $endStr) {
                 $q->whereBetween('tanggal', [$startStr, $endStr]);
-
             })
-
             ->orderByDesc('tanggal')
             ->orderByDesc('no_pesanan')
             ->paginate($perPage)
@@ -124,24 +95,15 @@ class PesananController extends Controller
 
         $totalItems = DB::table('pesanan_per_produk as pp')
             ->join('pesanan as p', 'pp.no_pesanan', '=', 'p.no_pesanan')
-
             ->when($keyword !== '', function ($q) use ($keyword) {
-
                 $q->where(function ($sub) use ($keyword) {
-
                     $sub->where('p.no_pesanan', 'like', "%{$keyword}%")
                         ->orWhere('p.no_resi', 'like', "%{$keyword}%");
-
                 });
-
             })
-
             ->when($keyword === '', function ($q) use ($startStr, $endStr) {
-
                 $q->whereBetween('p.tanggal', [$startStr, $endStr]);
-
             })
-
             ->sum('pp.jumlah');
 
         return view('pesanan.pesanan', [
@@ -356,10 +318,10 @@ class PesananController extends Controller
 
                 $hargaMarketplace = $this->toNumber(
                     $p['harga_original']
-                    ?? $p['Harga_original']
-                    ?? $p['Harga']
-                    ?? $p['harga']
-                    ?? 0
+                        ?? $p['Harga_original']
+                        ?? $p['Harga']
+                        ?? $p['harga']
+                        ?? 0
                 );
 
                 $hargaJualReal = round(
@@ -400,7 +362,7 @@ class PesananController extends Controller
             array_unique(
                 array_filter(
                     array_map(
-                        fn ($sku) => Str::upper(trim((string) $sku)),
+                        fn($sku) => Str::upper(trim((string) $sku)),
                         $skuList
                     )
                 )
@@ -541,11 +503,11 @@ class PesananController extends Controller
 
         $previewByOrder = collect($previewRaw)
             ->filter(
-                fn ($row) => is_array($row) &&
+                fn($row) => is_array($row) &&
                     ! empty($row['no_pesanan'])
             )
             ->keyBy(
-                fn ($row) => trim((string) $row['no_pesanan'])
+                fn($row) => trim((string) $row['no_pesanan'])
             );
 
         $biayaAdmin = (float) ($toko->biaya_admin ?? 0);
@@ -604,7 +566,7 @@ class PesananController extends Controller
                 ->select('sku', 'hpp')
                 ->get()
                 ->keyBy(
-                    fn ($row) => Str::upper(trim((string) $row->sku))
+                    fn($row) => Str::upper(trim((string) $row->sku))
                 );
         }
 
@@ -674,7 +636,7 @@ class PesananController extends Controller
                     $previewItem['produk_detail'] ?? []
                 )->values();
 
-               
+
                 $previewTerpakai = [];
                 foreach ($item['produk'] ?? [] as $produkIndex => $prd) {
                     if (! is_array($prd)) {
@@ -726,7 +688,8 @@ class PesananController extends Controller
                         );
 
                         $skuNormalCalon = $skuCalon !== ''
-                            ? Str::upper(trim((string)
+                            ? Str::upper(trim(
+                                (string)
                                 $excelService->normalizeSku($skuCalon)
                             ))
                             : '';
@@ -794,7 +757,8 @@ class PesananController extends Controller
                             }
 
                             $skuNormalPreview = Str::upper(
-                                trim((string)
+                                trim(
+                                    (string)
                                     $excelService->normalizeSku($skuPreview)
                                 )
                             );
@@ -888,19 +852,19 @@ class PesananController extends Controller
                     $jumlahReal = $jumlahPesanan * $multiplier;
                     $hargaMarketplace = $this->toNumber(
                         $prd['harga_original']
-                        ?? $prd['Harga_original']
-                        ?? $preview['harga_original']
-                        ?? $preview['Harga_original']
-                        ?? null
+                            ?? $prd['Harga_original']
+                            ?? $preview['harga_original']
+                            ?? $preview['Harga_original']
+                            ?? null
                     );
 
                     if ($hargaMarketplace <= 0) {
                         $hargaRealPayload = $this->toNumber(
                             $prd['harga']
-                            ?? $prd['Harga']
-                            ?? $preview['harga']
-                            ?? $preview['Harga']
-                            ?? 0
+                                ?? $prd['Harga']
+                                ?? $preview['harga']
+                                ?? $preview['Harga']
+                                ?? 0
                         );
 
                         $hargaMarketplace = $hargaRealPayload * $multiplier;
@@ -960,7 +924,7 @@ class PesananController extends Controller
                             'updated_at' => now(),
                         ], 'id_per_produk');
 
-                   
+
                     $skuEditor = Str::upper(trim((string) $sku));
 
                     if (
@@ -1017,7 +981,6 @@ class PesananController extends Controller
                 'parts_baru' => $hasilPart['parts_baru'],
                 'part_oversize' => $hasilPart['oversize'],
             ]);
-
         } catch (\Throwable $e) {
             DB::rollBack();
 
@@ -1028,7 +991,6 @@ class PesananController extends Controller
                 'message' => $e->getMessage(),
             ], 500);
         }
-
     }
 
     public function previewResi($token)

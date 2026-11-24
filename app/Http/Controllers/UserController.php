@@ -27,10 +27,12 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'role' => 'required|in:pegawai,manager,packing,gudang,editor',
-            'password' => 'required|min:6',
+            'name'     => 'required|string|max:255',
+            'email'    => 'required|email|max:255|unique:users,email',
+            'role'     => 'required|in:pegawai,manager,packing,gudang,editor,cs',
+            'password' => 'required|string|min:6',
+            'leader'   => 'required|boolean',
+            'platform' => 'required|in:marketplace,meta',
         ]);
 
         DB::beginTransaction();
@@ -38,8 +40,10 @@ class UserController extends Controller
             User::create([
                 'name' => $request->name,
                 'email' => $request->email,
+                'platform' => $request->platform,
+                'leader' => $request->leader,
                 'role' => $request->role,
-                'password' => Hash::make($request->password),
+                'password' => Hash::make($request->password)
             ]);
 
             DB::commit();
@@ -48,7 +52,6 @@ class UserController extends Controller
             DB::rollBack();
             return redirect()->route('users.index')->with('success', 'User gagal ditambahkan');
         }
-
     }
 
     public function update(Request $request, $id)
@@ -57,7 +60,7 @@ class UserController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,'.$user->id,
+            'email' => 'required|email|unique:users,email,' . $user->id,
             'role' => 'required|in:pegawai,manager,packing,editor,gudang',
             'password' => 'nullable|min:6',
         ]);

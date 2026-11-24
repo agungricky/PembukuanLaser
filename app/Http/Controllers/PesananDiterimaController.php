@@ -19,6 +19,7 @@ class PesananDiterimaController extends Controller
         }
 
         $query = Pesanan::with(['produk', 'user', 'toko'])
+            ->where('platform', 'marketplace')
             ->where('status', 'selesai')
 
             // search no_pesanan / no_resi

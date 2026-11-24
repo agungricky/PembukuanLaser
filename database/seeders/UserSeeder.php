@@ -68,12 +68,21 @@ class UserSeeder extends Seeder
             ]
         );
 
+        // User::firstOrCreate(
+        //     ['name' => 'ikaa'],
+        //     [
+        //         'role' => 'packing',
+        //         'email' => 'packing@gmail.com',
+        //         'password' => Hash::make('654321'),
+        //     ]
+        // );
+
         User::firstOrCreate(
-            ['name' => 'ikaaF'],
+            ['name' => 'josjis'],
             [
-                'role' => 'packing',
-                'email' => 'packing@gmail.com',
-                'password' => Hash::make('654321'),
+                'role' => 'manager',
+                'email' => 'manager1@gmail.com',
+                'password' => Hash::make('123456'),
             ]
         );
     }

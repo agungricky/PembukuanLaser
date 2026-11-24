@@ -273,7 +273,7 @@
         </div>
 
         <!-- Inventory Stock Table Section -->
-        <section id="stockTableSection" class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        {{-- <section id="stockTableSection" class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
             <div
                 class="card-header bg-white border-bottom p-3 p-md-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
                 <div>
@@ -327,7 +327,7 @@
                     <tbody id="stockTableBody"></tbody>
                 </table>
             </div>
-        </section>
+        </section> --}}
 
         <!-- Activity & Mutation History Log -->
         <div class="row">
@@ -369,7 +369,7 @@
                                         <td class="text-center">{{ $no++ }}</td>
                                         <td>
                                             <div class="fw-semibold text-dark">
-                                                {{ $item->stok_produk->produk->nama_produk ?? '-' }}
+                                                {{ \Illuminate\Support\Str::words($item->stok_produk->produk->nama_produk ?? '-', 3, '...') }}
                                             </div>
 
                                             <div class="text-muted" style="font-size: 11px;">

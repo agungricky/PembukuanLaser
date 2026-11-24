@@ -24,6 +24,7 @@ class PesananKirimController extends Controller
         }
 
         $query = Pesanan::with(['produk', 'user', 'toko'])
+            ->where('platform', 'marketplace')
             ->where('status', 'kirim')
             ->when($request->filled('q'), function ($qBuilder) use ($request) {
                 $keyword = $request->input('q');

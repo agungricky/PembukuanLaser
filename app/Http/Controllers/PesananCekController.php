@@ -19,6 +19,7 @@ class PesananCekController extends Controller
         }
 
         $query = Pesanan::with('toko')
+            ->where('platform', 'marketplace')
             ->where('status_cek', 1)
             ->when($request->filled('no_pesanan'), function ($q) use ($request) {
                 $keyword = trim($request->no_pesanan);

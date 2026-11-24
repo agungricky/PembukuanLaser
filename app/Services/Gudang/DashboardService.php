@@ -59,7 +59,7 @@ class DashboardService
         $aktivitas = mutasi_stok::with(['stok_produk.produk.kategori'])
             ->whereIn('jenis_mutasi', ['keluar', 'masuk'])
             ->orderBy('created_at', 'DESC')
-            ->take(10)
+            ->take(13)
             ->get();
 
         return view('gudang.Dashboard', [

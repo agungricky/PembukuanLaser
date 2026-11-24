@@ -22,6 +22,7 @@ class PesananBatalController extends Controller
         $allowedStatus = ['batal', 'pengembalian', 'pengiriman gagal'];
 
         $query = Pesanan::with(['toko'])
+            ->where('platform', 'marketplace')
             ->whereIn('status', $allowedStatus)
 
             // search no_pesanan / no_resi

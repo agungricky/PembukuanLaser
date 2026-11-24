@@ -19,6 +19,7 @@ class PesananAffiliateController extends Controller
         }
 
         $query = Pesanan::with(['toko', 'produk', 'user'])
+            ->where('platform', 'marketplace')
             ->where('status', 'affiliate')
 
             ->when($request->filled('q'), function ($qBuilder) use ($request) {
