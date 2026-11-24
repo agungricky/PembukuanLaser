@@ -9,10 +9,7 @@ use App\Http\Controllers\Api\ProdukController;
 use App\Http\Controllers\Api\RingkasanController;
 use App\Http\Controllers\Api\WilayahController as ApiWilayahController;
 use Illuminate\Support\Facades\Route;
-use App\Services\GoogleSheetsService;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Api\ChatKlarifikasiPackingController;
-use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/file', [FileGatorController::class, 'show'])
@@ -76,6 +73,8 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
             Route::get('/detail/{no_pesanan}', 'detail')->name('detail');
             Route::get('/create', 'create')->name('create');
             Route::post('/store', 'store')->name('store');
+            Route::patch('/edit/{no_pesanan}', 'edit')->name('edit');
+            Route::patch('/update', 'update')->name('update');
             Route::post('/google-sheets/store', 'googleSheet');
         });
 
@@ -93,6 +92,7 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
             ->controller(FileGatorController::class)->group(function () {
                 Route::post('/folders', 'createFolder');
                 Route::post('/upload', 'upload');
+                Route::delete('/delete', 'delete');
             });
     });
 

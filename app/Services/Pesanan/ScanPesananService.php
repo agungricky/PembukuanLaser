@@ -6,6 +6,7 @@ use App\Models\Pesanan;
 use App\Models\progres_pesanan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ScanPesananService
 {
@@ -17,9 +18,25 @@ class ScanPesananService
     public function scanUpdate($no_pesanan)
     {
         return DB::transaction(function () use ($no_pesanan) {
+
             $pesanan = Pesanan::where('no_pesanan', $no_pesanan)
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            if ($pesanan->status === 'kirim') {
+                return [
+                    'success' => false,
+                    'message' => 'Pesanan sudah dikirim.',
+                ];
+            }
+
+            if ($pesanan->status !== 'proses') {
+                return [
+                    'success' => false,
+                    'message' => 'Pesanan tidak dapat dikirim karena berstatus '
+                        . $pesanan->status . '.',
+                ];
+            }
 
             $pesanan->update([
                 'status' => 'kirim',
@@ -32,7 +49,11 @@ class ScanPesananService
                 'user_id' => userLogin()?->id,
             ]);
 
-            return $pesanan;
+            return [
+                'success' => true,
+                'message' => 'Pesanan berhasil dikirim.',
+                'data' => $pesanan,
+            ];
         });
     }
 

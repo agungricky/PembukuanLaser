@@ -3,9 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\FotoMeta;
 use App\Models\Pesanan;
-use App\Models\PesananPerProduk;
 use App\Models\Produk;
 use App\Models\User;
 use App\Services\Pesanan\PesananService;
@@ -14,10 +12,10 @@ use Illuminate\Support\Facades\DB;
 use Dedoc\Scramble\Attributes\Group;
 use App\Services\GoogleSheetsService;
 use App\Services\Pesanan\FotoPesananService;
-use Dotenv\Validator;
-use Illuminate\Support\Facades\Auth;
 use App\Services\Api\FileGatorService as ApiFileGatorService;
 use App\Services\Pesanan\ScanPesananService;
+use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
+use Illuminate\Validation\Rule;
 
 #[Group('Pesanan')]
 class pesananController extends Controller
@@ -698,6 +696,124 @@ class pesananController extends Controller
         }
     }
 
+    public function edit(PesananService $pesananService, $no_pesanan)
+    {
+        $data = $pesananService->detailpesanan($no_pesanan);
+        $pesanan = Pesanan::with('customer_address')
+            ->where('no_pesanan', data_get($data, 'pesanan.noPesanan'))
+            ->firstOrFail();
+
+        $address = $pesanan->customer_address;
+
+        $data->informasiPembeli['address'] = [
+            'provinsi' => $address?->getRawOriginal('provinsi'),
+            'kabupatenKota' => $address?->getRawOriginal('kabupaten_kota'),
+            'kecamatan' => $address?->getRawOriginal('kecamatan'),
+            'desa' => $address?->getRawOriginal('desa'),
+            'alamatLengkap' => $address?->alamat_lengkap,
+            'kodePos' => data_get($data, 'informasiPembeli.address.kodePos'),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ], 200, [], JSON_UNESCAPED_SLASHES);
+    }
+
+    public function update(PesananService $pesananService, Request $request, $no_pesanan)
+    {
+        $pesanan = Pesanan::findOrFail($no_pesanan);
+
+        $data = $request->validate([
+            // 01. DATA PESANAN
+            'no_pesanan' => [
+                'required',
+                'string',
+                Rule::in([$pesanan->no_pesanan]),
+            ],
+            'platform' => [
+                'required',
+                Rule::in([$pesanan->platform]),
+            ],
+            'tanggal' => 'required|date|before_or_equal:now',
+            'tanggal_order' => 'required|date|before_or_equal:now',
+            'user_id' => 'required|integer|exists:users,id',
+            'nama_pembeli' => 'required|string|max:255',
+            'total_hpp' => 'required|integer|min:0',
+            'total_harga' => 'required|integer|min:0',
+            'total_admin' => 'required|integer|min:0',
+            'chat_masuk_at' => 'required|date|before_or_equal:now',
+            'notes' => 'nullable|string',
+
+            // 02. ALAMAT PENGIRIMAN
+            'provinsi' => 'required|string',
+            'kabupaten_kota' => 'required|string',
+            'kecamatan' => 'required|string',
+            'desa' => 'nullable|string',
+            'alamat_lengkap' => 'required|string|max:1000',
+            'phone' => [
+                'required',
+                'string',
+                'regex:/^628[0-9]{7,12}$/',
+            ],
+
+            // 03. PEMBAYARAN
+            'jenis_transaksi' => 'required|in:cod,non-cod,dp',
+            'cod' => 'nullable|numeric|min:0',
+            'non_cod' => 'nullable|numeric|min:0',
+            'dp' => 'nullable|numeric|min:0',
+
+            'bukti_bayar' => [
+                'sometimes',
+                'nullable',
+                'file',
+                'mimes:jpg,jpeg,png,pdf',
+                'max:5120',
+            ],
+
+            // 04. PESANAN PER PRODUK
+            'pesanan_perproduk' => 'required|array|min:1',
+
+            'pesanan_perproduk.*.id' => [
+                'nullable',
+                'integer',
+                'distinct',
+                Rule::exists('pesanan_per_produk', 'id')
+                    ->where('no_pesanan', $pesanan->no_pesanan),
+            ],
+
+            'pesanan_perproduk.*.nama_produk' => 'required|string',
+            'pesanan_perproduk.*.variasi' => 'required|string',
+            'pesanan_perproduk.*.jumlah' => 'required|integer|min:1',
+            'pesanan_perproduk.*.hpp' => 'required|numeric|min:0',
+            'pesanan_perproduk.*.harga' => 'required|numeric|min:0',
+            'pesanan_perproduk.*.sku' => 'required|string',
+            'pesanan_perproduk.*.custom' => 'required|boolean',
+            'pesanan_perproduk.*.catatan' => 'nullable|string',
+
+            // 05. FOTO PRODUK BARU
+            'pesanan_perproduk.*.foto_produk' => [
+                'sometimes',
+                'nullable',
+                'array',
+                'max:5',
+            ],
+            'pesanan_perproduk.*.foto_produk.*' => [
+                'required',
+                'file',
+                'mimes:jpg,jpeg,png',
+                'max:5120',
+            ],
+        ]);
+
+        $data = $pesananService->update($request, $no_pesanan);
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
+
+    #[ExcludeRouteFromDocs]
     public function googleSheet(Request $request, GoogleSheetsService $googleSheets)
     {
         $data = $request->validate([
@@ -1546,17 +1662,27 @@ class pesananController extends Controller
      * File MP3 dapat disimpan secara lokal di aplikasi mobile
      * sehingga tidak perlu dikirim melalui API.
      */
-    public function scanUpdate(ScanPesananService $scanPesananService, $no_pesanan)
-    {
+    public function scanUpdate(
+        ScanPesananService $scanPesananService,
+        $no_pesanan
+    ) {
         $data = $scanPesananService->scanUpdate($no_pesanan);
+
+        if (!$data['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $data['message'],
+            ], 422);
+        }
 
         return response()->json([
             'success' => true,
+            'message' => $data['message'],
             'data' => (object) [
-                'no_pesanan' => $data->no_pesanan,
-                'status' => $data->status,
-            ]
-        ]);
+                'no_pesanan' => $data['data']->no_pesanan,
+                'status' => $data['data']->status,
+            ],
+        ], 200);
     }
 
     /**

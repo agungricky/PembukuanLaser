@@ -71,7 +71,7 @@ class PesananService
             }
         ])
             ->where('no_pesanan', $no_pesanan)
-            ->select('no_pesanan', 'nama_pembeli', 'total_harga', 'notes', 'input_at', 'no_resi', 'platform', 'foto_at')
+            ->select('no_pesanan', 'nama_pembeli', 'total_harga', 'notes', 'input_at','no_resi', 'platform', 'foto_at')
             ->firstOrFail();
 
         $pesanan->pesanan_per_produk->each(function ($item) {
@@ -174,6 +174,10 @@ class PesananService
             'no_pesanan' => $noPesananBaru,
             'user' => $user,
         ];
+    }
+
+    public function update($request, $no_pesanan) {
+
     }
 
     public function store(Request $request)
