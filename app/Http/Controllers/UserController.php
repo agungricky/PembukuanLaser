@@ -61,14 +61,18 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
-            'role' => 'required|in:pegawai,manager,packing,editor,gudang',
+            'role' => 'required|in:pegawai,manager,packing,editor,gudang,cs',
             'password' => 'nullable|min:6',
+            'leader'   => 'required|boolean',
+            'platform' => 'required|in:marketplace,meta',
         ]);
 
         $data = [
             'name' => $request->name,
             'email' => $request->email,
             'role' => $request->role,
+            'leader' => $request->leader,
+            'platform' => $request->platform
         ];
 
         if ($request->filled('password')) {

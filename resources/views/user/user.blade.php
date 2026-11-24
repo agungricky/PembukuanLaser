@@ -31,9 +31,10 @@
                 <thead class="table-light">
                     <tr class="text-center">
                         <th style="width:64px">No</th>
-                        <th style="min-width:220px" class="text-start">Nama</th>
+                        <th style="min-width:220px" class="text-start">Nama / Leader</th>
                         <th style="min-width:220px" class="text-start">Email</th>
                         <th style="min-width:120px">Role</th>
+                        <th style="min-width:120px">Platform</th>
                         <th style="min-width:160px">Aksi</th>
                     </tr>
                 </thead>
@@ -60,7 +61,14 @@
                             <td class="text-start">
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="avatar-circle">{{ $initials }}</div>
-                                    <div class="fw-semibold">{{ $user->name }}</div>
+
+                                    <div class="fw-semibold">
+                                        {{ $user->name }}
+
+                                        @if ($user->leader)
+                                            <i class="bi bi-check-circle-fill text-success ms-1" title="Leader"></i>
+                                        @endif
+                                    </div>
                                 </div>
                             </td>
                             <td class="text-start">
@@ -71,11 +79,23 @@
                                     class="badge rounded-pill bg-{{ $roleClass }} text-white text-capitalize">{{ $user->role }}</span>
                             </td>
                             <td class="text-center">
+                                <span
+                                    class="badge rounded-pill bg-{{ $user->platform == 'meta' ? 'primary' : 'success' }} text-white text-capitalize">
+                                    {{ $user->platform ?? '-' }}
+                                </span>
+                            </td>
+
+                            <td class="text-center">
                                 <div class="d-inline-flex gap-1">
                                     <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
-                                        data-bs-target="#editDataModal" data-id="{{ $user->id }}"
-                                        data-name="{{ $user->name }}" data-email="{{ $user->email }}"
-                                        data-role="{{ $user->role }}">
+                                        data-bs-target="#editDataModal" 
+                                        data-id="{{ $user->id }}"
+                                        data-name="{{ $user->name }}" 
+                                        data-email="{{ $user->email }}"
+                                        data-role="{{ $user->role }}"
+                                        data-leader="{{ $user->leader }}"
+                                        data-platform="{{ $user->platform }}"
+                                        >
                                         <i class="bi bi-pencil"></i> Edit
                                     </button>
                                     <form action="{{ route('users.destroy', $user->id) }}" method="POST" class="d-inline"
@@ -258,7 +278,6 @@
                                     <span class="input-group-text bg-white">
                                         <i class="bi bi-person text-muted"></i>
                                     </span>
-
                                     <input type="text" name="name" id="editName" class="form-control"
                                         placeholder="Nama lengkap" required>
                                 </div>
@@ -427,7 +446,6 @@
 
         // Populate edit modal
         const editModal = document.getElementById('editDataModal');
-        console.log(editModal);
         editModal.addEventListener('show.bs.modal', function(event) {
             const btn = event.relatedTarget;
             const id = btn.getAttribute('data-id');
