@@ -16,6 +16,7 @@ use App\Services\Api\FileGatorService as ApiFileGatorService;
 use App\Services\Pesanan\ScanPesananService;
 use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 #[Group('Pesanan')]
@@ -913,6 +914,108 @@ class pesananController extends Controller
             'success' => true,
             'data' => $data
         ]);
+    }
+
+    /**
+     * Hapus Pesanan
+     *
+     * Menghapus pesanan secara langsung atau mengajukan penghapusan
+     * pesanan berdasarkan status pengajuan resi dan nomor resi.
+     *
+     * ### Header Request
+     * ```http
+     * Authorization: Bearer {token}
+     * Accept: application/json
+     * Content-Type: application/json
+     * ```
+     *
+     * ### Parameter Request
+     * - **no_pesanan** : string, wajib diisi dan terdaftar pada tabel pesanan.
+     * - **keterangan** : string, wajib diisi apabila pengajuan penghapusan pesanan & tidak wajib di isi jika dihapus langsung.
+     *
+     * ### Catatan
+     * - Pada aplikasi mobile, field keterangan dapat
+     *   ditampilkan apabila `no_resi` tidak bernilai `null` dan
+     *   `pengajuan_resi_meta` bernilai `1` (true).
+     * - Field tersebut wajib diisi sebagai alasan pengajuan penghapusan pesanan.
+     * - Apabila kondisi tersebut tidak terpenuhi, field keterangan tidak perlu ditampilkan.
+     * 
+     * ### Contoh Request
+     * ```http
+     * DELETE /api/pesanan/delete/261126001A
+     * ```
+     *
+     * ### Body Request
+     * ```json
+     * {
+     *     "keterangan": "Pembeli membatalkan pesanan"
+     * }
+     * ```
+     *
+     * ### Hasil Respon
+     *
+     * **HTTP 200 - Berhasil**
+     * ```json
+     * {
+     *     "success": true,
+     *     "message": "Pesanan berhasil dihapus"
+     * }
+     * ```
+     *
+     * **HTTP 422 - Gagal**
+     * ```json
+     * {
+     *     "success": false,
+     *     "message": "Pesanan tidak memenuhi syarat penghapusan."
+     * }
+     * ```
+     *
+     * ### Keterangan Error
+     * - **401** : Token tidak valid atau pengguna belum login.
+     * - **403** : Pengguna tidak memiliki hak akses.
+     * - **404** : Pesanan tidak ditemukan setelah validasi.
+     * - **422** : Validasi gagal atau pesanan tidak memenuhi syarat.
+     * - **500** : Terjadi kesalahan pada server.
+     *
+     * ### Ketentuan
+     * - Jika pengajuan_resi_meta bernilai false dan no_resi bernilai null,
+     *   pesanan akan langsung dihapus beserta data terkait.
+     * - Jika pengajuan_resi_meta bernilai true dan no_resi tidak null,
+     *   pesanan akan masuk ke pengajuan penghapusan.
+     * - Pengajuan penghapusan memiliki status awal pending.
+     * - Pesanan yang masuk pengajuan tidak langsung dihapus.
+     * - Status pengajuan terdiri dari pending, approve, dan reject.
+     */
+    public function delete(PesananService $pesananService, $no_pesanan, Request $request)
+    {
+        Validator::make(['no_pesanan' => $no_pesanan], [
+            'no_pesanan' => 'required|string|exists:pesanan,no_pesanan',
+        ])->validate();
+
+        $pesanan = Pesanan::where('no_pesanan', $no_pesanan)->firstOrFail();
+        if ($pesanan->pengajuan_resi_meta == true && $pesanan->no_resi !== null) {
+            $request->validate([
+                'keterangan' => 'required|string',
+            ]);
+            $pesananService->pengajuanDelete($pesanan, $request);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Hapus pesanan berhasil di ajukan",
+            ]);
+        } elseif ($pesanan->pengajuan_resi_meta == false && $pesanan->no_resi === null) {
+            $pesananService->delete($pesanan);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Pesanan berhasil dihapus",
+            ]);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pesanan tidak memenuhi syarat penghapusan.',
+            ], 422);
+        }
     }
 
     #[ExcludeRouteFromDocs]

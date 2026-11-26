@@ -5,6 +5,7 @@ namespace App\Services\Pesanan;
 use App\Models\bukti_pembayaran;
 use App\Models\customer_addresses;
 use App\Models\PengajuanEditPesanan;
+use App\Models\PengajuanHapusPesanan;
 use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
 use App\Models\ReqFoto;
@@ -534,6 +535,40 @@ class PesananService
                 'buktiBayar' => $customerAddress
             ];
         });
+    }
+
+    public function delete($pesanan)
+    {
+        DB::beginTransaction();
+        try {
+            $noPesanan = $pesanan->no_pesanan;
+
+            $buktiBayar = bukti_pembayaran::where('no_pesanan', $noPesanan)->first();
+            if ($buktiBayar) {
+                $foto = $buktiBayar->getRawOriginal('bukti_bayar');
+                if (!empty($foto)) {
+                    $this->driveService->delete([$foto]);
+                }
+
+                $buktiBayar->delete();
+            }
+
+            customer_addresses::where('no_pesanan', $noPesanan)->delete();
+            PesananPerProduk::where('no_pesanan', $noPesanan)->delete();
+            Pesanan::where('no_pesanan', $noPesanan)->delete();
+
+            DB::commit();
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            throw $th;
+        }
+    }
+
+    public function pengajuanDelete($pesanan, $request) {
+        PengajuanHapusPesanan::create([
+            'no_pesanan' => $pesanan->no_pesanan,
+            'keterangan' => $request->keterangan
+        ]);
     }
 
     public function antrian($request)

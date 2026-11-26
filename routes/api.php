@@ -75,6 +75,7 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
             Route::post('/store', 'store')->name('store');
             Route::get('/edit/{no_pesanan}', 'edit')->name('edit');
             Route::patch('/update', 'update')->name('pengajuan.update');
+            Route::delete('/delete/{no_pesanan}', 'delete')->name('delete');
             Route::post('/google-sheets/store', 'googleSheet');
         });
 
