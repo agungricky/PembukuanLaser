@@ -73,8 +73,8 @@ Route::middleware(['auth:sanctum'])->name('api.')->group(function () {
             Route::get('/detail/{no_pesanan}', 'detail')->name('detail');
             Route::get('/create', 'create')->name('create');
             Route::post('/store', 'store')->name('store');
-            Route::patch('/edit/{no_pesanan}', 'edit')->name('edit');
-            Route::patch('/update', 'update')->name('update');
+            Route::get('/edit/{no_pesanan}', 'edit')->name('edit');
+            Route::patch('/update', 'update')->name('pengajuan.update');
             Route::post('/google-sheets/store', 'googleSheet');
         });
 

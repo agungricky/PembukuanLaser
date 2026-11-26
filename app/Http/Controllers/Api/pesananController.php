@@ -15,6 +15,7 @@ use App\Services\Pesanan\FotoPesananService;
 use App\Services\Api\FileGatorService as ApiFileGatorService;
 use App\Services\Pesanan\ScanPesananService;
 use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 #[Group('Pesanan')]
@@ -648,7 +649,7 @@ class pesananController extends Controller
             'phone' => ['required', 'regex:/^628[0-9]{7,12}$/'],
 
             // 03. PEMBAYARAN
-            'jenis_transaksi' => 'required|in:cod,non-cod,dp',
+            'jenis_transaksi' => 'required|in:cod,non-cod,dp,por',
             'cod' => 'nullable|numeric|min:0',
             'non_cod' => 'nullable|numeric|min:0',
             'dp' => 'nullable|numeric|min:0',
@@ -696,23 +697,51 @@ class pesananController extends Controller
         }
     }
 
+    /**
+     * Edit Pesanan
+     *
+     * Mengambil detail pesanan berdasarkan nomor pesanan
+     * untuk kebutuhan pengisian form edit pesanan.
+     *
+     * ### Fitur
+     *
+     * - Menampilkan informasi pembeli.
+     * - Menampilkan informasi pesanan.
+     * - Menampilkan produk dalam pesanan.
+     * - Menampilkan alamat customer.
+     * - Menampilkan bukti pembayaran.
+     *
+     * ### Header Request
+     *
+     * | Header | Value |
+     * | --- | --- |
+     * | Authorization | Bearer {token} |
+     * | Accept | application/json |
+     *
+     * ### Parameter
+     *
+     * | Parameter | Tipe | Keterangan |
+     * | --- | --- | --- |
+     * | no_pesanan | string | Nomor pesanan yang akan diedit |
+     *
+     * ### Contoh Request
+     *
+     * ```http
+     * GET /api/pesanan/edit/261126001A
+     * ```
+     *
+     * ### Catatan
+     *
+     * - Nomor pesanan harus terdaftar dalam database.
+     * - wilayah menggunakan nilai asli dari database yang merupakan kode wilayah.
+     * - Field `nama_file` berisi path asli file pada FileGator.
+     * - Field `foto` dan `bukti_bayar` bisa digunakan untuk menampilkan foto.
+     * - Endpoint ini hanya mengambil data untuk di tampilkan di form dan tidak mengubah pesanan.
+     * - Jika pesanan tidak ditemukan, API mengembalikan HTTP 404.
+     */
     public function edit(PesananService $pesananService, $no_pesanan)
     {
-        $data = $pesananService->detailpesanan($no_pesanan);
-        $pesanan = Pesanan::with('customer_address')
-            ->where('no_pesanan', data_get($data, 'pesanan.noPesanan'))
-            ->firstOrFail();
-
-        $address = $pesanan->customer_address;
-
-        $data->informasiPembeli['address'] = [
-            'provinsi' => $address?->getRawOriginal('provinsi'),
-            'kabupatenKota' => $address?->getRawOriginal('kabupaten_kota'),
-            'kecamatan' => $address?->getRawOriginal('kecamatan'),
-            'desa' => $address?->getRawOriginal('desa'),
-            'alamatLengkap' => $address?->alamat_lengkap,
-            'kodePos' => data_get($data, 'informasiPembeli.address.kodePos'),
-        ];
+        $data = $pesananService->edit($no_pesanan);
 
         return response()->json([
             'success' => true,
@@ -720,93 +749,166 @@ class pesananController extends Controller
         ], 200, [], JSON_UNESCAPED_SLASHES);
     }
 
-    public function update(PesananService $pesananService, Request $request, $no_pesanan)
+    /**
+     * Update Pesanan
+     *
+     * Memperbarui informasi pembeli, pesanan, alamat pengiriman,
+     * dan data pembayaran berdasarkan nomor pesanan.
+     *
+     * ### Ketentuan Update
+     *
+     * - Jika `pengajuan_resi_meta = false`, data pesanan bisa langsung diperbarui dari cs.
+     * - Jika `pengajuan_resi_meta = true`, perubahan disimpan sebagai pengajuan edit pesanan untuk di tinjau Admin logistik.
+     * - Pengajuan edit pesanan memiliki status awal `pending`.
+     * - Pengajuan tidak langsung mengubah data pesanan asli.
+     * - Daftar produk pesanan tidak diperbarui melalui endpoint ini.
+     * - Namun cara pembayaran atau bukti pembayaran bisa melalui endpoin ini termasuk metode POR (payment on Ready) yang dimana bukti pembayaran dapat di input diakhir.
+     *
+     * ### Header Request
+     *
+     * | Header | Value |
+     * | --- | --- |
+     * | Authorization | Bearer {token} |
+     * | Accept | application/json |
+     * | Content-Type | multipart/form-data |
+     *
+     * ### Data Pesanan
+     *
+     * | Parameter | Tipe | Wajib | Keterangan |
+     * | --- | --- | --- | --- |
+     * | no_pesanan | string | Ya | Nomor pesanan yang terdaftar |
+     * | tanggal_order | datetime | Ya | Format Y-m-d H:i:s, tidak melebihi waktu sekarang |
+     * | nama_pembeli | string | Ya | Nama pembeli, maksimal 255 karakter |
+     * | total_hpp | integer | Ya | Total HPP, minimal 0 |
+     * | total_harga | integer | Ya | Total harga, minimal 0 |
+     * | total_admin | integer | Ya | Total biaya admin, minimal 0 |
+     * | notes | string | Tidak | Catatan pesanan |
+     * | chat_masuk_at | datetime | Tidak | Waktu chat masuk, digunakan pada pengajuan edit |
+     *
+     * ### Alamat Pengiriman
+     *
+     * | Parameter | Tipe | Wajib | Keterangan |
+     * | --- | --- | --- | --- |
+     * | provinsi | string | Ya | Kode provinsi |
+     * | kabupaten_kota | string | Ya | Kode kabupaten atau kota |
+     * | kecamatan | string | Ya | Kode kecamatan |
+     * | desa | string | Tidak | Kode desa |
+     * | alamat_lengkap | string | Ya | Alamat lengkap, maksimal 1000 karakter |
+     * | phone | string | Ya | Nomor WhatsApp dengan awalan 628 |
+     *
+     * ### Pembayaran
+     *
+     * | Parameter | Tipe | Wajib | Keterangan |
+     * | --- | --- | --- | --- |
+     * | jenis_transaksi | string | Ya | cod, non-cod, dp, por |
+     * | cod | numeric | Tidak | Nominal pembayaran COD |
+     * | non_cod | numeric | Tidak | Nominal pembayaran Non-COD |
+     * | dp | numeric | Tidak | Nominal uang muka |
+     * | por | numeric | Tidak | Nominal pembayaran POR |
+     * | bukti_bayar | file | Tidak | JPG, JPEG, PNG, PDF, maksimal 5 MB |
+     *
+     * ### Ketentuan Bukti Pembayaran
+     *
+     * - Upload bukti pembayaran bersifat opsional.
+     * - Jika update langsung tanpa file baru, bukti pembayaran lama dipertahankan.
+     * - Jika update langsung dengan file baru, bukti pembayaran lama diganti.
+     * - Jika pengajuan edit tanpa file baru, bukti pembayaran pengajuan bernilai NULL.
+     * - File bukti pembayaran pengajuan menggunakan suffix `_EP`.
+     * - Bukti pembayaran asli tidak diubah ketika membuat pengajuan.
+     * - Seluruh file bukti pembayaran disimpan pada folder `TF_META`.
+     *
+     * ### Contoh Nama File
+     *
+     * | Jenis | Nama File |
+     * | --- | --- |
+     * | Update langsung | 261126001A.jpg |
+     * | Pengajuan edit | 261126001A_EP.jpg |
+     *
+     * ### Response Update Langsung
+     *
+     * ```json
+     * {
+     *     "success": true,
+     *     "data": {
+     *         "success": true,
+     *         "message": "Pesanan berhasil diperbarui."
+     *     }
+     * }
+     * ```
+     *
+     * ### Response Pengajuan Edit
+     *
+     * ```json
+     * {
+     *     "success": true,
+     *     "data": {
+     *         "success": true,
+     *         "message": "Pengajuan edit pesanan berhasil dibuat.",
+     *         "data": {
+     *             "no_pesanan": "261126001A",
+     *             "status": "pending"
+     *         }
+     *     }
+     * }
+     * ```
+     *
+     * ### HTTP Status Code
+     *
+     * | Status | Keterangan |
+     * | --- | --- |
+     * | 200 | Update atau pengajuan edit berhasil |
+     * | 401 | Bearer Token tidak valid |
+     * | 403 | Tidak memiliki hak akses |
+     * | 404 | Data terkait pesanan tidak ditemukan |
+     * | 422 | Validasi request gagal |
+     * | 500 | Terjadi kesalahan pada server |
+     *
+     * ### Catatan
+     *
+     * - Nomor pesanan harus tersedia pada tabel pesanan.
+     * - Batas kirim update langsung dihitung 3 hari dari tanggal order, jika tanggal order di edit batas kirim akan dihitung ulang otomatis 3 hari.
+     * - User pengajuan diambil otomatis dari pengguna yang login.
+     * - Nominal pembayaran yang kosong pada pengajuan disimpan sebagai 0.
+     */
+    public function update(PesananService $pesananService, Request $request)
     {
-        $pesanan = Pesanan::findOrFail($no_pesanan);
-
-        $data = $request->validate([
+        $request->validate([
             // 01. DATA PESANAN
-            'no_pesanan' => [
-                'required',
-                'string',
-                Rule::in([$pesanan->no_pesanan]),
-            ],
-            'platform' => [
-                'required',
-                Rule::in([$pesanan->platform]),
-            ],
-            'tanggal' => 'required|date|before_or_equal:now',
-            'tanggal_order' => 'required|date|before_or_equal:now',
-            'user_id' => 'required|integer|exists:users,id',
+            'no_pesanan' => ['required', 'string', Rule::exists('pesanan', 'no_pesanan')],
+            'tanggal_order' => 'required|date_format:Y-m-d H:i:s|before_or_equal:now',
             'nama_pembeli' => 'required|string|max:255',
             'total_hpp' => 'required|integer|min:0',
             'total_harga' => 'required|integer|min:0',
             'total_admin' => 'required|integer|min:0',
-            'chat_masuk_at' => 'required|date|before_or_equal:now',
             'notes' => 'nullable|string',
 
             // 02. ALAMAT PENGIRIMAN
-            'provinsi' => 'required|string',
-            'kabupaten_kota' => 'required|string',
-            'kecamatan' => 'required|string',
-            'desa' => 'nullable|string',
+            'provinsi' => 'required|string|max:255',
+            'kabupaten_kota' => 'required|string|max:255',
+            'kecamatan' => 'required|string|max:255',
+            'desa' => 'nullable|string|max:255',
             'alamat_lengkap' => 'required|string|max:1000',
-            'phone' => [
-                'required',
-                'string',
-                'regex:/^628[0-9]{7,12}$/',
-            ],
+            'phone' => ['required', 'string', 'regex:/^628[0-9]{7,12}$/'],
 
             // 03. PEMBAYARAN
-            'jenis_transaksi' => 'required|in:cod,non-cod,dp',
+            'jenis_transaksi' => 'required|in:cod,non-cod,dp,por',
             'cod' => 'nullable|numeric|min:0',
             'non_cod' => 'nullable|numeric|min:0',
             'dp' => 'nullable|numeric|min:0',
-
-            'bukti_bayar' => [
-                'sometimes',
-                'nullable',
-                'file',
-                'mimes:jpg,jpeg,png,pdf',
-                'max:5120',
-            ],
-
-            // 04. PESANAN PER PRODUK
-            'pesanan_perproduk' => 'required|array|min:1',
-
-            'pesanan_perproduk.*.id' => [
-                'nullable',
-                'integer',
-                'distinct',
-                Rule::exists('pesanan_per_produk', 'id')
-                    ->where('no_pesanan', $pesanan->no_pesanan),
-            ],
-
-            'pesanan_perproduk.*.nama_produk' => 'required|string',
-            'pesanan_perproduk.*.variasi' => 'required|string',
-            'pesanan_perproduk.*.jumlah' => 'required|integer|min:1',
-            'pesanan_perproduk.*.hpp' => 'required|numeric|min:0',
-            'pesanan_perproduk.*.harga' => 'required|numeric|min:0',
-            'pesanan_perproduk.*.sku' => 'required|string',
-            'pesanan_perproduk.*.custom' => 'required|boolean',
-            'pesanan_perproduk.*.catatan' => 'nullable|string',
-
-            // 05. FOTO PRODUK BARU
-            'pesanan_perproduk.*.foto_produk' => [
-                'sometimes',
-                'nullable',
-                'array',
-                'max:5',
-            ],
-            'pesanan_perproduk.*.foto_produk.*' => [
-                'required',
-                'file',
-                'mimes:jpg,jpeg,png',
-                'max:5120',
-            ],
+            'por' => 'nullable|numeric|min:0',
+            'bukti_bayar' => ['sometimes', 'nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
 
-        $data = $pesananService->update($request, $no_pesanan);
+        $pesanan = Pesanan::where('no_pesanan', $request->no_pesanan)
+            ->select('pengajuan_resi_meta')->first();
+
+        $pengajuanResi = $pesanan->pengajuan_resi_meta;
+        if ($pengajuanResi == true) {
+            $data = $pesananService->pengajuanUpdate($request);
+        } elseif ($pengajuanResi == false) {
+            $data = $pesananService->update($request);
+        }
+
         return response()->json([
             'success' => true,
             'data' => $data

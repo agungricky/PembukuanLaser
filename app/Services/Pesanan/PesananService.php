@@ -4,6 +4,7 @@ namespace App\Services\Pesanan;
 
 use App\Models\bukti_pembayaran;
 use App\Models\customer_addresses;
+use App\Models\PengajuanEditPesanan;
 use App\Models\Pesanan;
 use App\Models\PesananPerProduk;
 use App\Models\ReqFoto;
@@ -14,11 +15,16 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use App\Services\Storage\DriveService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 
 class PesananService
 {
     public function __construct(
-        private WilayahIndo $wilayahIndo
+        private WilayahIndo $wilayahIndo,
+        protected DriveService $driveService,
+        protected ApiFileGatorService $filegator
     ) {}
 
     public function index(Request $request)
@@ -67,11 +73,11 @@ class PesananService
                 $query->select('no_pesanan', 'provinsi', 'kabupaten_kota', 'kecamatan', 'desa', 'alamat_lengkap', 'phone');
             },
             'bukti_pembayaran' => function ($query) {
-                $query->select('no_pesanan', 'jenis_transaksi', 'cod', 'non_cod', 'dp', 'bukti_bayar');
+                $query->select('no_pesanan', 'jenis_transaksi', 'cod', 'non_cod', 'dp', 'por', 'bukti_bayar');
             }
         ])
             ->where('no_pesanan', $no_pesanan)
-            ->select('no_pesanan', 'nama_pembeli', 'total_harga', 'notes', 'input_at','no_resi', 'platform', 'foto_at')
+            ->select('no_pesanan', 'nama_pembeli', 'total_harga', 'notes', 'input_at', 'no_resi', 'platform', 'foto_at')
             ->firstOrFail();
 
         $pesanan->pesanan_per_produk->each(function ($item) {
@@ -176,8 +182,236 @@ class PesananService
         ];
     }
 
-    public function update($request, $no_pesanan) {
+    public function edit($no_pesanan)
+    {
+        $data = $this->detailpesanan($no_pesanan);
+        $pesanan = Pesanan::with('customer_address')
+            ->where('no_pesanan', data_get($data, 'pesanan.noPesanan'))
+            ->firstOrFail();
 
+        // 01. SISIPKAN DATA PESANAN
+        $data->pesanan['totalHpp'] = $pesanan->total_hpp;
+        $data->pesanan['totalAdmin'] = $pesanan->total_admin;
+        $data->pesanan['chatMasuk'] = $pesanan->chat_masuk_at;
+        $data->pesanan['pengajuan_resi_meta'] = $pesanan->pengajuan_resi_meta;
+
+
+        // 02. ALAMAT PENGIRIMAN
+        $address = $pesanan->customer_address;
+        $data->informasiPembeli['address'] = [
+            'provinsi' => $address?->getRawOriginal('provinsi'),
+            'kabupatenKota' => $address?->getRawOriginal('kabupaten_kota'),
+            'kecamatan' => $address?->getRawOriginal('kecamatan'),
+            'desa' => $address?->getRawOriginal('desa'),
+            'alamatLengkap' => $address?->alamat_lengkap,
+            'kodePos' => data_get($data, 'informasiPembeli.address.kodePos'),
+        ];
+
+        // 03. INFORMASI PRODUK
+        $nominalProduk = PesananPerProduk::where(
+            'no_pesanan',
+            $data->pesanan['noPesanan']
+        )
+            ->select('id_per_produk', 'hpp', 'harga')
+            ->get()
+            ->keyBy('id_per_produk');
+
+        $data->informasiProduk = collect($data->informasiProduk)
+            ->map(function ($item) use ($nominalProduk) {
+                $nominal = $nominalProduk->get($item->id_per_produk);
+                $item->hpp = $nominal?->hpp;
+                $item->harga = $nominal?->harga;
+                $item->reqfoto->transform(function ($foto) {
+                    $foto->nama_file = $foto->getRawOriginal('foto');
+
+                    return $foto;
+                });
+
+                return $item;
+            });
+
+        // 04. PEMBAYARAN
+        $data->pembayaran = collect($data->pembayaran)
+            ->map(function ($item) {
+                $item->nama_file = $item->getRawOriginal('bukti_bayar');
+                return $item;
+            });
+
+        return $data;
+    }
+
+    public function pengajuanUpdate($request)
+    {
+        DB::beginTransaction();
+        try {
+            $data = [
+                'no_pesanan' => $request->no_pesanan,
+                'tanggal_order' => Carbon::parse($request->tanggal_order)->format('Y-m-d'),
+                'nama_pembeli' => $request->nama_pembeli,
+                'user_id' => Auth::id(),
+                'total_hpp' => $request->total_hpp,
+                'total_harga' => $request->total_harga,
+                'total_admin' => $request->total_admin,
+                'notes' => $request->notes,
+                'chat_masuk_at' => $request->chat_masuk_at,
+                'provinsi' => $request->provinsi,
+                'kabupaten_kota' => $request->kabupaten_kota,
+                'kecamatan' => $request->kecamatan,
+                'desa' => $request->desa,
+                'alamat_lengkap' => $request->alamat_lengkap,
+                'phone' => $request->phone,
+                'jenis_transaksi' => $request->jenis_transaksi,
+                'cod' => $request->cod ?? 0,
+                'non_cod' => $request->non_cod ?? 0,
+                'dp' => $request->dp ?? 0,
+                'por' => $request->por ?? 0,
+                'bukti_bayar' => null,
+                'status' => 'pending',
+            ];
+
+            $fileBukti = $request->file('bukti_bayar');
+            if ($fileBukti) {
+                if (!$fileBukti->isValid()) {
+                    throw new \RuntimeException(
+                        'File bukti pembayaran tidak valid.'
+                    );
+                }
+
+                $fileGatorService = app(ApiFileGatorService::class);
+                $fileGatorService->login();
+                $extension = strtolower(
+                    $fileBukti->getClientOriginalExtension()
+                );
+
+                $namaFile = $request->no_pesanan . '_EP.' . $extension;
+                $buktiBayar = $fileGatorService->upload($fileBukti, $namaFile, 'TF_META');
+                if (!is_string($buktiBayar) || empty(trim($buktiBayar))) {
+                    throw new \RuntimeException(
+                        'Upload bukti pembayaran pengajuan gagal.'
+                    );
+                }
+
+                $data['bukti_bayar'] = $buktiBayar;
+            }
+
+            $pengajuan = PengajuanEditPesanan::create($data);
+            DB::commit();
+
+            return [
+                'success' => true,
+                'message' => 'Pengajuan edit pesanan berhasil dibuat.',
+                'data' => $pengajuan,
+            ];
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            throw $th;
+        }
+    }
+
+    private function updateBuktibayar($request)
+    {
+        $bukti_pembayaran_old = bukti_pembayaran::where(
+            'no_pesanan',
+            $request->no_pesanan
+        )->firstOrFail();
+
+        $dataUpdate = [
+            'jenis_transaksi' => $request->jenis_transaksi,
+            'cod' => $request->cod,
+            'non_cod' => $request->non_cod,
+            'dp' => $request->dp,
+            'por' => $request->por,
+        ];
+
+        $fileBukti = $request->file('bukti_bayar');
+
+        // JIKA ADA UPLOAD FILE BARU
+        if ($fileBukti) {
+            if (!$fileBukti->isValid()) {
+                throw new \RuntimeException(
+                    'File bukti pembayaran tidak valid.'
+                );
+            }
+
+            $fotoLama = $bukti_pembayaran_old
+                ->getRawOriginal('bukti_bayar');
+            $fileGatorService = app(ApiFileGatorService::class);
+            $fileGatorService->login();
+            $extension = strtolower(
+                $fileBukti->getClientOriginalExtension()
+            );
+
+            $namaFile = $bukti_pembayaran_old->no_pesanan
+                . '.' . $extension;
+
+            if (!empty($fotoLama)) {
+                $this->driveService->delete([$fotoLama]);
+            }
+
+            $buktiBayar = $fileGatorService->upload(
+                $fileBukti,
+                $namaFile,
+                'TF_META'
+            );
+
+            if (!is_string($buktiBayar) || empty(trim($buktiBayar))) {
+                throw new \RuntimeException(
+                    'Upload bukti pembayaran gagal.'
+                );
+            }
+
+            $dataUpdate['bukti_bayar'] = $buktiBayar;
+        }
+
+        $bukti_pembayaran_old->update($dataUpdate);
+    }
+
+    public function update($request)
+    {
+        DB::beginTransaction();
+
+        try {
+            // 01. UPDATE DATA PESANAN
+            Pesanan::where('no_pesanan', $request->no_pesanan)->update([
+                'tanggal' => Carbon::parse($request->tanggal_order)->format('Y-m-d'),
+                'input_at' => Carbon::parse($request->tanggal_order)->format('Y-m-d H:i:s'),
+                'nama_pembeli' => $request->nama_pembeli,
+                'username' => $request->nama_pembeli,
+                'total_hpp' => $request->total_hpp,
+                'total_harga' => $request->total_harga,
+                'total_admin' => $request->total_admin,
+                'notes' => $request->notes,
+                'batas_kirim_at' => Carbon::parse($request->tanggal_order)
+                    ->addDays(3)
+                    ->format('Y-m-d H:i:s'),
+            ]);
+
+            // 02. UPDATE ALAMAT PENGIRIMAN
+            customer_addresses::where(
+                'no_pesanan',
+                $request->no_pesanan
+            )->update([
+                'provinsi' => $request->provinsi,
+                'kabupaten_kota' => $request->kabupaten_kota,
+                'kecamatan' => $request->kecamatan,
+                'desa' => $request->desa,
+                'alamat_lengkap' => $request->alamat_lengkap,
+                'phone' => $request->phone,
+            ]);
+
+            // 03. UPDATE DATA PEMBAYARAN
+            $this->updateBuktibayar($request);
+
+            DB::commit();
+
+            return [
+                'success' => true,
+                'message' => 'Pesanan berhasil diperbarui.',
+            ];
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            throw $th;
+        }
     }
 
     public function store(Request $request)
@@ -244,6 +478,7 @@ class PesananService
                 'cod' => $request->cod,
                 'non_cod' => $request->non_cod,
                 'dp' => $request->dp,
+                'por' => $request->por,
                 'bukti_bayar' => $buktiBayar,
             ]);
 
@@ -256,7 +491,7 @@ class PesananService
                     'hpp' => $value['hpp'],
                     'harga' => $value['harga'],
                     'sku' => $value['sku'],
-                    'custom' => $value['custom'] ?? null,
+                    'custom' => str_ends_with($value['sku'], 'C') ? 1 : 0,
                     'status_pesanan' => $value['status_pesanan'] ?? 0,
                     'mutasi_stok_id' => $value['mutasi_stok_id'] ?? null,
                     'catatan' => $value['catatan'] ?? null,
@@ -307,6 +542,7 @@ class PesananService
             ->where('platform', 'meta')
             ->where('status', 'proses')
             ->where('foto_at', null)
+            ->whereNotNull('no_resi')
             ->where('input_at', '>=', now()->subMonths(3))
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = $request->input('search');

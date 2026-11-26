@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\Http;
 use GuzzleHttp\Cookie\CookieJar;
 use RuntimeException;
 
+use InvalidArgumentException;
+use OutOfBoundsException;
+
 use function React\Promise\all;
 
 class FileGatorController extends Controller
@@ -352,184 +355,220 @@ class FileGatorController extends Controller
         ]);
     }
 
-    public function delete(Request $request): JsonResponse
+    // public function delete(Request $request): JsonResponse
+    // {
+    //     $data = $request->validate([
+    //         'paths' => ['required','array','min:1','max:50'],
+    //         'paths.*' => ['required','string','max:500','distinct'],
+    //     ]);
+
+    //     try {
+    //         $items = [];
+    //         $directories = [];
+
+    //         foreach ($data['paths'] as $path) {
+    //             $path = '/' . ltrim($path, '/');
+    //             if (
+    //                 $path === '/' ||
+    //                 str_ends_with($path, '/') ||
+    //                 str_contains($path, '\\') ||
+    //                 str_contains($path, '%') ||
+    //                 str_contains($path, '//') ||
+    //                 preg_match('#(^|/)\.{1,2}(/|$)#', $path) ||
+    //                 preg_match('/[\x00-\x1F\x7F]/', $path)
+    //             ) {
+    //                 return response()->json([
+    //                     'success' => false,
+    //                     'message' => 'Path file tidak valid',
+    //                     'path' => $path,
+    //                 ], 422);
+    //             }
+
+    //             $items[$path] = [
+    //                 'type' => 'file',
+    //                 'path' => $path,
+    //             ];
+    //         }
+
+    //         $items = array_values($items);
+
+    //         // KONFIGURASI FILEGATOR LOGIN
+    //         $url = rtrim(config('services.filegator.url'), '/');
+    //         $cookies = new CookieJar();
+    //         $client = Http::acceptJson()
+    //             ->asJson()
+    //             ->timeout(30)
+    //             ->connectTimeout(10)
+    //             ->withOptions([
+    //                 'cookies' => $cookies,
+    //                 'allow_redirects' => false,
+    //             ]);
+
+    //         $init = $client->get(
+    //             $url . '/?r=/getconfig'
+    //         );
+    //         $init->throw();
+    //         $csrfToken = $init->header('X-CSRF-Token');
+    //         if (!$init->successful() || !$csrfToken) {
+    //             throw new RuntimeException(
+    //                 'CSRF Token tidak ditemukan'
+    //             );
+    //         }
+
+    //         $login = $client
+    //             ->replaceHeaders([
+    //                 'Accept' => 'application/json',
+    //                 'Content-Type' => 'application/json',
+    //                 'X-CSRF-Token' => $csrfToken,
+    //             ])
+    //             ->post($url . '/?r=/login', [
+    //                 'username' => config(
+    //                     'services.filegator.username'
+    //                 ),
+    //                 'password' => config(
+    //                     'services.filegator.password'
+    //                 ),
+    //             ]);
+
+    //         $login->throw();
+    //         if (!$login->successful()) {
+    //             throw new RuntimeException(
+    //                 'Login FileGator gagal'
+    //             );
+    //         }
+
+    //         $session = $client->get($url . '/?r=/getuser');
+    //         $session->throw();
+    //         $csrfToken = $session->header('X-CSRF-Token');
+    //         if (!$session->successful() || !$csrfToken) {
+    //             throw new RuntimeException(
+    //                 'Session CSRF tidak ditemukan'
+    //             );
+    //         }
+
+    //         $client->replaceHeaders([
+    //             'Accept' => 'application/json',
+    //             'Content-Type' => 'application/json',
+    //             'X-CSRF-Token' => $csrfToken,
+    //         ]);
+
+    //         // MEMASTIKAN TARGET ADALAH FILE
+    //         foreach ($items as $item) {
+    //             $path = $item['path'];
+    //             $folder = dirname($path);
+    //             if (!array_key_exists($folder, $directories)) {
+    //                 $listing = $client->post(
+    //                     $url . '/?r=/changedir', ['to' => $folder]
+    //                 );
+
+    //                 $listing->throw();
+    //                 $files = $listing->json('data.files');
+    //                 $location = $listing->json('data.location');
+
+    //                 if (
+    //                     !$listing->successful() ||
+    //                     !is_array($files) ||
+    //                     $location !== $folder
+    //                 ) {
+    //                     throw new RuntimeException(
+    //                         'Gagal membaca direktori FileGator'
+    //                     );
+    //                 }
+
+    //                 $directories[$folder] = $files;
+    //             }
+
+    //             // Cari target berdasarkan path
+    //             $target = collect($directories[$folder])
+    //                 ->first(function ($file) use ($path) {
+    //                     return ($file['path'] ?? null) === $path;
+    //                 });
+
+    //             // Pastikan target ditemukan
+    //             if (!$target) {
+    //                 return response()->json([
+    //                     'success' => false,
+    //                     'message' => 'File tidak ditemukan',
+    //                     'path' => $path,
+    //                 ], 404);
+    //             }
+
+    //             // Pastikan target benar-benar file
+    //             if (($target['type'] ?? null) !== 'file') {
+    //                 return response()->json([
+    //                     'success' => false,
+    //                     'message' => 'Penghapusan folder tidak diizinkan',
+    //                     'path' => $path,
+    //                 ], 422);
+    //             }
+    //         }
+
+    //         // 08. HAPUS FILE
+    //         $response = $client->post(
+    //             $url . '/?r=/deleteitems',
+    //             [
+    //                 'items' => $items,
+    //             ]
+    //         );
+
+    //         $response->throw();
+    //         $result = $response->json('data')
+    //             ?? $response->json();
+
+    //         if (
+    //             !$response->successful() ||
+    //             $result !== 'Done'
+    //         ) {
+    //             throw new RuntimeException(
+    //                 'FileGator gagal mengonfirmasi penghapusan file'
+    //             );
+    //         }
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'File berhasil dihapus',
+    //             'data' => [
+    //                 'total' => count($items),
+    //                 'paths' => array_column($items, 'path'),
+    //             ],
+    //         ], 200, [], JSON_UNESCAPED_SLASHES);
+    //     } catch (Throwable $e) {
+    //         report($e);
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Gagal menghapus atau mengonfirmasi penghapusan file dari FileGator',
+    //             'error' => config('app.debug')
+    //                 ? $e->getMessage()
+    //                 : null,
+    //         ], 502);
+    //     }
+    // }
+
+    public function delete(DriveService $driveService, Request $request): JsonResponse
     {
         $data = $request->validate([
-            'paths' => ['required','array','min:1','max:50'],
-            'paths.*' => ['required','string','max:500','distinct'],
+            'paths' => ['required', 'array', 'min:1', 'max:50'],
+            'paths.*' => ['required', 'string', 'max:500', 'distinct'],
         ]);
 
         try {
-            $items = [];
-            $directories = [];
+            $result = $this->$driveService->delete($data['paths']);
 
-            foreach ($data['paths'] as $path) {
-                $path = '/' . ltrim($path, '/');
-                if (
-                    $path === '/' ||
-                    str_ends_with($path, '/') ||
-                    str_contains($path, '\\') ||
-                    str_contains($path, '%') ||
-                    str_contains($path, '//') ||
-                    preg_match('#(^|/)\.{1,2}(/|$)#', $path) ||
-                    preg_match('/[\x00-\x1F\x7F]/', $path)
-                ) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Path file tidak valid',
-                        'path' => $path,
-                    ], 422);
-                }
-
-                $items[$path] = [
-                    'type' => 'file',
-                    'path' => $path,
-                ];
-            }
-
-            $items = array_values($items);
-            
-            // KONFIGURASI FILEGATOR LOGIN
-            $url = rtrim(config('services.filegator.url'), '/');
-            $cookies = new CookieJar();
-            $client = Http::acceptJson()
-                ->asJson()
-                ->timeout(30)
-                ->connectTimeout(10)
-                ->withOptions([
-                    'cookies' => $cookies,
-                    'allow_redirects' => false,
-                ]);
-
-            $init = $client->get(
-                $url . '/?r=/getconfig'
-            );
-            $init->throw();
-            $csrfToken = $init->header('X-CSRF-Token');
-            if (!$init->successful() || !$csrfToken) {
-                throw new RuntimeException(
-                    'CSRF Token tidak ditemukan'
-                );
-            }
-
-            $login = $client
-                ->replaceHeaders([
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                    'X-CSRF-Token' => $csrfToken,
-                ])
-                ->post($url . '/?r=/login', [
-                    'username' => config(
-                        'services.filegator.username'
-                    ),
-                    'password' => config(
-                        'services.filegator.password'
-                    ),
-                ]);
-
-            $login->throw();
-            if (!$login->successful()) {
-                throw new RuntimeException(
-                    'Login FileGator gagal'
-                );
-            }
-
-            $session = $client->get($url . '/?r=/getuser');
-            $session->throw();
-            $csrfToken = $session->header('X-CSRF-Token');
-            if (!$session->successful() || !$csrfToken) {
-                throw new RuntimeException(
-                    'Session CSRF tidak ditemukan'
-                );
-            }
-
-            $client->replaceHeaders([
-                'Accept' => 'application/json',
-                'Content-Type' => 'application/json',
-                'X-CSRF-Token' => $csrfToken,
-            ]);
-
-            // MEMASTIKAN TARGET ADALAH FILE
-            foreach ($items as $item) {
-                $path = $item['path'];
-                $folder = dirname($path);
-                if (!array_key_exists($folder, $directories)) {
-                    $listing = $client->post(
-                        $url . '/?r=/changedir', ['to' => $folder]
-                    );
-
-                    $listing->throw();
-                    $files = $listing->json('data.files');
-                    $location = $listing->json('data.location');
-
-                    if (
-                        !$listing->successful() ||
-                        !is_array($files) ||
-                        $location !== $folder
-                    ) {
-                        throw new RuntimeException(
-                            'Gagal membaca direktori FileGator'
-                        );
-                    }
-
-                    $directories[$folder] = $files;
-                }
-
-                // Cari target berdasarkan path
-                $target = collect($directories[$folder])
-                    ->first(function ($file) use ($path) {
-                        return ($file['path'] ?? null) === $path;
-                    });
-
-                // Pastikan target ditemukan
-                if (!$target) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'File tidak ditemukan',
-                        'path' => $path,
-                    ], 404);
-                }
-
-                // Pastikan target benar-benar file
-                if (($target['type'] ?? null) !== 'file') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Penghapusan folder tidak diizinkan',
-                        'path' => $path,
-                    ], 422);
-                }
-            }
-
-            // 08. HAPUS FILE
-            $response = $client->post(
-                $url . '/?r=/deleteitems',
-                [
-                    'items' => $items,
-                ]
-            );
-
-            $response->throw();
-            $result = $response->json('data')
-                ?? $response->json();
-
-            if (
-                !$response->successful() ||
-                $result !== 'Done'
-            ) {
-                throw new RuntimeException(
-                    'FileGator gagal mengonfirmasi penghapusan file'
-                );
-            }
-
-            // 09. RESPONSE BERHASIL
             return response()->json([
                 'success' => true,
                 'message' => 'File berhasil dihapus',
-                'data' => [
-                    'total' => count($items),
-                    'paths' => array_column($items, 'path'),
-                ],
+                'data' => $result,
             ], 200, [], JSON_UNESCAPED_SLASHES);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (OutOfBoundsException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 404);
         } catch (Throwable $e) {
             report($e);
             return response()->json([

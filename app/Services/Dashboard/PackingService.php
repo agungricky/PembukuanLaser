@@ -17,7 +17,6 @@ class PackingService
             ->get();
 
         if (userLogin()?->platform == "marketplace") {
-
             $totalMenunggu = Pesanan::query()
                 ->where('status', 'proses')
                 ->whereNotNull('batas_kirim_at')
@@ -81,21 +80,18 @@ class PackingService
                 ->whereNotNull('no_resi')
                 ->whereNotNull('foto_at')
                 ->count();
-                
+
             $dikirim = $pesanan->where('status', 'kirim')
                 ->whereNotNull('no_resi')
                 ->whereNotNull('foto_at')->count();
-                
-            $terlambat = $pesanan
+
+            $terlambat = Pesanan::where('platform', userLogin()?->platform)
                 ->where('status', 'proses')
                 ->whereNotNull('batas_kirim_at')
-                ->filter(function ($item) {
-                    return \Carbon\Carbon::parse($item->batas_kirim_at)
-                        ->startOfDay()
-                        ->lt(today());
-                })
+                ->where('batas_kirim_at', '<', today())
                 ->count();
         }
+        
         return (object) [
             'totalMenunggu' => $totalMenunggu,
             'siapDikirim' => $siapDikirim,

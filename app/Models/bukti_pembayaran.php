@@ -12,6 +12,7 @@ class bukti_pembayaran extends Model
         'cod', 
         'non_cod',
         'dp',
+        'por',
         'bukti_bayar'
     ];
 

@@ -23,6 +23,15 @@ class ScanPesananService
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            if ($pesanan->platform == "meta") {
+                if ($pesanan->no_resi == null || $pesanan->foto_at == null) {
+                    return [
+                        'success' => false,
+                        'message' => 'Pesanan Belum punya resi atau belum memiliki foto barang jadi.',
+                    ];
+                }
+            }
+
             if ($pesanan->status === 'kirim') {
                 return [
                     'success' => false,
@@ -40,13 +49,13 @@ class ScanPesananService
 
             $pesanan->update([
                 'status' => 'kirim',
-                'id_user_kirim' => userLogin()?->id,
+                'id_user_kirim' => Auth::id(),
             ]);
 
             progres_pesanan::create([
                 'no_pesanan' => $pesanan->no_pesanan,
                 'role' => 'dikirim',
-                'user_id' => userLogin()?->id,
+                'user_id' => Auth::id(),
             ]);
 
             return [
