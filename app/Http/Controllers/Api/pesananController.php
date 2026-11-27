@@ -15,6 +15,7 @@ use App\Services\Pesanan\FotoPesananService;
 use App\Services\Api\FileGatorService as ApiFileGatorService;
 use App\Services\Pesanan\ScanPesananService;
 use Dedoc\Scramble\Attributes\ExcludeRouteFromDocs;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -1016,6 +1017,242 @@ class pesananController extends Controller
                 'message' => 'Pesanan tidak memenuhi syarat penghapusan.',
             ], 422);
         }
+    }
+
+    /**
+     * Pengajuan Komplain Pesanan
+     *
+     * Digunakan untuk mengajukan komplain berdasarkan nomor pesanan
+     * dengan melampirkan satu atau beberapa bukti berupa foto dan video.
+     *
+     * ### Catatan Mobile
+     *
+     * - Mobile hanya perlu menampilkan satu field upload bukti komplain.
+     * - Field tersebut harus mendukung pemilihan beberapa file (multiple files).
+     * - Foto dan video dapat dipilih dan diunggah secara bersamaan.
+     * - Tidak perlu memisahkan field upload foto dan video.
+     * - Pengguna dapat menambahkan atau menghapus file sebelum pengajuan dikirim.
+     * - Seluruh file dikirim menggunakan parameter `files[]` dalam
+     *   format multipart/form-data.
+     * - Minimal satu file dengan ukuran maksimal 5 MB per file.
+     * - Penamaan file dan lokasi penyimpanan ditentukan otomatis oleh backend.
+     * 
+     * ### Header Request
+     *
+     * ```http
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ### Parameter Request
+     *
+     * Content-Type: multipart/form-data
+     *
+     * | Parameter | Wajib | Tipe | Batasan / Pilihan |
+     * |-----------|-------|------|-------------------|
+     * | no_pesanan | Ya | String | Parameter URL dan terdaftar pada tabel pesanan |
+     * | keterangan | Tidak | String | Keterangan komplain |
+     * | files[] | Ya | Array File | Minimal 1 file |
+     * | files.* | Ya | File | JPG, JPEG, PNG, WEBP, MP4, MOV. Maksimal 50 MB per file |
+     *
+     * ### Contoh Request
+     *
+     * ```http
+     * POST /api/pesanan/komplain/20261126001A
+     * ```
+     *
+     * Body (multipart/form-data):
+     *
+     * | Key | Type | Value |
+     * |-----|------|-------|
+     * | keterangan | Text | Barang Rusak |
+     * | files[] | File | foto_01.png |
+     * | files[] | File | video_01.mp4 |
+     *
+     * ### Hasil Respon
+     *
+     * HTTP 201 - Created
+     *
+     * ```json
+     * {
+     *     "success": true,
+     *     "message": "Komplain berhasil diajukan.",
+     *     "data": [
+     *         {
+     *             "id": 1,
+     *             "no_pesanan": "20261126001A",
+     *             "user_id": 35,
+     *             "path": "KOMPLAIN/20261126001A/20261126001A_01.png",
+     *             "keterangan": "Barang Rusak",
+     *             "created_at": "2026-11-27T02:43:29.000000Z",
+     *             "updated_at": "2026-11-27T02:43:29.000000Z"
+     *         },
+     *         {
+     *             "id": 2,
+     *             "no_pesanan": "20261126001A",
+     *             "user_id": 35,
+     *             "path": "KOMPLAIN/20261126001A/20261126001A_02.mp4",
+     *             "keterangan": "Barang Rusak",
+     *             "created_at": "2026-11-27T02:43:30.000000Z",
+     *             "updated_at": "2026-11-27T02:43:30.000000Z"
+     *         }
+     *     ]
+     * }
+     * ```
+     *
+     * ### Keterangan Error
+     *
+     * | HTTP Status | Keterangan |
+     * |-------------|------------|
+     * | 401 | Token tidak valid atau belum login |
+     * | 403 | User tidak memiliki hak akses |
+     * | 422 | Validasi gagal atau nomor pesanan tidak ditemukan |
+     * | 500 | Terjadi kesalahan pada server atau upload FileGator |
+     *
+     * ### Ketentuan
+     *
+     * - User wajib melakukan autentikasi menggunakan Bearer Token.
+     * - Nomor pesanan harus terdaftar pada sistem.
+     * - Minimal mengunggah satu file bukti komplain.
+     * - Foto dan video dapat diunggah secara bersamaan.
+     * - Jumlah file tidak dibatasi oleh validasi.
+     * - Ukuran maksimal setiap file adalah 5 MB.
+     * - User ID diambil secara otomatis dari user yang sedang login.
+     * - File disimpan pada FileGator.
+     * - Folder penyimpanan: `KOMPLAIN/{no_pesanan}/`.
+     * - Format nama file: `{no_pesanan}_{no_urut}.{extension}`.
+     * - Nomor urut file dimulai dari 01 pada setiap pengajuan.
+     * - Setiap file disimpan sebagai satu record pada tabel komplain.
+     * - Status awal komplain adalah `pending`.
+     * - Status komplain terdiri dari `pending`, `approve`, dan `reject`.
+     * - Jika salah satu upload gagal, file yang sebelumnya berhasil
+     *   diunggah tetap tersimpan.
+     * - Pengajuan ulang berpotensi menimpa file sebelumnya
+     *   karena nomor urut dimulai kembali dari 01.
+     */
+    public function komplain(PesananService $pesananService, Request $request)
+    {
+        $request->validate([
+            'no_pesanan' => ['required', 'string', 'exists:pesanan,no_pesanan'],
+            'keterangan' => ['nullable', 'string'],
+            'files' => ['required', 'array', 'min:1'],
+            'files.*' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,mp4,mov', 'max:5120'],
+        ]);
+
+        $data = $pesananService->komplain($request);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ], 200, [], JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * View Komplain Pesanan
+     *
+     * Digunakan untuk menampilkan informasi komplain berdasarkan nomor
+     * pesanan beserta seluruh bukti komplain berupa foto dan video.
+     *
+     * ### Header Request
+     *
+     * ```http
+     * Accept: application/json
+     * Authorization: Bearer {token}
+     * ```
+     *
+     * ### Parameter Request
+     *
+     * | Parameter | Wajib | Tipe | Keterangan |
+     * |-----------|-------|------|------------|
+     * | no_pesanan | Ya | String | Nomor pesanan yang terdaftar pada sistem |
+     *
+     * ### Contoh Request
+     *
+     * ```http
+     * GET /api/pesanan/komplain/20261126001A
+     * ```
+     *
+     * ### Hasil Respon
+     *
+          * HTTP 200 - OK
+     *
+     * ```json
+     * {
+     *     "success": true,
+     *     "data": {
+     *         "pesanan": {
+     *             "noPesanan": "20261126001A",
+     *             "komplain": "Barang Rusak",
+     *             "user": "dev",
+     *             "namaPembeli": "Pembeli Uji",
+     *             "noResi": "1111",
+     *             "platform": "meta",
+     *             "status": "proses",
+     *             "pengajuanKomplain": "pending"
+     *         },
+     *         "bukti": [
+     *             {
+     *                 "id": 1,
+     *                 "path": "https://pembukuan.test/api/file?path=KOMPLAIN%2F20261126001A%2F20261126001A_01.png&signature=..."
+     *             },
+     *             {
+     *                 "id": 2,
+     *                 "path": "https://pembukuan.test/api/file?path=KOMPLAIN%2F20261126001A%2F20261126001A_02.mp4&signature=..."
+     *             },
+     *             {
+     *                 "id": 3,
+     *                 "path": "https://pembukuan.test/api/file?path=KOMPLAIN%2F20261126001A%2F20261126001A_03.mp4&signature=..."
+     *             }
+     *         ]
+     *     }
+     * }
+     * ```
+     *
+     * ### Status Pengajuan Komplain
+     *
+     * | Nilai | Keterangan |
+     * |-------|------------|
+     * | pending | Menunggu persetujuan |
+     * | approve | Pengajuan komplain disetujui |
+     * | reject | Pengajuan komplain ditolak |
+     *
+     * ### Catatan Mobile
+     *
+     * - Field `status` merupakan status pesanan.
+     * - Field `pengajuanKomplain` merupakan status pengajuan komplain.
+     * - Gunakan field `pengajuanKomplain` untuk menampilkan status
+     *   persetujuan komplain pada halaman mobile.
+     *
+     * ### Keterangan Error
+     *
+     * | HTTP Status | Keterangan |
+     * |-------------|------------|
+     * | 401 | Token tidak valid atau belum login |
+     * | 403 | User tidak memiliki hak akses |
+     * | 404 | Nomor pesanan tidak ditemukan |
+     * | 500 | Terjadi kesalahan pada server |
+     *
+     * ### Ketentuan
+     *
+     * - User wajib melakukan autentikasi menggunakan Bearer Token.
+     * - Nomor pesanan dikirim melalui parameter URL.
+     * - Informasi pesanan ditampilkan satu kali.
+     * - Seluruh bukti komplain ditampilkan dalam satu array `bukti`.
+     * - Jumlah bukti komplain bersifat dinamis.
+     * - Bukti komplain diurutkan berdasarkan ID secara ascending.
+     * - Keterangan komplain dan nama user diambil dari data komplain pertama.
+     * - Field `status` merupakan status pesanan, bukan status persetujuan komplain.
+     * - Path file dikembalikan dalam bentuk Signed URL di mobile application bisa menggunakan liberary pemutar vidio untuk dapat memutar vidio.
+     *
+     */
+    public function viewKomplain(PesananService $pesananService, string $no_pesanan): JsonResponse
+    {
+        $data = $pesananService->komplainView($no_pesanan);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ], 200, [], JSON_UNESCAPED_SLASHES);
     }
 
     #[ExcludeRouteFromDocs]

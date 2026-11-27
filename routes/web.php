@@ -344,11 +344,3 @@ Route::get('/jadwal-elsa', function () {
 Route::get('/jadwal-piket-lck', function () {
     return view('piket');
 })->name('jadwal-piket-lck');
-
-
-
-Route::get('/testing/update-pesanan', function () {
-    abort_unless(app()->environment('local'), 404);
-
-    return view('testing.update-pesanan');
-});

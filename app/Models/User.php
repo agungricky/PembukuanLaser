@@ -92,4 +92,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Pencairan::class, 'user_id');
     }
+
+    public function komplain()
+    {
+        return $this->hasMany(Komplain::class, 'user_id');
+    }
 }

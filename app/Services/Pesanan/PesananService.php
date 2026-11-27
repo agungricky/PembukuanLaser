@@ -4,6 +4,7 @@ namespace App\Services\Pesanan;
 
 use App\Models\bukti_pembayaran;
 use App\Models\customer_addresses;
+use App\Models\Komplain;
 use App\Models\PengajuanEditPesanan;
 use App\Models\PengajuanHapusPesanan;
 use App\Models\Pesanan;
@@ -17,8 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use App\Services\Storage\DriveService;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class PesananService
 {
@@ -564,7 +564,88 @@ class PesananService
         }
     }
 
-    public function pengajuanDelete($pesanan, $request) {
+    public function komplain($request)
+    {
+        $no_pesanan = $request->no_pesanan;
+        $folder = 'KOMPLAIN/' . $no_pesanan;
+        $hasil = [];
+
+        $fileGatorService = app(ApiFileGatorService::class);
+        $fileGatorService->login();
+        foreach ($request->file('files', []) as $index => $file) {
+            $extension = strtolower(
+                $file->getClientOriginalExtension()
+            );
+
+            $namaFile = $no_pesanan . '_'
+                . str_pad($index + 1, 2, '0', STR_PAD_LEFT)
+                . '.' . $extension;
+
+            $path = $fileGatorService->upload(
+                $file,
+                $namaFile,
+                $folder
+            );
+
+            if (!$path) {
+                throw new \RuntimeException(
+                    'Gagal upload file komplain.'
+                );
+            }
+
+            $komplain = Komplain::create([
+                'no_pesanan' => $no_pesanan,
+                'user_id' => Auth::id(),
+                'path' => ltrim($path, '/'),
+                'keterangan' => $request->keterangan,
+            ]);
+
+            $hasil[] = $komplain;
+        }
+
+        return $hasil;
+    }
+
+    public function komplainView($no_pesanan)
+    {
+        $pesanan = Pesanan::where('no_pesanan', $no_pesanan)
+            ->select('no_pesanan', 'nama_pembeli', 'no_resi', 'platform','status')
+            ->firstOrFail();
+
+        $komplain = Komplain::with('user:id,name')
+            ->where('no_pesanan', $no_pesanan)
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $first = $komplain->first();
+        $bukti = $komplain->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'path' => !empty($item->path)
+                    ? URL::signedRoute('file', [
+                        'path' => $item->path,
+                    ])
+                    : null,
+            ];
+        });
+
+        return (object) [
+            'pesanan' => [
+                'noPesanan' => $pesanan->no_pesanan,
+                'komplain' => $first?->keterangan,
+                'user' => $first?->user?->name,
+                'namaPembeli' => $pesanan->nama_pembeli,
+                'noResi' => $pesanan->no_resi,
+                'platform' => $pesanan->platform,
+                'status' => $pesanan->status,
+                'pengajuanKomplain' => $first?->status,
+            ],
+            'bukti' => $bukti,
+        ];
+    }
+
+    public function pengajuanDelete($pesanan, $request)
+    {
         PengajuanHapusPesanan::create([
             'no_pesanan' => $pesanan->no_pesanan,
             'keterangan' => $request->keterangan

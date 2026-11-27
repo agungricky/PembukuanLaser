@@ -153,6 +153,11 @@ class Pesanan extends Model
 
     public function fotoMeta(): HasOne
     {
-        return $this->hasOne(FotoMeta::class, 'no_pesanan','no_pesanan');
+        return $this->hasOne(FotoMeta::class, 'no_pesanan', 'no_pesanan');
+    }
+
+    public function komplain()
+    {
+        return $this->hasMany(Komplain::class, 'no_pesanan', 'no_pesanan');
     }
 }
